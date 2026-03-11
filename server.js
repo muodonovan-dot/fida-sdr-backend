@@ -1,15 +1,14 @@
-// Fida AI SDR Backend v2 — PubMed + LinkedIn research + Instantly.ai CSV export
+// Fida AI SDR Backend v3 — generalized, tone + application focus + ZeroBounce
 const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
-
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
-app.get('/', (req, res) => res.json({ status: 'Fida AI SDR backend v2 running ✅' }));
+app.get('/', (req, res) => res.json({ status: 'Fida AI SDR backend v3 running' }));
 
-// ── PubMed search ─────────────────────────────────────────────────────────────
+// PubMed search
 async function searchPubMed(firstName, lastName, institution) {
   try {
     const query = encodeURIComponent(`${firstName} ${lastName}[Author] ${institution}[Affiliation]`);
@@ -17,164 +16,151 @@ async function searchPubMed(firstName, lastName, institution) {
     const searchData = await searchRes.json();
     const ids = searchData.esearchresult?.idlist || [];
     if (!ids.length) return [];
-
     const summaryRes = await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=${ids.join(',')}&retmode=json`);
     const summaryData = await summaryRes.json();
     const uids = summaryData.result?.uids || [];
-
     return uids.map(uid => {
       const pub = summaryData.result[uid];
-      return {
-        title: pub.title || '',
-        journal: pub.fulljournalname || pub.source || '',
-        date: pub.pubdate || '',
-      };
+      return { title: pub.title || '', journal: pub.fulljournalname || pub.source || '', date: pub.pubdate || '' };
     }).filter(p => p.title);
-  } catch (e) {
-    console.error('PubMed error:', e.message);
-    return [];
-  }
+  } catch (e) { console.error('PubMed error:', e.message); return []; }
 }
 
-// ── LinkedIn via Claude web search ────────────────────────────────────────────
 async function searchLinkedIn(firstName, lastName, institution, anthropicKey) {
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': anthropicKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-beta': 'web-search-2025-03-05'
-      },
+      headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01', 'anthropic-beta': 'web-search-2025-03-05' },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 400,
+        model: 'claude-haiku-4-5-20251001', max_tokens: 400,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-        messages: [{
-          role: 'user',
-          content: `Search for "${firstName} ${lastName}" researcher at "${institution}" on LinkedIn or their lab website. Return ONLY JSON: {"title":"","lab_focus":"","notable":""} — current job title, main research focus, one notable fact. If not found return empty strings.`
-        }]
+        messages: [{ role: 'user', content: `Search for "${firstName} ${lastName}" researcher at "${institution}". Return ONLY JSON: {"title":"","lab_focus":"","notable":""}. If not found return empty strings.` }]
       })
     });
     const data = await response.json();
-    const textBlock = (data.content || []).find(b => b.type === 'text');
-    if (!textBlock) return {};
-    return JSON.parse(textBlock.text.replace(/```json|```/g, '').trim());
-  } catch (e) {
-    console.error('LinkedIn search error:', e.message);
-    return {};
-  }
+    const textBlocks = (data.content || []).filter(b => b.type === 'text');
+    if (!textBlocks.length) return {};
+    const rawText = textBlocks[textBlocks.length - 1].text;
+    const match = rawText.match(/{[\s\S]*}/);
+    if (!match) return {};
+    return JSON.parse(match[0]);
+  } catch (e) { return {}; }
 }
 
-// ── Generate personalized emails ──────────────────────────────────────────────
-app.post('/generate', async (req, res) => {
-  const { lead, anthropicKey, knowledgeBase } = req.body;
-  if (!lead || !anthropicKey) return res.status(400).json({ error: 'Missing lead or anthropicKey' });
+const APPLICATION_FOCUS = {
+  general: { product: 'FIDA NEO measures hydrodynamic radius (Rh), polydispersity, and aggregation in 40nL under native conditions.', angle: 'Position Fida Neo as a powerful protein characterization tool connecting to the contact published work.' },
+  spr_biacore: { product: 'FIDA NEO: official Cytiva/Biacore companion. Use for reagent QC before SPR, then orthogonal KD verification after. Catches aggregation SPR misses.', angle: 'Position Fida NEO as the essential SPR companion. Confirm binding partners are monomeric before SPR runs. Emphasize Cytiva partnership.' },
+  antibody_dev: { product: 'FIDA NEO measures Rh, polydispersity, aggregation of antibodies in 40nL under native conditions. Critical for developability screening.', angle: 'Rapid aggregation screening during developability. 40nL means screening without sacrificing precious candidate material.' },
+  drug_discovery: { product: 'FIDA NEO: label-free, native-condition Rh measurement in 40nL. Detects binding-induced size changes without labels.', angle: 'Rapid target characterization and binding confirmation under native conditions. No labels, no immobilization.' },
+  structural_biology: { product: 'FIDA NEO confirms monodispersity before cryo-EM, crystallography, or NMR in 40nL.', angle: 'Pre-screening for structural biology: confirm monodispersity before committing to cryo-EM grids or crystallization.' }
+};
 
-  try {
-    const [publications, linkedIn] = await Promise.all([
-      searchPubMed(lead.firstName, lead.lastName, lead.organisation),
-      searchLinkedIn(lead.firstName, lead.lastName, lead.organisation, anthropicKey)
-    ]);
+function buildPrompt(lead, publications, linkedIn, knowledgeBase, tone, campaignContext, applicationFocus) {
+  const focusAreas = lead.focusedAreas ? lead.focusedAreas.split(';').slice(0,4).map(s => s.split('#')[0].trim()).join(', ') : 'protein characterization, biophysics';
+  const pubContext = publications.length ? publications.map(p => `- "${p.title}" (${p.journal}, ${p.date})`).join('\n') : '- No PubMed publications found; use focus areas only';
+  const linkedInContext = linkedIn.title ? `- Title: ${linkedIn.title}\n- Lab focus: ${linkedIn.lab_focus}\n- Notable: ${linkedIn.notable}` : '- LinkedIn data not found';
+  const kbContext = knowledgeBase && knowledgeBase.length ? '\n\nFIDA KNOWLEDGE BASE:\n' + knowledgeBase.map((doc,i) => `[Doc ${i+1}: ${doc.name}]\n${doc.content.substring(0,2500)}`).join('\n---\n') : '';
+  const appInfo = APPLICATION_FOCUS[applicationFocus] || APPLICATION_FOCUS.general;
+  const toneGuide = tone === 'academic' ? 'TONE - ACADEMIC: Peer scientist voice. Reference papers by name. No sales buzzwords.' : 'TONE - INDUSTRY: Results-focused. Throughput, reproducibility, time savings.';
+  const ctx = { scileads: 'Confirmed instrument users (SciLeads). Reference their work directly.', leadgeeks: 'Curated researcher list. Reference published research.', conference_attendee: 'Conference attendee. Reference recent activity.', conference_announcement: 'Fida attending conference. Offer to meet in person.', generic: 'General outreach. Frame around published research.' };
+  return `You are a B2B sales email writer for Fida Bio.
 
-    const focusAreas = lead.focusedAreas
-      ? lead.focusedAreas.split(';').slice(0, 4).map(s => s.split('#')[0].trim()).join(', ')
-      : 'surface plasmon resonance, binding assays';
+PRODUCT: ${appInfo.product}${kbContext}
 
-    const pubContext = publications.length
-      ? publications.map(p => `- "${p.title}" (${p.journal}, ${p.date})`).join('\n')
-      : '- No recent PubMed publications found; use SciLeads focus areas only';
+APPLICATION FOCUS: ${appInfo.angle}
 
-    const linkedInContext = linkedIn.title
-      ? `- Current title: ${linkedIn.title}\n- Lab focus: ${linkedIn.lab_focus}\n- Notable: ${linkedIn.notable}`
-      : '- LinkedIn data not found';
-
-    const kbContext = knowledgeBase?.length
-      ? `\n\nFIDA KNOWLEDGE BASE — application notes & brochures:\n` +
-        knowledgeBase.map((doc, i) => `[Doc ${i+1}: ${doc.name}]\n${doc.content.substring(0, 2500)}`).join('\n\n---\n\n')
-      : '';
-
-    const prompt = `You are an expert B2B sales email writer for Fida, a biotech instrument company.
-
-FIDA NEO:
-- Measures hydrodynamic radius (Rh), polydispersity, aggregation — 40nL sample, minutes
-- Cytiva/Biacore partnership: Fida Neo is the recommended companion to Biacore SPR
-- Workflow: FIDA (reagent QC) → Biacore SPR (kinetics) → FIDA (orthogonal KD verification)
-- Catches aggregation that SPR misses — "Don't waste SPR runs on bad reagents"
-- Sales rep: Mike O'Donovan${kbContext}
+${toneGuide}
+LEAD SOURCE: ${ctx[campaignContext] || ctx.generic}
+SALES REP: Mike O'Donovan, Fida Bio
 
 CONTACT:
 - Name: ${lead.firstName} ${lead.lastName}
 - Institution: ${lead.organisation}
 - Title: ${lead.jobTitle}
 - Location: ${lead.state}, ${lead.country}
-- SciLeads focus: ${focusAreas}
+- Research focus: ${focusAreas}
 
-PubMed publications:
+Publications:
 ${pubContext}
 
-LinkedIn/web:
-${linkedInContext}
+LinkedIn: ${linkedInContext}
 
-TASK: Write a 3-email cold outreach sequence.
-Rules:
-- Reference their SPECIFIC recent papers or research by name when possible
-- If knowledge base docs provided, pick the single most relevant Fida application for their work and reference it
-- Peer-to-peer tone, never salesy, scientifically credible
+Write a 3-email cold outreach sequence. Rules:
+- Reference SPECIFIC papers or research by name
+- Pick most relevant KB doc if provided
+- Apply tone and focus above
 - No placeholder text
-- Email 1 (Day 1): 5 sentences max — personalized hook from their research + Fida relevance
-- Email 2 (Day 4): 4 sentences max — specific pain point their work faces, how Fida solves it
-- Email 3 (Day 8): 3 sentences max — brief low-friction breakup / last check-in
-- Each email ends with a soft ask for a 20-min call
+- Email 1 (Day 1): 5 sentences max
+- Email 2 (Day 4): 4 sentences max
+- Email 3 (Day 8): 3 sentences max
+- Each ends with soft ask for 20-min call
 
-Respond ONLY with valid JSON, no markdown fences:
+Respond ONLY in valid JSON (no markdown):
 {"email1":{"subject":"...","body":"..."},"email2":{"subject":"...","body":"..."},"email3":{"subject":"...","body":"..."},"personalization_note":"...","matched_app":"..."}
 
-personalization_note = 1 sentence on what specific research angle was used
-matched_app = most relevant doc name from knowledge base, or "General SPR/Biacore workflow" if none`;
+matched_app = KB doc name or "General Fida Neo characterization"`;
+}
 
+app.post('/generate', async (req, res) => {
+  const { lead, anthropicKey, knowledgeBase, tone, campaignContext, applicationFocus } = req.body;
+  if (!lead || !anthropicKey) return res.status(400).json({ error: 'Missing lead or anthropicKey' });
+  try {
+    const [publications, linkedIn] = await Promise.all([searchPubMed(lead.firstName, lead.lastName, lead.organisation), searchLinkedIn(lead.firstName, lead.lastName, lead.organisation, anthropicKey)]);
+    const lowConfidence = !publications.length && !linkedIn.title;
+    const effectiveTone = tone || (((lead.email||'').includes('.edu') || (lead.email||'').includes('.ac.')) ? 'academic' : 'industry');
+    const prompt = buildPrompt(lead, publications, linkedIn, knowledgeBase, effectiveTone, campaignContext || 'scileads', applicationFocus || 'general');
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': anthropicKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1500,
-        messages: [{ role: 'user', content: prompt }]
-      })
+      headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] })
     });
-
     const data = await response.json();
     if (data.error) return res.status(500).json({ error: data.error.message });
-    const text = data.content?.[0]?.text || '';
-    const emails = JSON.parse(text.replace(/```json|```/g, '').trim());
-
-    res.json({ emails, research: { publications: publications.slice(0, 3), linkedIn } });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+    const emails = JSON.parse((data.content?.[0]?.text || '').replace(/```json|```/g, '').trim());
+    res.json({ emails, research: { publications: publications.slice(0,3), linkedIn }, lowConfidence });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── Test Anthropic key ────────────────────────────────────────────────────────
 app.post('/test-anthropic', async (req, res) => {
   const { anthropicKey } = req.body;
   try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 10, messages: [{ role: 'user', content: 'Hi' }] })
-    });
+    const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 10, messages: [{ role: 'user', content: 'Hi' }] }) });
     const d = await r.json();
     if (d.error) return res.status(401).json({ error: d.error.message });
     res.json({ ok: true });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/test-zerobounce', async (req, res) => {
+  const { zeroBounceKey } = req.body;
+  if (!zeroBounceKey) return res.status(400).json({ error: 'Missing zeroBounceKey' });
+  try {
+    const r = await fetch(`https://api.zerobounce.net/v2/getcredits?api_key=${zeroBounceKey}`);
+    const d = await r.json();
+    if (d.Credits === undefined || d.Credits < 0) return res.status(401).json({ error: 'Invalid ZeroBounce key' });
+    res.json({ ok: true, credits: d.Credits });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/verify-emails-bulk', async (req, res) => {
+  const { emails, zeroBounceKey } = req.body;
+  if (!emails?.length || !zeroBounceKey) return res.status(400).json({ error: 'Missing emails or zeroBounceKey' });
+  try {
+    const payload = { api_key: zeroBounceKey, email_batch: emails.map(email => ({ email_address: email })) };
+    const r = await fetch('https://bulkapi.zerobounce.net/v2/validatebatch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const d = await r.json();
+    if (d.errors?.length && !d.email_batch?.length) return res.status(400).json({ error: d.errors[0]?.error || 'ZeroBounce error' });
+    const verified = (d.email_batch || []).map(item => {
+      const status = item.ZB_STATUS || item.status || '';
+      let tag = 'unknown';
+      if (status === 'valid') tag = 'valid';
+      else if (status === 'catch-all') tag = 'catch-all';
+      else if (['invalid','spamtrap','abuse','do_not_mail'].includes(status)) tag = 'invalid';
+      return { email: item.email_address || item.address || '', status, tag };
+    });
+    res.json({ verified });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Fida SDR backend v2 running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Fida SDR backend v3 running on port ${PORT}`));
