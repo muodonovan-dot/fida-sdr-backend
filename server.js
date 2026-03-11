@@ -8,7 +8,6 @@ app.use(express.json({ limit: '50mb' }));
 
 app.get('/', (req, res) => res.json({ status: 'Fida AI SDR backend v3 running' }));
 
-// PubMed search
 async function searchPubMed(firstName, lastName, institution) {
   try {
     const query = encodeURIComponent(`${firstName} ${lastName}[Author] ${institution}[Affiliation]`);
@@ -23,7 +22,7 @@ async function searchPubMed(firstName, lastName, institution) {
       const pub = summaryData.result[uid];
       return { title: pub.title || '', journal: pub.fulljournalname || pub.source || '', date: pub.pubdate || '' };
     }).filter(p => p.title);
-  } catch (e) { console.error('PubMed error:', e.message); return []; }
+  } catch (e) { return []; }
 }
 
 async function searchLinkedIn(firstName, lastName, institution, anthropicKey) {
@@ -34,14 +33,13 @@ async function searchLinkedIn(firstName, lastName, institution, anthropicKey) {
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001', max_tokens: 400,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-        messages: [{ role: 'user', content: `Search for "${firstName} ${lastName}" researcher at "${institution}". Return ONLY JSON: {"title":"","lab_focus":"","notable":""}. If not found return empty strings.` }]
+        messages: [{ role: 'user', content: `Search for "${firstName} ${lastName}" at "${institution}". Return ONLY JSON: {"title":"","lab_focus":"","notable":""}. Empty strings if not found.` }]
       })
     });
     const data = await response.json();
     const textBlocks = (data.content || []).filter(b => b.type === 'text');
     if (!textBlocks.length) return {};
-    const rawText = textBlocks[textBlocks.length - 1].text;
-    const match = rawText.match(/{[\s\S]*}/);
+    const match = textBlocks[textBlocks.length - 1].text.match(/{[\s\S]*}/);
     if (!match) return {};
     return JSON.parse(match[0]);
   } catch (e) { return {}; }
@@ -52,7 +50,8 @@ const APPLICATION_FOCUS = {
   spr_biacore: { product: 'FIDA NEO: official Cytiva/Biacore companion. Use for reagent QC before SPR, then orthogonal KD verification after. Catches aggregation SPR misses.', angle: 'Position Fida NEO as the essential SPR companion. Confirm binding partners are monomeric before SPR runs. Emphasize Cytiva partnership.' },
   antibody_dev: { product: 'FIDA NEO measures Rh, polydispersity, aggregation of antibodies in 40nL under native conditions. Critical for developability screening.', angle: 'Rapid aggregation screening during developability. 40nL means screening without sacrificing precious candidate material.' },
   drug_discovery: { product: 'FIDA NEO: label-free, native-condition Rh measurement in 40nL. Detects binding-induced size changes without labels.', angle: 'Rapid target characterization and binding confirmation under native conditions. No labels, no immobilization.' },
-  structural_biology: { product: 'FIDA NEO confirms monodispersity before cryo-EM, crystallography, or NMR in 40nL.', angle: 'Pre-screening for structural biology: confirm monodispersity before committing to cryo-EM grids or crystallization.' }
+  structural_biology: { product: 'FIDA NEO confirms monodispersity before cryo-EM, crystallography, or NMR in 40nL.', angle: 'Pre-screening for structural biology: confirm monodispersity before committing to cryo-EM grids or crystallization.' },
+  de_novo_proteins: { product: 'FIDA NEO measures Rh and polydispersity of designed proteins in 40nL under native conditions. Confirms whether a computationally designed sequence folds into the intended compact structure.', angle: 'For de novo protein design, Fida Neo is the fast experimental reality-check. Reference their specific design methodology (RFdiffusion, ProteinMPNN, hallucination) and position Fida as solution-phase confirmation that the designed protein folds as intended — before investing in cryo-EM, activity assays, or crystallization.' }
 };
 
 function buildPrompt(lead, publications, linkedIn, knowledgeBase, tone, campaignContext, applicationFocus) {
@@ -62,7 +61,7 @@ function buildPrompt(lead, publications, linkedIn, knowledgeBase, tone, campaign
   const kbContext = knowledgeBase && knowledgeBase.length ? '\n\nFIDA KNOWLEDGE BASE:\n' + knowledgeBase.map((doc,i) => `[Doc ${i+1}: ${doc.name}]\n${doc.content.substring(0,2500)}`).join('\n---\n') : '';
   const appInfo = APPLICATION_FOCUS[applicationFocus] || APPLICATION_FOCUS.general;
   const toneGuide = tone === 'academic' ? 'TONE - ACADEMIC: Peer scientist voice. Reference papers by name. No sales buzzwords.' : 'TONE - INDUSTRY: Results-focused. Throughput, reproducibility, time savings.';
-  const ctx = { scileads: 'Confirmed instrument users (SciLeads). Reference their work directly.', leadgeeks: 'Curated researcher list. Reference published research.', conference_attendee: 'Conference attendee. Reference recent activity.', conference_announcement: 'Fida attending conference. Offer to meet in person.', generic: 'General outreach. Frame around published research.' };
+  const ctx = { scileads: 'SciLeads — reference their work directly.', leadgeeks: 'Curated researcher list — reference published research.', conference_attendee: 'Conference attendee — reference recent activity.', conference_announcement: 'Fida attending conference — offer to meet in person.', generic: 'General outreach — frame around published research.' };
   return `You are a B2B sales email writer for Fida Bio.
 
 PRODUCT: ${appInfo.product}${kbContext}
@@ -85,11 +84,9 @@ ${pubContext}
 
 LinkedIn: ${linkedInContext}
 
-Write a 3-email cold outreach sequence. Rules:
+Write a 3-email cold outreach sequence:
 - Reference SPECIFIC papers or research by name
-- Pick most relevant KB doc if provided
-- Apply tone and focus above
-- No placeholder text
+- Apply tone and focus above — no placeholder text
 - Email 1 (Day 1): 5 sentences max
 - Email 2 (Day 4): 4 sentences max
 - Email 3 (Day 8): 3 sentences max
