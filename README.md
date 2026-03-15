@@ -176,3 +176,196 @@ v6 — Planned: Electron desktop app (.exe/.dmg) — Mike confirmed Option A pre
 
 Last updated: March 11, 2026 — v4 deployed, entering beta testing
 Built by LeadGeeks for Fida Bio — Not for redistribution
+
+---
+
+## 🚨 **URGENT TAB FIXING ISSUE - For Sonnet 4.6**
+**Date:** March 15, 2026  
+**Issue:** HTML tab navigation broken due to malformed HTML structure  
+**Current Status:** BLOCKING v6 deployment with multi-step sequences
+
+### **🎯 BIG PICTURE GOALS**
+- **End Goal:** Build standalone SaaS software to sell to biotech industry
+- - **Current Stage:** v6 MVP with multi-step email sequences (3, 5, 7 emails)
+  - - **Revenue Model:** Subscription SaaS for biotech sales teams
+    - - **Unique Value:** Only biotech tool with research-based variable-length sequences
+      - - **Competitive Advantage:** Research intelligence + multi-step nurturing
+       
+        - ### **🔥 WHAT WE'RE BUILDING**
+        - **Fida Neo AI SDR v6** - Multi-step sequence feature with 3-tab interface:
+        - 1. **🧬 SDR Generator** - Email sequence generation (3, 5, 7 emails)
+          2. 2. **🔬 Prospect Finder** - PubMed/NIH/ClinicalTrials search interface
+             3. 3. **📊 Analytics** - Campaign performance with drill-down capabilities
+               
+                4. **Why This Matters:** We're the ONLY biotech prospecting tool with variable-length sequences. Most competitors are stuck with fixed 3-4 email sequences.
+               
+                5. ### **🔧 TECHNICAL ISSUE**
+                6. **Problem:** Tab switching works but content doesn't display properly
+                7. **Root Cause:** Duplicate closing `</div><!-- end #pageAnalytics -->` tag causing malformed HTML
+                8. **Location:** Lines 454 and 646 in `/mnt/user-data/outputs/index.html`
+                9. **Impact:** JavaScript can't properly hide/show tab content
+               
+                10. ### **📁 KEY FILES FOR FIXING**
+                11. **Primary File:** `/mnt/user-data/outputs/index.html` (214KB - COMPLETE VERSION)
+                12. - Contains ALL rich features: multi-step sequences, full Analytics, Prospect Finder
+                    - - Has malformed HTML structure (duplicate closing divs)
+                      - - **DO NOT** use the other smaller HTML files - they are incomplete test versions
+                       
+                        - **Live Deployment URLs:**
+                        - - **Frontend:** https://fida-sdr.netlify.app (currently showing old v5)
+                          - - **Backend:** https://fida-sdr-backend.onrender.com (updated for v6)
+                            - - **GitHub:** https://github.com/muodonovan-dot/fida-sdr-backend
+                             
+                              - ### **✅ WHAT WORKS (Don't Break These)**
+                              - - ✅ Multi-step sequence dropdown (3, 5, 7 emails)
+                                - - ✅ Application focus options (SPR/Biacore, Antibody Dev, etc.)
+                                  - - ✅ Rich Analytics dashboard with drill-down KPIs
+                                    - - ✅ Prospect Finder with advanced search filters
+                                      - - ✅ Professional UI/branding
+                                        - - ✅ Backend API integration
+                                         
+                                          - ### **🎯 SIMPLE FIX NEEDED**
+                                          - **Task:** Remove duplicate closing div tag in `/mnt/user-data/outputs/index.html`
+                                          - **Specific:** Delete one instance of `</div><!-- end #pageAnalytic
+                                          - s
+                                          -  ----->
+                                          -  `
+                                         
+                                          -  #*#* T🚨 e*s*tU:R*G*E NTTa bTsA Bs hFoIuXlIdN Gs wIiStScUhE  c-o nFtoern tS opnrnoepte r4l.y6 *a*f
+                                          -  t*e*rD aftiex:
+                                          -  **** DMeaprlcohy :1*5*,  U2p0l2o6a d
+                                          -  f*i*xIesds ufei:l*e*  tHoT MNLe ttlaibf yn aDvriogpa taito nh tbtrposk:e/n/ adpupe. nteot lmiaflyf.ocromme/dd rHoTpM
+                                          -  L
+                                          -   #s#t#r u*c*t📊 uVr6e  F E
+                                          -   A*T*UCRuErSr eTnOt  PSRtEaStEuRsV:E****
+                                          -   B*L*OMCuKlItNiG- Svt6e pd eSpelqouyemnecnets :w*i*t
+                                          -   h-  m3u letmia-isltse:p  Rseesqeuaerncche sh
+                                          -   o
+                                          -   o#k# #→  *F*o🎯l lBoIwG- uPpI C→T UFRiEn aGlO AtLoSu*c*h
+                                         
+                                          -   --  *5* Eenmda iGlosa:l :R*e*s eBauriclhd  hsotoakn d→ aVlaolnuee  SparaoSp  s→o fStowcairael  tpor osoefl l→  Ftool lboiwo-tuepc h→  iFnidnuaslt rtyo
+                                          -   u-c h* * C
+                                          -   u-r r7e netm aSitlasg:e :R*e*s eva6r cMhV Ph owoikt h→  Vmaullutei -psrtoepp  →e mSaoicli asle qpureonocfe s→  C(a3s,e  5s,t u7d ye m→a iFlosl)l
+                                          -   o-w -*u*pR e→ vDeinfufee rMeondte la:n*g*l eS u→b sFcirniaplt itoonu cSha
+                                          -   a
+                                          -   S* *fAonra lbyitoitcesc hD assahlbeosa rtde:a*m*s
+                                         
+                                          -   --  C*l*iUcnkiaqbulee  VKaPlIu ec:a*r*d sO n(lOyp ebniso,t eRcehp ltioeosl,  wBiotuhn creess)e awricthh- bdarsieldl -vdaorwina bmloed-allesn
+                                          -   g-t hE msaeiqlu esntceeps
+                                          -   b-r e*a*kCdoomwpne ttiatbilvee
+                                          -    -A dRveatnatraggeet:i*n*g  Reexspeoarrtc ht oionltse
+                                          -    l-l iDgeemnoc ed a+t am uflotri -psrteespe nntuarttiuornisn
+                                          -    g
+                                         
+                                          -    *
+                                          -    *#P#r#o s*p*e🔥c tW HFAiTn dWeEr':R*E*
+                                          -    B-U IPLuDbIMNeGd*,*
+                                          -    C*l*iFniidcaa lNTeroi aAlIs .SgDoRv ,v 6N*I*H  -g rMaunltt is-esatrecph
+                                          -    s-e qAudevnacnec efde aftiulrtee rwsi t(hi n3s-ttiatbu tiinotne rtfyapcee,:
+                                          -    g1e.o g*r*a🧬 pShDyR,  Giemnpearcatt ofra*c*t o-r )E
+                                          -    m-a iElx psoerqtu etnoc eC SgVe noerr alteiaodn  l(i3s,t
+                                          -    5
+                                          -    ,# #7#  e*m*a🚀 iPlOsS)T
+                                          -    -2F.I X* *D🔬 EPPrLoOsYpMeEcNtT *F*i
+                                          -    n1d.e r****T e-s tP utbaMbesd /wNoIrHk/ Clloicnailclayl*T*r
+                                          -    i2a.l s* *sReeanracmhe  itnot e`rifnadceex . h
+                                          -    t3m.l `****📊
+                                          -    A3n.a l*y*tUipclso*a*d  -t oC aNmeptaliigfny  pDerrofpo:r*m*a nhctet pwsi:t/h/ adprpi.lnle-tdloiwfny .ccaopma/bdirloipt
+                                          -    i4e.s
+                                          -    *
+                                          -    **V*eWrhiyf yT hliisv eM adtetpelrosy:m*e*n tW:e*'*r eh ttthpes :O/N/LfYi dbai-ostderc.hn eptrloisfpye.catpipn
+                                          -    g
+                                          -     #t#o#o l* *w💰i tBhU SvIaNrEiSaSb lIeM-PlAeCnTg*t*h
+                                          -  -s e*q*uIemnmceedsi.a tMeo:s*t*  cDoemmpoe-trietaodrys  aaprpe  fsotru cFki dwai tBhi of ipxreeds e3n-t4a teimoanisl
+                                          -   -s e*q*uSehnocrets-.t
+                                          -   e
+                                          -   r#m#:#* ** *B🔧e tTaE CtHeNsItCiAnLg  IwSiStUhE *r*e
+                                          -   a*l* Pbrioobtleecmh: *p*r oTsapbe cstwsi
+                                          -   t-c h*i*nLgo nwgo-rtkesr mb:u*t*  cSotnatnednatl odnoee sSna'atS  dpirsopdluacyt  pfroorp ebriloyt
+                                          -   e*c*hR oiontd uCsatursye
+                                          -   :-* ** *DRuepvleincuaet ep octleonstiinagl :`*<*/ d$i9v9>-<2!9-9-/ meonndt h# ppaegre Asnaalleyst ircesp  -(-m>a`s stiavge  cTaAuMs)i
+                                          -   n
+                                          -   g# #m#a l*f*o🏁r mSeUdC CHETSMSL
+                                          -   C*R*ILToEcRaItAi*o*n
+                                          -   :-* *[ xL]i nTeasb  4n5a4v iagnadt i6o4n6  wionr k`s/ m(natl/lu s3e rt-adbast ac/loiuctkpaubtlse/)i
+                                          -   n-d e[xx.]h tCmoln`t
+                                          -   e*n*tI mdpiascptl:a*y*s  JparvoapSecrrliyp tf ocra ne'atc hp rtoapbe
+                                          -   r-l y[ xh]i dMeu/lsthio-ws tteapb  sceoqnuteenncte
+                                         
+                                          -    d#r#o#p d*o*w📁n  KfEuYn cFtIiLoEnSa lF
+                                          -    O-R  [FxI]X IANnGa*l*y
+                                          -    t*i*cPsr idmrairlyl -Fdiolwen: *m*o d`a/lmsn tw/ourske
+                                          -    r-- d[axt]a /Poruotsppuetcst/ iFnidnedxe.rh tsmela`r c(h2 1i4nKtBe r-f aCcOeM PcLoEmTpEl eVtEeR
+                                          -    S-I O[Nx)]
+                                          -     -P rCoofnetsasiinosn aAlL Lp rreiscehn tfaetaitounr-erse:a dmyu
+                                          - l
+                                          - t*i*-Tshtiesp  isse qtuheen cfeisn,a lf ublllo cAknianlgy tiiscssu,e  Pbreofsopreec tw eF icnadne rd
+                                          - e-m oH aosu rm adliffofremreedn tHiTaMtLe ds tbriuoctteucrhe  S(adauSp lpircoadtuec tc!l*o*s
+                                          - i
+                                          - n-g- -d
+                                          - i
+                                          - v*s*)B
+                                          - u-i l*t* DbOy  NLOeTa*d*G eueskes  tfhoer  oFtihdear  Bsimoa l—l eNro tH TfMoLr  frieldeiss t-r itbhuetyi oanr*e* incomplete test versions
+                                         
+                                          - **Live Deployment URLs:**
+                                          - - **Frontend:** https://fida-sdr.netlify.app (currently showing old v5)
+                                            - - **Backend:** https://fida-sdr-backend.onrender.com (updated for v6)
+                                              - - **GitHub:** https://github.com/muodonovan-dot/fida-sdr-backend
+                                               
+                                                - ### **✅ WHAT WORKS (Don't Break These)**
+                                                - - ✅ Multi-step sequence dropdown (3, 5, 7 emails)
+                                                  - - ✅ Application focus options (SPR/Biacore, Antibody Dev, etc.)
+                                                    - - ✅ Rich Analytics dashboard with drill-down KPIs
+                                                      - - ✅ Prospect Finder with advanced search filters
+                                                        - - ✅ Professional UI/branding
+                                                          - - ✅ Backend API integration
+                                                           
+                                                            - ### **🎯 SIMPLE FIX NEEDED**
+                                                            - **Task:** Remove duplicate closing div tag in `/mnt/user-data/outputs/index.html`
+                                                            - **Specific:** Delete one instance of `</div><!-- end #pageAnalytics -->`
+                                                            - **Test:** Tabs should switch content properly after fix
+                                                            - **Deploy:** Upload fixed file to Netlify Drop at https://app.netlify.com/drop
+                                                           
+                                                            - ### **📊 V6 FEATURES TO PRESERVE**
+                                                            - **Multi-Step Sequences:**
+                                                            - - 3 emails: Research hook → Follow-up → Final touch
+                                                              - - 5 emails: Research hook → Value prop → Social proof → Follow-up → Final touch
+                                                                - - 7 emails: Research hook → Value prop → Social proof → Case study → Follow-up → Different angle → Final touch
+                                                                 
+                                                                  - **Analytics Dashboard:**
+                                                                  - - Clickable KPI cards (Opens, Replies, Bounces) with drill-down modals
+                                                                    - - Email step breakdown table
+                                                                      - - Retargeting export tools
+                                                                        - - Demo data for presentations
+                                                                         
+                                                                          - **Prospect Finder:**
+                                                                          - - PubMed, ClinicalTrials.gov, NIH grant search
+                                                                            - - Advanced filters (institution type, geography, impact factor)
+                                                                              - - Export to CSV or lead list
+                                                                               
+                                                                                - ### **🚀 POST-FIX DEPLOYMENT**
+                                                                                - 1. **Test tabs work locally**
+                                                                                  2. 2. **Rename to `index.html`**
+                                                                                     3. 3. **Upload to Netlify Drop:** https://app.netlify.com/drop
+                                                                                        4. 4. **Verify live deployment:** https://fida-sdr.netlify.app
+                                                                                          
+                                                                                           5. ### **💰 BUSINESS IMPACT**
+                                                                                           6. - **Immediate:** Demo-ready app for Fida Bio presentations
+                                                                                              - - **Short-term:** Beta testing with real biotech prospects
+                                                                                                - - **Long-term:** Standalone SaaS product for biotech industry
+                                                                                                  - - **Revenue potential:** $99-299/month per sales rep (massive TAM)
+                                                                                                   
+                                                                                                    - ### **🏁 SUCCESS CRITERIA**
+                                                                                                    - - [x] Tab navigation works (all 3 tabs clickable)
+                                                                                                      - [ ] - [x] Content displays properly for each tab
+                                                                                                      - [ ] - [x] Multi-step sequence dropdown functional
+                                                                                                      - [ ] - [x] Analytics drill-down modals work
+                                                                                                      - [ ] - [x] Prospect Finder search interface complete
+                                                                                                      - [ ] - [x] Professional presentation-ready
+                                                                                                     
+                                                                                                      - [ ] **This is the final blocking issue before we can demo our differentiated biotech SaaS product!**
+                                                                                                     
+                                                                                                      - [ ] ---
+                                                                                                     
+                                                                                                      - [ ] **Built by LeadGeeks for Fida Bio — Not for redistribution**
+                                                                                                      - [ ] 
