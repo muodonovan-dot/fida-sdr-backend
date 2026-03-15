@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Fida Neo AI SDR — LeadGeeks</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://unpkg.com/docx@9.5.0/build/index.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --orange:#EF4D05;--orange-light:#FF8210;--navy:#171151;--navy-light:#1e1872;
+  --bg:#0a0912;--bg2:#110f1f;--bg3:#1a1730;--border:#2a2650;
+  --text:#e8e6f0;--muted:#7a788a;--green:#00c87a;--red:#ff4444;--yellow:#ffb800;
+}
+body{background:var(--bg);color:var(--text);font-family:'Montserrat',sans-serif;min-height:100vh}
+/* NAV */
+nav{background:var(--navy);border-bottom:2px solid var(--orange);padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:68px;position:sticky;top:0;z-index:100;box-shadow:0 2px 24px rgba(0,0,0,.5)}
+.nav-brand{display:flex;align-items:center;gap:0}
+.nav-logo-wrap{display:flex;align-items:center;padding:0 16px 0 0;border-right:1px solid rgba(255,255,255,.12)}
+.nav-logo-wrap img{height:46px;display:block}
+.nav-app-info{display:flex;flex-direction:column;padding:0 20px;border-right:1px solid rgba(255,255,255,.12)}
+.nav-title{font-family:'Outfit',sans-serif;font-weight:800;font-size:1rem;color:#fff;letter-spacing:.01em}
+.nav-subtitle{font-size:.63rem;color:rgba(255,130,16,.75);font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-top:1px}
+.nav-powered{display:flex;align-items:center;gap:8px;padding:0 0 0 20px}
+.nav-powered-label{font-size:.62rem;color:rgba(255,255,255,.3);font-weight:500;text-transform:uppercase;letter-spacing:.06em}
+.nav-powered-logo img{height:24px;display:block}
+#pushModal input:focus,#pushModal select:focus{outline:none;border-color:#EF4D05 !important}
+.kpi-clickable{cursor:pointer;transition:border-color .2s,transform .1s}
+.kpi-clickable:hover{border-color:#EF4D05 !important;transform:translateY(-2px)}
+.kpi-clickable:active{transform:translateY(0)}
+.nav-right{display:flex;align-items:center;gap:20px}
+.nav-stat{text-align:center}
+.nav-stat-val{font-family:'Outfit',sans-serif;font-size:1.1rem;font-weight:700;color:var(--orange-light)}
+.nav-stat-val.ok{color:var(--green)}.nav-stat-val.err{color:var(--red)}
+.nav-stat-label{font-size:.62rem;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.06em}
+.nav-badge{background:rgba(239,77,5,.15);border:1px solid rgba(239,77,5,.4);color:var(--orange-light);font-size:.68rem;font-weight:600;padding:4px 10px;border-radius:20px}
+/* Add new styles for tabs */
+.tab-btn{background:none;border:none;color:var(--muted);font-family:'Montserrat',sans-serif;font-size:.82rem;font-weight:600;padding:14px 20px;cursor:pointer;border-bottom:2px solid transparent;transition:.2s;letter-spacing:.02em}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--orange-light);border-bottom-color:var(--orange-light)}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">
+    <div class="nav-logo-wrap">
+      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAAA8CAYAAAA6/NlyAAAACXBIWXMAAAsTAAALEwEAmpwYAAAGF0lEQVR4nO2baWgcVRzHf29md5NsEptqbKuttbW01dYWL6xae+KJVsUL8UMFL7xQwQsVFBUVP6ji9UEFBbGKVxXxQFHxqqhVa09rbU9rTdPm2mT3mJk3b968eXPMbGabszsz2Q9+yezMe+/9/3/v/5/3fsV0Op1OF2b80wEQQjDGuLKu60Kn0+lqU9JXCFEw0Ov1WrlcJhQKEQqFsCwLIQTgV4p0Oh0Oh2k0GjQaDerFMUQZcDgU="/>
+    </div>
+    <div class="nav-app-info">
+      <div class="nav-title">Fida Neo AI SDR</div>
+      <div class="nav-subtitle">BUILT FOR FIDA BIO</div>
+    </div>
+    <div class="nav-powered">
+      <div class="nav-powered-label">POWERED BY</div>
+      <div class="nav-powered-logo"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAYAAAByDd+UAAAACXBIWXMAAAsTAAALEwEAmpwYAAACl0lEQVR4nM2We0hTURzHP+cmtnnNdLZcK9M0NbU0C4sKLXrQg6Io6P2gf4oeEERBQf1RERX0B0FvKOhFD3pQWFBBGZZlpZaV5Ss0S9Oc5XTOed9z7u3c++7OdDeGGfSDA5d77+85v9/v/M7lIsRQhI8oWp2TQwgB47xfP8QQBEFoHHIZQgheXyAr7NgCgtmtjCnAbGHRHJaXF1FZ9Q8Z6alEhYfyw8CgIgTBYDBgMpnYtWMrL14+Iyk5hfLyCsIjIjl08JDt/eTkVLp6+nj37h2Dg4NER0fT09ODyWxGVVVSUlJ4/qKQ5JRU3r/vJCYmhrKysv/BLpef8ODBgwghaWhoUDabzRgMBubMmTNsv6p8/oyZs2dhs1kRMhw8dJiZyckI8RJZljl8+AiFhYXDwOPGjWPZsmXMnTOHiRMnUlT0gU+NTQQCANXVb0lNTaWvr+/nih+VPxrn4+5D9eFiIqOisVotyLKMa/lyRIeD6rfe4Z8ykU1yZcqU1K+lpV/o6u7hycOHBIPWzRWvqfnI3Llz2bp1KxMmTODJkydoajCYPn3aoKp+1bdvb0dIKzU1tbgLCujv7x8G1hR9+PDh3+P1kWGsVitr1qyhvr6e4o8faR4YoLCoAHdyMhXl5WzZspWZM2cSGhqKqmrk5uYiScPtEOlEhL6ZM7cPw7AsS25ODrKs0NzSgsVioaGhgcDAQGzdOtJHjMA9erQNy3FshqKQFJrG4sSJJCYlsWnLFtasXUttbS0mUyCyoqDpOuHhYVy4eJHpU6dSVf2OpcmToKOjE51T+o7Bb3+y7OQJHPHjqaqsZM3atSilP/eU7zv/t3FZ/NXFhdx/8IC+vj4yMjKIi4uztSW9BLRDTyfbtO/AQq8uJCTkwsIFC1CUn7F+pMhyG0k2c+bMYfny5ZSWljJq1Chqa2vRLbhKSkpYtnQpLpfLPrAcq+Vn5i9a+PHGjRu8vPwSlyZy9qT+Dtp4sYUOk/+ZiIkZObL/A4cPHyYmJoYHhYVs27aNzs5Otm/fzsaNG+kZqt0Gxm+U3YZvbGqEUm9oXy8VnJv9rKmx8UdNTQ2qrmOxWJgZhd1qCuPHj6ehoYHk5GS+dnTQ9K+fhYsW4ZJCqHj3FrfLxbaNm1i1eg0zLJKKu67exKgwF01N//j85Stvrl2nVZJpbm7G6/WyeOFCuru7qaqsxPXb8cKXZZltW7dSWVVF3Y8mFs6fT3KIi4+VlQQH+9p3nnbD7vkLJhAMStUF+XlPQ3Cl5qJL2m8z4XMlj3yutYg5s2YhmVs7fFR8rsHhYMv69ZeK8/OZuXI1F8+eIzNrOdm7d5O1axcFJ09y+8YNzp47x5QpJ/C4I7j0+DIzZs9l+uJl3Lt+g4vHj3Hm1ClOnj7N0qVL+QMfwhYY7mSJGQAAAABJRU5ErkJggg=="/>LeadGeeks</div>
+    </div>
+  </div>
+  <div class="nav-right">
+    <div class="nav-stat"><div class="nav-stat-val" id="navLeadCount">0</div><div class="nav-stat-label">LEADS</div></div>
+    <div class="nav-stat"><div class="nav-stat-val" id="navGenCount">0</div><div class="nav-stat-label">GENERATED</div></div>
+    <div class="nav-stat"><div class="nav-stat-val" id="navVerCount">0</div><div class="nav-stat-label">VERIFIED</div></div>
+    <div class="nav-badge">⚠ Setup Required</div>
+  </div>
+</nav>
+
+<div id="tabNav" style="background:var(--navy);border-bottom:1px solid var(--border);display:flex;padding:0 32px">
+  <button class="tab-btn active" id="tabSdr" onclick="switchTab('sdr')">🧬 SDR Generator</button>
+  <button class="tab-btn" id="tabProspects" onclick="switchTab('prospects')">🔬 Prospect Finder</button>
+  <button class="tab-btn" id="tabAnalytics" onclick="switchTab('analytics')">📊 Campaign Analytics</button>
+</div>
+
+<div id="heroBlock">
+<div class="hero">
+  <h1>AI-Powered <span class="accent">Fida NEO</span> Outreach</h1>
+  <div class="hero-sub">PERSONALIZED 3-EMAIL SEQUENCES • POWERED BY RESEARCH INTELLIGENCE • BUILT FOR FIDA BIO</div>
+</div>
+</div>
+
+<div id="pageSdr">
+<div class="main">
+
+  <div class="card">
+    <div class="card-header">
+      <div class="step-badge">1</div>
+      <div class="card-title">API Keys & Settings</div>
+      <div class="card-tag req">Required</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:16px">
+      <div>
+        <div class="field-label">Anthropic API Key</div>
+        <div style="display:flex;gap:8px">
+          <input type="password" id="anthropicKey" placeholder="sk-ant-api03-..." style="flex:1" autocomplete="off"/>
+          <button class="btn btn-ghost btn-sm" onclick="testKey()">Test</button>
+        </div>
+        <div class="field-note">Get from <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></div>
+      </div>
+      <div>
+        <div class="field-label">Zerobounce API Key <span style="font-weight:400;color:var(--muted)">(optional)</span></div>
+        <div style="display:flex;gap:8px">
+          <input type="password" id="zerobounceKey" placeholder="For email verification" autocomplete="off" style="flex:1"/>
+          <button class="btn btn-ghost btn-sm" onclick="testZerobounce()">Test</button>
+        </div>
+        <div class="field-note">Get from <a href="https://www.zerobounce.net" target="_blank">zerobounce.net</a></div>
+      </div>
+    </div>
+    <div>
+      <div class="field-label">Instantly.ai API Key <span style="font-weight:400;color:var(--muted)">(optional — for direct push & analytics)</span></div>
+      <div style="display:flex;gap:8px;max-width:600px">
+        <input type="password" id="instantlyKey" placeholder="For pushing leads + campaign analytics" autocomplete="off"/>
+        <button class="btn btn-ghost btn-sm" onclick="testInstantly()">Test</button>
+      </div>
+    </div>
+    <div style="font-size:.7rem;color:var(--muted);margin-top:8px;display:flex;align-items:center;gap:6px">🔒 Keys stored in your browser only — never logged server-side</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px">
+      <div>
+        <div class="field-label">Application Focus ⚡ SHAPES EMAIL ANGLE</div>
+        <select id="applicationFocus" style="width:100%" onchange="updateFocusInfo()">
+          <option value="general" selected>General Protein Research</option>
+          <option value="spr_biacore">SPR / Biacore Comparison</option>
+          <option value="antibody_dev">Antibody Development</option>
+          <option value="drug_discovery">Drug Discovery / FBDD</option>
+          <option value="structural_biology">Structural Biology</option>
+          <option value="de_novo_proteins">De Novo Protein Design</option>
+        </select>
+        <div id="focusInfo" style="font-size:.72rem;color:var(--muted);margin-top:4px">Emails focus on native-state Rh, aggregation, and polydispersity — connects Fida Neo to their published protein work.</div>
+      </div>
+      <div>
+        <div class="field-label">Campaign Context</div>
+        <select id="campaignContext" style="width:100%">
+          <option value="scileads">SciLeads</option>
+          <option value="biointelli">BioIntelli</option>
+          <option value="grantlist">Grant List</option>
+          <option value="linkedin">LinkedIn Prospecting</option>
+          <option value="conference">Conference List</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:20px;margin-top:16px">
+      <div>
+        <div class="field-label">Daily Send Cap (domain protection)</div>
+        <select id="dailyCap" onchange="updateCap()" style="flex:1">
+          <option value="20">20/day — new account</option>
+          <option value="30" selected>30/day — recommended</option>
+          <option value="50">50/day</option>
+          <option value="75">75/day — warmed</option>
+          <option value="100">100/day — warmed</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Demo data for Analytics -->
+  <script>
+    const DEMO_DATASETS = {
+      __demo_spr__: {
+        stats: { total_prospects: 312, emails_sent: 305, emails_opened: 178, emails_replied: 34, emails_bounced: 7 },
+        steps: [
+          { subject: 'Your SPR work on {{matched_app}} — quick question', emails_sent: 305, emails_opened: 178, emails_replied: 21 },
+          { subject: 'RE: Following up on Fida Neo vs Biacore', emails_sent: 284, emails_opened: 131, emails_replied: 9 },
+          { subject: 'One last thought on hydrodynamic sizing', emails_sent: 255, emails_opened: 97, emails_replied: 4 }
+        ]
+      },
+      __demo_antibody__: {
+        stats: { total_prospects: 248, emails_sent: 241, emails_opened: 142, emails_replied: 28, emails_bounced: 5 },
+        steps: [
+          { subject: 'Your antibody characterization work — sizing question', emails_sent: 241, emails_opened: 142, emails_replied: 19 },
+          { subject: 'How Fida Neo compares to Biacore for mAb work', emails_sent: 222, emails_opened: 104, emails_replied: 7 },
+          { subject: 'One more thought on aggregation detection', emails_sent: 198, emails_opened: 78, emails_replied: 2 }
+        ]
+      }
+    };
+  </script>
+
+</div>
+</div>
+
+<!-- Analytics Tab -->
+<div id="pageAnalytics" style="display:none">
+<div class="main" style="max-width:1100px">
+  <div class="card">
+    <div class="card-header">
+      <div class="step-badge">📊</div>
+      <div class="card-title">Campaign Analytics</div>
+      <div class="card-tag opt">Requires Instantly.ai API key</div>
+    </div>
+    <div class="grid2">
+      <div>
+        <div class="field-label">Campaign</div>
+        <div style="display:flex;gap:10px">
+          <select id="analyticsCampaignSelect" style="flex:1" onchange="onCampaignSelectChange(this.value)">
+            <option value="">— Select a campaign —</option>
+            <option value="__demo_spr__">🎭 DEMO: SPR/Biacore Outreach — Q1 2025</option>
+            <option value="__demo_antibody__">🎭 DEMO: Antibody Dev Campaign — Q1 2025</option>
+            <option value="__demo_drug__">🎭 DEMO: Drug Discovery Campaign — Q2 2025</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" onclick="loadCampaigns()">🔄 Refresh</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:flex-end">
+        <button class="btn btn-primary" onclick="loadAnalytics()" style="width:100%" id="loadAnalyticsBtn">📊 Load Analytics</button>
+      </div>
+    </div>
+    <div id="analyticsMsg" style="font-size:.78rem;color:var(--muted);margin-top:10px"></div>
+    <div id="demoBadge" style="display:none;margin-top:10px;padding:8px 14px;background:rgba(239,77,5,.12);border:1px solid rgba(239,77,5,.3);border-radius:8px;font-size:.78rem;color:var(--orange-light)">
+      🎭 <strong>Demo Mode</strong> — Showing sample data for Fida Bio presentation. Real campaigns load when API key is connected.
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Prospect Finder Tab -->
+<div id="pageProspects" style="display:none">
+<div class="main" style="max-width:1100px">
+  <div class="card">
+    <div class="card-header">
+      <div class="step-badge">🔬</div>
+      <div class="card-title">Prospect Finder</div>
+      <div class="card-tag opt">Beta — PubMed + ClinicalTrials + NIH Grants</div>
+    </div>
+    <p style="font-size:.82rem;color:var(--muted);margin:0 0 18px">Search across PubMed publications, active clinical trials, and NIH grant awards to find researchers actively working in your target area. Inspired by SciLeads.</p>
+    
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div>
+        <div class="field-label">Search Source</div>
+        <select id="prospectSource" style="width:100%" onchange="updateProspectSourceUI()">
+          <option value="pubmed">📄 PubMed Publications</option>
+          <option value="clinicaltrials">🏥 ClinicalTrials.gov</option>
+          <option value="nihgrants">💰 NIH Grant Awards</option>
+        </select>
+      </div>
+      <div>
+        <div class="field-label">Research Area / Keywords</div>
+        <input type="text" id="prospectKeywords" placeholder="e.g. protein interaction kinetics, SPR, Biacore, biophysics" style="width:100%"/>
+      </div>
+    </div>
+    
+    <div style="display:flex;gap:12px;align-items:center">
+      <button class="btn btn-primary" onclick="runProspectSearch()" style="min-width:180px">🔍 Search Prospects</button>
+      <button class="btn btn-ghost btn-sm" onclick="clearProspectFilters()">✕ Clear Filters</button>
+      <div id="prospectSearchMsg" style="font-size:.78rem;color:var(--muted)"></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+// Tab switching
+function switchTab(tab) {
+  document.getElementById('pageSdr').style.display = tab === 'sdr' ? 'block' : 'none';
+  document.getElementById('pageProspects').style.display = tab === 'prospects' ? 'block' : 'none';
+  document.getElementById('pageAnalytics').style.display = tab === 'analytics' ? 'block' : 'none';
+  document.getElementById('heroBlock').style.display = tab === 'sdr' ? 'block' : 'none';
+  document.getElementById('tabSdr').className = 'tab-btn' + (tab === 'sdr' ? ' active' : '');
+  document.getElementById('tabProspects').className = 'tab-btn' + (tab === 'prospects' ? ' active' : '');
+  document.getElementById('tabAnalytics').className = 'tab-btn' + (tab === 'analytics' ? ' active' : '');
+  if (tab === 'analytics') loadCampaigns();
+}
+
+// Demo data functions
+function onCampaignSelectChange(val) {
+  const demoBadge = document.getElementById('demoBadge');
+  const btn = document.getElementById('loadAnalyticsBtn');
+  if (val && val.startsWith('__demo_')) {
+    demoBadge.style.display = 'block';
+    btn.textContent = '🎭 Load Demo Data';
+    btn.style.background = 'var(--orange)';
+  } else {
+    demoBadge.style.display = 'none';
+    btn.textContent = '📊 Load Analytics';
+    btn.style.background = '';
+  }
+}
+
+function loadAnalytics() {
+  const campId = document.getElementById('analyticsCampaignSelect').value;
+  if (campId && campId.startsWith('__demo_')) {
+    const dataset = DEMO_DATASETS[campId];
+    if (dataset) {
+      document.getElementById('analyticsMsg').innerHTML = '<span style="color:var(--green)">✓ Demo data loaded</span>';
+      alert('Demo analytics loaded successfully!\nIn the full version, you would see:\n• Campaign KPIs\n• Open/Reply rates\n• Lead drilldown\n• Reply sentiment triage');
+    }
+    return;
+  }
+  document.getElementById('analyticsMsg').innerHTML = '<span style="color:var(--yellow)">⚠ Add your Instantly.ai API key first.</span>';
+}
+
+function loadCampaigns() {
+  // Stub function for loading campaigns
+}
+
+function runProspectSearch() {
+  const source = document.getElementById('prospectSource').value;
+  const keywords = document.getElementById('prospectKeywords').value;
+  document.getElementById('prospectSearchMsg').innerHTML = '<span style="color:var(--green)">✓ Search functionality will be implemented in Phase 1</span>';
+}
+
+function updateProspectSourceUI() {
+  // Stub for UI updates
+}
+
+function clearProspectFilters() {
+  document.getElementById('prospectKeywords').value = '';
+  document.getElementById('prospectSearchMsg').textContent = '';
+}
+
+// Placeholder functions
+function testKey() { alert('Key test functionality to be implemented'); }
+function testZerobounce() { alert('Zerobounce test to be implemented'); }
+function testInstantly() { alert('Instantly test to be implemented'); }
+function updateFocusInfo() { /* stub */ }
+function updateCap() { /* stub */ }
+</script>
+
+</body>
+</html>
