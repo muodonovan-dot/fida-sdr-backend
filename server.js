@@ -3,6 +3,55 @@ const cors = require('cors');
 const fetch = require('node-fetch');
 
 const app = express();
+
+// Supabase client for resource lookups
+const SUPABASE_URL = 'https://cqsdsztzyvxtnzrruxeb.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_oWLb_blZHL_rayCldsPfMw_OoQs0HMR';
+
+async function getRelevantResources(applicationFocus, researchContext) {
+  // Map application focus to resource keywords
+  const keywordMap = {
+    spr_biacore:        ['biacore','spr','kinetics','binding affinity'],
+    antibody_dev:       ['antibody','aggregation','developability'],
+    drug_discovery:     ['small molecule','drug discovery','fragment','binding'],
+    structural_biology: ['structural','cryo','crystallography','monodispersity'],
+    de_novo_proteins:   ['de novo','protein design','folding'],
+    general:            ['protein','characterization','quality']
+  };
+
+  const keywords = keywordMap[applicationFocus] || keywordMap.general;
+  const matchedApp = researchContext?.application_match;
+  const extraKeywords = matchedApp ? (keywordMap[matchedApp] || []) : [];
+  const allKeywords = [...new Set([...keywords, ...extraKeywords])];
+
+  // Prefer Application Notes and Posters for cold email links
+  const preferredTypes = ['Application Notes', 'Posters', 'Brochures', 'Tech Notes', 'White Papers'];
+
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/fida_resources?select=type,title,url&order=created_at.asc`, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+    });
+    const all = await resp.json();
+    
+    // Score each resource
+    const scored = all.map(r => {
+      const text = (r.title + ' ' + r.url).toLowerCase();
+      const keywordScore = allKeywords.filter(kw => text.includes(kw)).length;
+      const typeBonus = preferredTypes.includes(r.type) ? 2 : 0;
+      return { ...r, score: keywordScore + typeBonus };
+    });
+
+    // Return top 5 most relevant
+    return scored
+      .filter(r => r.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5)
+      .map(r => `[${r.type}] ${r.title} — ${r.url}`);
+  } catch(e) {
+    console.warn('Resource lookup failed:', e.message);
+    return [];
+  }
+}
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
@@ -165,8 +214,16 @@ Return ONLY valid JSON, no markdown.`;
 
   const emailCount = Math.min(Math.max(sequenceLength, 3), 7);
 
+  // Fetch relevant Fida resources from Supabase
+  const relevantResources = await getRelevantResources(applicationFocus, researchContext);
+  const resourcesText = relevantResources.length > 0
+    ? `\nRELEVANT FIDA RESOURCES (use the most appropriate link in one of the emails — hyperlink it naturally):\n${relevantResources.join('\n')}`
+    : '';
+
   // Generate the email sequence
   const emailPrompt = `You are an expert biotech sales email writer for Fida Bio, selling the Fida Neo instrument.
+IMPORTANT RULE: If you include a resource link in an email, embed it naturally as a hyperlink in the body text — do NOT add it as a bare URL at the end. Example: "I thought you might find <a href='URL'>this application note on SPR companion workflows</a> relevant to your work."
+${resourcesText}
 
 LEAD INFORMATION:
 Name: ${lead.firstName} ${lead.lastName}
