@@ -107,6 +107,83 @@ app.post('/verify-emails-bulk', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── Test Instantly key ──────────────────────────────────────────────────────
+app.post('/test-instantly', async (req, res) => {
+  const { instantlyKey } = req.body;
+  if (!instantlyKey) return res.status(400).json({ ok: false, error: 'Missing key' });
+  try {
+    const r = await fetch('https://api.instantly.ai/api/v2/campaigns?limit=1', {
+      headers: { 'Authorization': 'Bearer ' + instantlyKey }
+    });
+    const d = await r.json();
+    if (r.ok) res.json({ ok: true, message: 'Instantly V2 connected' });
+    else res.json({ ok: false, error: d.error || d.message || 'Invalid key' });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── List Instantly accounts ──────────────────────────────────────────────────
+app.get('/instantly-accounts', async (req, res) => {
+  const key = req.headers['x-instantly-key'];
+  if (!key) return res.status(400).json({ error: 'Missing key' });
+  try {
+    const r = await fetch('https://api.instantly.ai/api/v2/accounts?limit=100', {
+      headers: { 'Authorization': 'Bearer ' + key }
+    });
+    const d = await r.json();
+    res.json(d);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── List Instantly campaigns ─────────────────────────────────────────────────
+app.get('/instantly-campaigns', async (req, res) => {
+  const key = req.headers['x-instantly-key'];
+  if (!key) return res.status(400).json({ error: 'Missing key' });
+  try {
+    const r = await fetch('https://api.instantly.ai/api/v2/campaigns?limit=100', {
+      headers: { 'Authorization': 'Bearer ' + key }
+    });
+    const d = await r.json();
+    res.json(d);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Create Instantly campaign + push leads ───────────────────────────────────
+app.post('/instantly-push', async (req, res) => {
+  const { instantlyKey, campaign, leads } = req.body;
+  if (!instantlyKey) return res.status(400).json({ error: 'Missing key' });
+  try {
+    // Create campaign
+    const campResp = await fetch('https://api.instantly.ai/api/v2/campaigns', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + instantlyKey },
+      body: JSON.stringify(campaign)
+    });
+    const campData = await campResp.json();
+    if (!campResp.ok) return res.status(campResp.status).json({ error: campData.error || 'Campaign creation failed' });
+    
+    const campaignId = campData.id;
+    
+    // Push leads
+    let pushed = 0, failed = 0;
+    for (const lead of leads) {
+      const lr = await fetch('https://api.instantly.ai/api/v2/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + instantlyKey },
+        body: JSON.stringify({ ...lead, campaign_id: campaignId })
+      });
+      if (lr.ok) pushed++; else failed++;
+    }
+    
+    // Activate
+    await fetch(`https://api.instantly.ai/api/v2/campaigns/${campaignId}/activate`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + instantlyKey }
+    });
+    
+    res.json({ ok: true, campaignId, pushed, failed });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── Claude proxy — for AI Auto-Discover and other frontend Claude calls ──────
 app.post('/claude-proxy', async (req, res) => {
   const { apiKey, prompt, maxTokens = 800 } = req.body;
