@@ -365,4 +365,19 @@ Return ONLY valid JSON in this exact format:
   }
 });
 
+// NIH Reporter proxy (avoids CORS/extension blocking on client side)
+app.post('/nih-grants-search', async (req, res) => {
+  try {
+    const response = await fetch('https://api.reporter.nih.gov/v2/projects/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req.body)
+    });
+    const data = await response.json();
+    res.json(data);
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.listen(PORT, () => console.log(`Fida SDR backend running on port ${PORT}`));
