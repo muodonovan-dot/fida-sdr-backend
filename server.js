@@ -393,6 +393,48 @@ app.post('/nih-grants-search', async (req, res) => {
   }
 });
 
+
+// ── NIH PI direct lookup — gets phone, email, department ─────────────────────
+app.post('/lookup-pi', async (req, res) => {
+  const { firstName, lastName, organisation } = req.body;
+  if (!firstName || !lastName) return res.status(400).json({ error: 'Missing name' });
+  
+  try {
+    // Search NIH for this PI specifically
+    const resp = await fetch('https://api.reporter.nih.gov/v2/projects/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        criteria: { pi_names: [{ first_name: firstName, last_name: lastName }] },
+        offset: 0, limit: 5,
+        fields: ['principal_investigators', 'organization', 'contact_pi_name']
+      })
+    });
+    const data = await resp.json();
+    const grants = data.results || [];
+    if (!grants.length) return res.json({ found: false });
+    
+    // Get the most recent grant's PI info
+    const recent = grants.sort((a,b) => (b.fiscal_year||0) - (a.fiscal_year||0))[0];
+    const pi = recent?.principal_investigators?.[0] || {};
+    const org = recent?.organization || {};
+    
+    return res.json({
+      found: true,
+      phone: pi.contact_telephone || pi.phone || '',
+      email: pi.contact_email || pi.email || '',
+      title: pi.title || '',
+      orgName: org.org_name || '',
+      orgCity: org.org_city || '',
+      orgState: org.org_state || '',
+      orgZip: org.org_zipcode || '',
+      department: org.department || '',
+    });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.listen(PORT, () => console.log(`Fida SDR backend running on port ${PORT}`));
 
 // ── Google Custom Search — LinkedIn finder + location validator ──────────────
@@ -637,6 +679,25 @@ app.post('/enrich-lead', async (req, res) => {
           const recentGrant = finalGrants.sort((a,b) => (b.fiscal_year||0) - (a.fiscal_year||0))[0];
           const org = recentGrant?.organization;
 
+          const piInfo = recentGrant?.principal_investigators?.[0] || null;
+          
+          // Extract phone + department from PI profile
+          // NIH stores contact info in the PI object
+          const piPhone = piInfo?.['contact_telephone'] || piInfo?.phone || 
+                         piInfo?.telephone || '';
+          const piEmail = piInfo?.['contact_email'] || piInfo?.email || '';
+          const piTitle = piInfo?.title || piInfo?.pi_title || '';
+          
+          // Try to get phone from a direct PI lookup if we have their profile ID
+          let phone = piPhone;
+          let department = '';
+          let labWebsite = '';
+          
+          // Parse department from org_name (often contains dept info)
+          const orgNameFull = org?.org_name || '';
+          const deptMatch = orgNameFull.match(/(?:Department|Dept|Division|School|College|Center|Institute)\s+(?:of\s+)?([^,;|]+)/i);
+          if (deptMatch) department = deptMatch[0].trim();
+
           results.nih = {
             grantCount: finalGrants.length,
             totalFunding: totalFunding,
@@ -651,8 +712,12 @@ app.post('/enrich-lead', async (req, res) => {
             orgState: org?.org_state || '',
             orgZip: org?.org_zipcode || '',
             orgCountry: org?.org_country || '',
-            orgName: org?.org_name || '',
-            piProfile: recentGrant?.principal_investigators?.[0] || null
+            orgName: orgNameFull,
+            department: department,
+            phone: phone,
+            piEmail: piEmail,
+            piTitle: piTitle,
+            piProfile: piInfo
           };
         }
       } catch(e) { errors.nih = e.message; }
@@ -726,6 +791,7 @@ app.post('/enrich-lead', async (req, res) => {
         let affiliation = '';
         let recentTitles = [];
         let department = '';
+        let labName = '';
 
         if (ids.length > 0) {
           const summaryResp = await fetch(
@@ -762,7 +828,8 @@ app.post('/enrich-lead', async (req, res) => {
           publicationCount: totalCount,
           recentTitles,
           affiliation,
-          department
+          department,
+          labName: labName || ''
         };
       } catch(e) { errors.pubmed = e.message; }
     })()
