@@ -304,7 +304,7 @@ Return ONLY valid JSON, no markdown.`;
     generic: 'General cold outreach.'
   };
 
-  const emailCount = Math.min(Math.max(sequenceLength, 3), 7);
+  const emailCount = Math.min(Math.max(sequenceLength, 1), 7);
 
   // Fetch relevant Fida resources from Supabase
   const relevantResources = await getRelevantResources(applicationFocus, researchContext);
@@ -339,7 +339,7 @@ CAMPAIGN CONTEXT: ${contextDescriptions[campaignContext] || contextDescriptions.
 
 ${kbText ? `FIDA KNOWLEDGE BASE:\n${kbText}` : ''}
 
-Write a ${emailCount}-email cold outreach sequence. Each email should:
+Write ${emailCount === 1 ? "a single cold outreach email" : `a ${emailCount}-email cold outreach sequence`}. Each email should:
 - Be concise (150-200 words max)
 - Reference their specific research when possible
 - Have a clear, non-spammy subject line
@@ -350,9 +350,7 @@ Return ONLY valid JSON in this exact format:
 {
   "personalization_note": "1 sentence on the specific angle used",
   "matched_app": "which Fida Neo application was matched",
-  "email1": { "subject": "...", "body": "..." },
-  "email2": { "subject": "...", "body": "..." },
-  "email3": { "subject": "...", "body": "..." }${emailCount >= 5 ? ',\n  "email4": { "subject": "...", "body": "..." },\n  "email5": { "subject": "...", "body": "..." }' : ''}${emailCount >= 7 ? ',\n  "email6": { "subject": "...", "body": "..." },\n  "email7": { "subject": "...", "body": "..." }' : ''}
+  "${Array.from({length: emailCount}, (_, i) => `"email${i+1}": { "subject": "...", "body": "..." }`).join(',\n  ')}
 }`;
 
   try {
