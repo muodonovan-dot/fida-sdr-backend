@@ -396,3 +396,200 @@ app.post('/nih-grants-search', async (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Fida SDR backend running on port ${PORT}`));
+
+// ── Google Custom Search — LinkedIn finder + location validator ──────────────
+app.post('/find-linkedin', async (req, res) => {
+  const { firstName, lastName, organisation, googleApiKey, googleCseId } = req.body;
+  if (!googleApiKey || !googleCseId) {
+    return res.status(400).json({ error: 'Missing Google API key or CSE ID' });
+  }
+  if (!firstName || !lastName) {
+    return res.status(400).json({ error: 'Missing name' });
+  }
+
+  try {
+    // Build search query: name + org scoped to linkedin.com/in/
+    const org = organisation || '';
+    const query = `"${firstName} ${lastName}" ${org ? '"' + org + '"' : ''} site:linkedin.com/in`;
+    const url = `https://www.googleapis.com/customsearch/v1?key=${googleApiKey}&cx=${googleCseId}&q=${encodeURIComponent(query)}&num=3`;
+
+    const resp = await fetch(url);
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      return res.status(resp.status).json({ error: data.error?.message || 'Google API error', raw: data });
+    }
+
+    const items = data.items || [];
+    if (!items.length) {
+      // Retry with looser query (no org)
+      const looseQuery = `"${firstName} ${lastName}" site:linkedin.com/in`;
+      const looseUrl = `https://www.googleapis.com/customsearch/v1?key=${googleApiKey}&cx=${googleCseId}&q=${encodeURIComponent(looseQuery)}&num=3`;
+      const looseResp = await fetch(looseUrl);
+      const looseData = await looseResp.json();
+      const looseItems = looseData.items || [];
+
+      if (!looseItems.length) {
+        return res.json({ found: false, linkedinUrl: null, location: null, confidence: 0 });
+      }
+
+      return res.json(parseLinkedInResult(looseItems, firstName, lastName, org, false));
+    }
+
+    return res.json(parseLinkedInResult(items, firstName, lastName, org, true));
+
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+function parseLinkedInResult(items, firstName, lastName, org, withOrg) {
+  // Pick the best result
+  const fullName = `${firstName} ${lastName}`.toLowerCase();
+
+  // Score each result — prefer ones that mention name + org in snippet
+  const scored = items.map(item => {
+    const titleLower = (item.title || '').toLowerCase();
+    const snippetLower = (item.snippet || '').toLowerCase();
+    const orgLower = (org || '').toLowerCase();
+    let score = 0;
+
+    // Name match in title
+    if (titleLower.includes(firstName.toLowerCase())) score += 3;
+    if (titleLower.includes(lastName.toLowerCase())) score += 3;
+
+    // Org match in title or snippet
+    const orgWords = orgLower.split(/\s+/).filter(w => w.length > 3);
+    orgWords.forEach(word => {
+      if (titleLower.includes(word) || snippetLower.includes(word)) score += 2;
+    });
+
+    // Penalize if LinkedIn URL looks like a company page not a person
+    if (item.link?.includes('/company/')) score -= 10;
+
+    return { ...item, _score: score };
+  });
+
+  scored.sort((a, b) => b._score - a._score);
+  const best = scored[0];
+  if (!best || best._score < 2) {
+    return { found: false, linkedinUrl: null, location: null, confidence: 0 };
+  }
+
+  // Extract location from snippet
+  // LinkedIn snippets typically look like:
+  // "John Smith - Professor at MIT · Greater Boston"
+  // "Jane Doe · Ann Arbor, Michigan, United States · Professor"
+  const snippet = best.snippet || '';
+  const location = extractLocationFromSnippet(snippet);
+
+  return {
+    found: true,
+    linkedinUrl: best.link,
+    linkedinTitle: best.title,
+    linkedinSnippet: snippet,
+    location: location,
+    confidence: withOrg ? (best._score >= 6 ? 'high' : 'medium') : 'low',
+    confidenceScore: Math.min(100, best._score * 10),
+    allResults: scored.slice(0, 3).map(i => ({
+      url: i.link,
+      title: i.title,
+      snippet: i.snippet,
+      score: i._score
+    }))
+  };
+}
+
+function extractLocationFromSnippet(snippet) {
+  if (!snippet) return null;
+
+  // US state abbreviations
+  const stateAbbrs = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
+    'KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC',
+    'ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC'];
+
+  const stateNames = {
+    'alabama': 'AL', 'alaska': 'AK', 'arizona': 'AZ', 'arkansas': 'AR', 'california': 'CA',
+    'colorado': 'CO', 'connecticut': 'CT', 'delaware': 'DE', 'florida': 'FL', 'georgia': 'GA',
+    'hawaii': 'HI', 'idaho': 'ID', 'illinois': 'IL', 'indiana': 'IN', 'iowa': 'IA',
+    'kansas': 'KS', 'kentucky': 'KY', 'louisiana': 'LA', 'maine': 'ME', 'maryland': 'MD',
+    'massachusetts': 'MA', 'michigan': 'MI', 'minnesota': 'MN', 'mississippi': 'MS',
+    'missouri': 'MO', 'montana': 'MT', 'nebraska': 'NE', 'nevada': 'NV', 'new hampshire': 'NH',
+    'new jersey': 'NJ', 'new mexico': 'NM', 'new york': 'NY', 'north carolina': 'NC',
+    'north dakota': 'ND', 'ohio': 'OH', 'oklahoma': 'OK', 'oregon': 'OR', 'pennsylvania': 'PA',
+    'rhode island': 'RI', 'south carolina': 'SC', 'south dakota': 'SD', 'tennessee': 'TN',
+    'texas': 'TX', 'utah': 'UT', 'vermont': 'VT', 'virginia': 'VA', 'washington': 'WA',
+    'west virginia': 'WV', 'wisconsin': 'WI', 'wyoming': 'WY'
+  };
+
+  // Pattern: "City, State, United States" or "Greater X Area" or "City, ST"
+  // LinkedIn location formats:
+  // "San Francisco Bay Area" → CA
+  // "Greater Boston" → MA
+  // "Ann Arbor, Michigan, United States" → MI
+  // "New York, New York, United States" → NY
+  // "Chicago, Illinois, United States" → IL
+  // "Dallas-Fort Worth Metroplex" → TX
+
+  const s = snippet.toLowerCase();
+
+  // Try to find "City, State" pattern
+  const cityStateMatch = snippet.match(/([A-Z][a-z]+(?:\s[A-Z][a-z]+)?),\s+([A-Z][a-z]+(?:\s[A-Z][a-z]+)?)/);
+  if (cityStateMatch) {
+    const possibleState = cityStateMatch[2].toLowerCase();
+    if (stateNames[possibleState]) {
+      return {
+        raw: cityStateMatch[0],
+        state: stateNames[possibleState],
+        city: cityStateMatch[1],
+        country: 'US',
+        source: 'linkedin_snippet'
+      };
+    }
+  }
+
+  // Check for state name anywhere in snippet
+  for (const [stateName, abbr] of Object.entries(stateNames)) {
+    if (s.includes(stateName)) {
+      return {
+        raw: stateName,
+        state: abbr,
+        country: 'US',
+        source: 'linkedin_snippet'
+      };
+    }
+  }
+
+  // Check for 2-letter state abbr in " · City, ST · " pattern
+  const abbrMatch = snippet.match(/·\s*([^·]+),\s+([A-Z]{2})\s*[·,]/);
+  if (abbrMatch && stateAbbrs.includes(abbrMatch[2])) {
+    return {
+      raw: abbrMatch[0].trim(),
+      city: abbrMatch[1].trim(),
+      state: abbrMatch[2],
+      country: 'US',
+      source: 'linkedin_snippet'
+    };
+  }
+
+  // Metro area patterns
+  const metroMap = {
+    'greater boston': 'MA', 'san francisco bay area': 'CA', 'greater new york': 'NY',
+    'new york city': 'NY', 'greater chicago': 'IL', 'greater los angeles': 'CA',
+    'greater seattle': 'WA', 'greater denver': 'CO', 'greater houston': 'TX',
+    'greater dallas': 'TX', 'dallas-fort worth': 'TX', 'greater atlanta': 'GA',
+    'greater philadelphia': 'PA', 'greater miami': 'FL', 'greater detroit': 'MI',
+    'greater minneapolis': 'MN', 'greater portland': 'OR', 'greater baltimore': 'MD',
+    'greater st. louis': 'MO', 'greater pittsburgh': 'PA', 'triangle area': 'NC',
+    'research triangle': 'NC', 'rtp': 'NC', 'greater san diego': 'CA',
+    'greater austin': 'TX', 'greater nashville': 'TN', 'greater columbus': 'OH'
+  };
+
+  for (const [metro, state] of Object.entries(metroMap)) {
+    if (s.includes(metro)) {
+      return { raw: metro, state, country: 'US', source: 'linkedin_snippet' };
+    }
+  }
+
+  return null;
+}
