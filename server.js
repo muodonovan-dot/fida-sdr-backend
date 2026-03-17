@@ -149,14 +149,29 @@ app.get('/instantly-campaigns', async (req, res) => {
 
 // ── Create Instantly campaign + push leads ───────────────────────────────────
 app.post('/instantly-push', async (req, res) => {
-  const { instantlyKey, campaign, leads } = req.body;
+  const { instantlyKey, campaignName, leads, emailAccount, dailyLimit, campaign_schedule, campaign } = req.body;
   if (!instantlyKey) return res.status(400).json({ error: 'Missing key' });
   try {
-    // Create campaign
+    // Build campaign — support both new format (campaignName) and old format (campaign object)
+    const campaignBody = campaign || {
+      name: campaignName || 'Fida SDR Campaign',
+      email_list: emailAccount ? [emailAccount] : [],
+      daily_limit: dailyLimit || 30,
+      daily_max_leads: dailyLimit || 30,
+      stop_on_reply: true,
+      campaign_schedule: campaign_schedule || {
+        schedules: [{
+          name: 'Business Hours',
+          timing: { from: '09:00', to: '11:00' },
+          days: { monday: false, tuesday: true, wednesday: true, thursday: true, friday: false, saturday: false, sunday: false },
+          timezone: 'America/New_York'
+        }]
+      }
+    };
     const campResp = await fetch('https://api.instantly.ai/api/v2/campaigns', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + instantlyKey },
-      body: JSON.stringify(campaign)
+      body: JSON.stringify(campaignBody)
     });
     const campData = await campResp.json();
     if (!campResp.ok) return res.status(campResp.status).json({ error: campData.error || 'Campaign creation failed' });
