@@ -593,3 +593,183 @@ function extractLocationFromSnippet(snippet) {
 
   return null;
 }
+
+// ── Lead enrichment — NIH + Semantic Scholar + PubMed in parallel ────────────
+app.post('/enrich-lead', async (req, res) => {
+  const { firstName, lastName, organisation } = req.body;
+  if (!firstName || !lastName) return res.status(400).json({ error: 'Missing name' });
+
+  const results = { nih: null, semanticScholar: null, pubmed: null };
+  const errors = {};
+
+  // Run all 3 in parallel
+  await Promise.allSettled([
+
+    // ── 1. NIH Reporter — funding data ─────────────────────────────────────
+    (async () => {
+      try {
+        const query = `${firstName} ${lastName}`;
+        const nihResp = await fetch('https://api.reporter.nih.gov/v2/projects/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            criteria: {
+              pi_names: [{ first_name: firstName, last_name: lastName }],
+              ...(organisation ? {} : {})
+            },
+            offset: 0, limit: 25,
+            fields: ['contact_pi_name','organization','project_title','award_amount',
+                     'fiscal_year','project_start_date','project_end_date',
+                     'direct_cost_amt','agency_ic_admin','project_num','principal_investigators']
+          })
+        });
+        const nihData = await nihResp.json();
+        const grants = nihData.results || [];
+
+        if (grants.length > 0) {
+          // Filter to match org if provided
+          const orgLower = (organisation || '').toLowerCase();
+          const matched = orgLower
+            ? grants.filter(g => g.organization?.org_name?.toLowerCase().includes(orgLower.split(' ')[0]) ||
+                                  g.organization?.org_name?.toLowerCase().includes(orgLower.split(' ').slice(-1)[0]))
+            : grants;
+          const finalGrants = matched.length > 0 ? matched : grants;
+
+          const totalFunding = finalGrants.reduce((sum, g) => sum + (g.award_amount || 0), 0);
+          const recentGrant = finalGrants.sort((a,b) => (b.fiscal_year||0) - (a.fiscal_year||0))[0];
+          const org = recentGrant?.organization;
+
+          results.nih = {
+            grantCount: finalGrants.length,
+            totalFunding: totalFunding,
+            totalFundingFormatted: totalFunding >= 1000000
+              ? `$${(totalFunding/1000000).toFixed(1)}M`
+              : totalFunding >= 1000 ? `$${Math.round(totalFunding/1000)}K` : `$${totalFunding}`,
+            recentGrantTitle: recentGrant?.project_title || '',
+            recentGrantAmount: recentGrant?.award_amount || 0,
+            recentGrantYear: recentGrant?.fiscal_year || '',
+            recentGrantAgency: recentGrant?.agency_ic_admin?.abbreviation || '',
+            orgCity: org?.org_city || '',
+            orgState: org?.org_state || '',
+            orgZip: org?.org_zipcode || '',
+            orgCountry: org?.org_country || '',
+            orgName: org?.org_name || '',
+            piProfile: recentGrant?.principal_investigators?.[0] || null
+          };
+        }
+      } catch(e) { errors.nih = e.message; }
+    })(),
+
+    // ── 2. Semantic Scholar — research impact ───────────────────────────────
+    (async () => {
+      try {
+        const query = encodeURIComponent(`${firstName} ${lastName}`);
+        const ssResp = await fetch(
+          `https://api.semanticscholar.org/graph/v1/author/search?query=${query}&fields=authorId,name,affiliations,hIndex,citationCount,paperCount,url,externalIds&limit=5`
+        );
+        const ssData = await ssResp.json();
+        const authors = ssData.data || [];
+
+        // Find best match by name + org similarity
+        const orgWords = (organisation || '').toLowerCase().split(/\s+/).filter(w => w.length > 3);
+        const scored = authors.map(a => {
+          const aName = a.name?.toLowerCase() || '';
+          const aAffils = (a.affiliations || []).map(af => af.name?.toLowerCase() || '').join(' ');
+          let score = 0;
+          if (aName.includes(firstName.toLowerCase())) score += 3;
+          if (aName.includes(lastName.toLowerCase())) score += 3;
+          orgWords.forEach(w => { if (aAffils.includes(w)) score += 2; });
+          return { ...a, _score: score };
+        }).sort((a,b) => b._score - a._score);
+
+        const best = scored[0];
+        if (best && best._score >= 3) {
+          // Get recent papers for this author
+          let recentPapers = [];
+          try {
+            const papersResp = await fetch(
+              `https://api.semanticscholar.org/graph/v1/author/${best.authorId}/papers?fields=title,year,citationCount,fieldsOfStudy,journal&limit=5&sort=citationCount:desc`
+            );
+            const papersData = await papersResp.json();
+            recentPapers = (papersData.data || []).slice(0, 3).map(p => ({
+              title: p.title,
+              year: p.year,
+              citations: p.citationCount,
+              journal: p.journal?.name || '',
+              fields: p.fieldsOfStudy || []
+            }));
+          } catch(e) {}
+
+          results.semanticScholar = {
+            authorId: best.authorId,
+            hIndex: best.hIndex || 0,
+            citationCount: best.citationCount || 0,
+            paperCount: best.paperCount || 0,
+            profileUrl: best.url || '',
+            affiliations: (best.affiliations || []).map(a => a.name).filter(Boolean),
+            topPapers: recentPapers,
+            score: best._score
+          };
+        }
+      } catch(e) { errors.semanticScholar = e.message; }
+    })(),
+
+    // ── 3. PubMed — publication count + affiliation details ─────────────────
+    (async () => {
+      try {
+        const query = encodeURIComponent(`${firstName} ${lastName}[Author]${organisation ? ` AND "${organisation.split(' ')[0]}"[Affiliation]` : ''}`);
+        const searchResp = await fetch(
+          `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${query}&retmax=5&retmode=json&sort=date`
+        );
+        const searchData = await searchResp.json();
+        const ids = searchData.esearchresult?.idlist || [];
+        const totalCount = parseInt(searchData.esearchresult?.count || '0');
+
+        let affiliation = '';
+        let recentTitles = [];
+        let department = '';
+
+        if (ids.length > 0) {
+          const summaryResp = await fetch(
+            `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=${ids.join(',')}&retmode=json`
+          );
+          const summaryData = await summaryResp.json();
+          const articles = Object.values(summaryData.result || {}).filter(a => a.uid);
+
+          recentTitles = articles.slice(0, 3).map(a => ({
+            title: a.title || '',
+            year: a.pubdate?.substring(0, 4) || '',
+            journal: a.source || ''
+          }));
+
+          // Try to get full affiliation from first article
+          if (ids[0]) {
+            try {
+              const fetchResp = await fetch(
+                `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${ids[0]}&retmode=xml&rettype=abstract`
+              );
+              const xml = await fetchResp.text();
+              const affilMatch = xml.match(/<Affiliation>([^<]+)<\/Affiliation>/);
+              if (affilMatch) {
+                affiliation = affilMatch[1];
+                // Extract department from affiliation string
+                const deptMatch = affiliation.match(/(?:Department|Dept\.?|Division|Lab(?:oratory)?|School|Center|Centre)\s+(?:of\s+)?([^,;]+)/i);
+                if (deptMatch) department = deptMatch[0].trim();
+              }
+            } catch(e) {}
+          }
+        }
+
+        results.pubmed = {
+          publicationCount: totalCount,
+          recentTitles,
+          affiliation,
+          department
+        };
+      } catch(e) { errors.pubmed = e.message; }
+    })()
+
+  ]);
+
+  res.json({ results, errors });
+});
