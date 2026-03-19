@@ -46,7 +46,7 @@ async function getRelevantResources(applicationFocus, researchContext) {
       .filter(r => r.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, 5)
-      .map(r => `[${r.type}] ${r.title} Ã¢ÂÂ ${r.url}`);
+      .map(r => `[${r.type}] ${r.title} — ${r.url}`);
   } catch(e) {
     console.warn('Resource lookup failed:', e.message);
     return [];
@@ -57,10 +57,10 @@ app.use(express.json({ limit: '10mb' }));
 
 const PORT = process.env.PORT || 3000;
 
-// Ã¢ÂÂÃ¢ÂÂ Health check Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ── Health check ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => res.json({ ok: true }));
 
-// Ã¢ÂÂÃ¢ÂÂ Test Anthropic key Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ── Test Anthropic key ───────────────────────────────────────────────────────
 app.post('/test-anthropic', async (req, res) => {
   const { anthropicKey } = req.body;
   try {
@@ -75,7 +75,7 @@ app.post('/test-anthropic', async (req, res) => {
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
-// Ã¢ÂÂÃ¢ÂÂ Test ZeroBounce key Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ── Test ZeroBounce key ──────────────────────────────────────────────────────
 app.post('/test-zerobounce', async (req, res) => {
   const { zeroBounceKey } = req.body;
   try {
@@ -86,7 +86,7 @@ app.post('/test-zerobounce', async (req, res) => {
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
-// Ã¢ÂÂÃ¢ÂÂ Verify emails bulk (ZeroBounce) Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ── Verify emails bulk (ZeroBounce) ─────────────────────────────────────────
 app.post('/verify-emails-bulk', async (req, res) => {
   const { emails, zeroBounceKey } = req.body;
   if (!emails?.length) return res.json({ verified: [] });
@@ -107,14 +107,13 @@ app.post('/verify-emails-bulk', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Ã¢ÂÂÃ¢ÂÂ Test Instantly key Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ── Test Instantly key ──────────────────────────────────────────────────────
 app.post('/test-instantly', async (req, res) => {
   const { instantlyKey } = req.body;
   if (!instantlyKey) return res.status(400).json({ ok: false, error: 'Missing key' });
   try {
     const r = await fetch('https://api.instantly.ai/api/v2/campaigns?limit=1', {
-      headers: { 'Authorization': 'Bearer ' + instantlyKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({})
+      headers: { 'Authorization': 'Bearer ' + instantlyKey }
     });
     const d = await r.json();
     if (r.ok) res.json({ ok: true, message: 'Instantly V2 connected' });
@@ -122,7 +121,7 @@ app.post('/test-instantly', async (req, res) => {
   } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-// Ã¢ÂÂÃ¢ÂÂ List Instantly accounts Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ── List Instantly accounts ──────────────────────────────────────────────────
 app.get('/instantly-accounts', async (req, res) => {
   const key = req.headers['x-instantly-key'];
   if (!key) return res.status(400).json({ error: 'Missing key' });
@@ -135,7 +134,7 @@ app.get('/instantly-accounts', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-// Ã¢ÂÂÃ¢ÂÂ List Instantly campaigns Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ── List Instantly campaigns ─────────────────────────────────────────────────
 app.get('/instantly-campaigns', async (req, res) => {
   const key = req.headers['x-instantly-key'];
   if (!key) return res.status(400).json({ error: 'Missing key' });
@@ -148,12 +147,12 @@ app.get('/instantly-campaigns', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-// Ã¢ÂÂÃ¢ÂÂ Create Instantly campaign + push leads Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ── Create Instantly campaign + push leads ───────────────────────────────────
 app.post('/instantly-push', async (req, res) => {
   const { instantlyKey, campaignName, leads, emailAccount, dailyLimit, campaign_schedule, campaign } = req.body;
   if (!instantlyKey) return res.status(400).json({ error: 'Missing key' });
   try {
-    // Build campaign Ã¢ÂÂ support both new format (campaignName) and old format (campaign object)
+    // Build campaign — support both new format (campaignName) and old format (campaign object)
     const campaignBody = campaign || {
       name: campaignName || 'Fida SDR Campaign',
       email_list: emailAccount ? [emailAccount] : [],
@@ -200,7 +199,7 @@ app.post('/instantly-push', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-// Ã¢ÂÂÃ¢ÂÂ Claude proxy Ã¢ÂÂ for AI Auto-Discover and other frontend Claude calls Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ── Claude proxy — for AI Auto-Discover and other frontend Claude calls ──────
 app.post('/claude-proxy', async (req, res) => {
   const { apiKey, prompt, maxTokens = 800 } = req.body;
   if (!apiKey) return res.status(400).json({ error: 'Missing apiKey' });
@@ -224,7 +223,7 @@ app.post('/claude-proxy', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Ã¢ÂÂÃ¢ÂÂ Generate email sequence Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ── Generate email sequence ──────────────────────────────────────────────────
 app.post('/generate', async (req, res) => {
   const { lead, anthropicKey, knowledgeBase = [], tone = 'industry', campaignContext = 'scileads', applicationFocus = 'general', sequenceLength = 3 } = req.body;
 
@@ -241,8 +240,8 @@ Research Focus: ${lead.focusedAreas || 'protein research'}
 Location: ${lead.state}, ${lead.country}
 
 Search for:
-1. Their recent publications (PubMed) Ã¢ÂÂ what specific proteins/systems are they working on?
-2. Their LinkedIn profile Ã¢ÂÂ current role, recent activity
+1. Their recent publications (PubMed) — what specific proteins/systems are they working on?
+2. Their LinkedIn profile — current role, recent activity
 3. Any recent grants or conference presentations
 
 Return a JSON object with:
@@ -286,12 +285,12 @@ Return ONLY valid JSON, no markdown.`;
 
   // Application focus descriptions
   const focusDescriptions = {
-    general: 'native-state protein characterization Ã¢ÂÂ Rh, aggregation, polydispersity in 40nL',
-    spr_biacore: 'SPR/Biacore companion Ã¢ÂÂ verify reagent quality before runs, orthogonal KD confirmation',
-    antibody_dev: 'antibody developability screening Ã¢ÂÂ rapid aggregation check with 40nL, no labeling',
+    general: 'native-state protein characterization — Rh, aggregation, polydispersity in 40nL',
+    spr_biacore: 'SPR/Biacore companion — verify reagent quality before runs, orthogonal KD confirmation',
+    antibody_dev: 'antibody developability screening — rapid aggregation check with 40nL, no labeling',
     drug_discovery: 'label-free target engagement and fragment binding confirmation in native conditions',
-    structural_biology: 'pre-cryo-EM/crystallography screening Ã¢ÂÂ confirm monodispersity before committing samples',
-    de_novo_proteins: 'solution-phase validation of designed proteins Ã¢ÂÂ confirm folding and monodispersity'
+    structural_biology: 'pre-cryo-EM/crystallography screening — confirm monodispersity before committing samples',
+    de_novo_proteins: 'solution-phase validation of designed proteins — confirm folding and monodispersity'
   };
 
   const appDesc = focusDescriptions[researchContext?.application_match || applicationFocus] || focusDescriptions.general;
@@ -310,12 +309,12 @@ Return ONLY valid JSON, no markdown.`;
   // Fetch relevant Fida resources from Supabase
   const relevantResources = await getRelevantResources(applicationFocus, researchContext);
   const resourcesText = relevantResources.length > 0
-    ? `\nRELEVANT FIDA RESOURCES (use the most appropriate link in one of the emails Ã¢ÂÂ hyperlink it naturally):\n${relevantResources.join('\n')}`
+    ? `\nRELEVANT FIDA RESOURCES (use the most appropriate link in one of the emails — hyperlink it naturally):\n${relevantResources.join('\n')}`
     : '';
 
   // Generate the email sequence
   const emailPrompt = `You are an expert biotech sales email writer for Fida Bio, selling the Fida Neo instrument.
-IMPORTANT RULE: If you include a resource link in an email, embed it naturally as a hyperlink in the body text Ã¢ÂÂ do NOT add it as a bare URL at the end. Example: "I thought you might find <a href='URL'>this application note on SPR companion workflows</a> relevant to your work."
+IMPORTANT RULE: If you include a resource link in an email, embed it naturally as a hyperlink in the body text — do NOT add it as a bare URL at the end. Example: "I thought you might find <a href='URL'>this application note on SPR companion workflows</a> relevant to your work."
 ${resourcesText}
 
 LEAD INFORMATION:
@@ -327,14 +326,14 @@ Research Focus: ${lead.focusedAreas || 'protein research'}
 Tone: ${tone} (academic = collegial/peer-to-peer; industry = professional/ROI-focused)
 
 RESEARCH CONTEXT:
-${researchContext ? JSON.stringify(researchContext, null, 2) : 'No specific research found Ã¢ÂÂ use general biotech context'}
+${researchContext ? JSON.stringify(researchContext, null, 2) : 'No specific research found — use general biotech context'}
 
 FIDA NEO VALUE PROPOSITION:
 - Measures hydrodynamic radius (Rh), polydispersity, and aggregation in native conditions
-- Only 40nL sample needed Ã¢ÂÂ no wasted precious material
+- Only 40nL sample needed — no wasted precious material
 - Label-free, solution-phase measurements
 - Application focus for this lead: ${appDesc}
-- Cytiva/Biacore partner Ã¢ÂÂ positioned as companion, NOT competitor
+- Cytiva/Biacore partner — positioned as companion, NOT competitor
 
 CAMPAIGN CONTEXT: ${contextDescriptions[campaignContext] || contextDescriptions.generic}
 
@@ -344,7 +343,7 @@ Write ${emailCount === 1 ? "a single cold outreach email" : `a ${emailCount}-ema
 - Be concise (150-200 words max)
 - Reference their specific research when possible
 - Have a clear, non-spammy subject line
-- End with a soft CTA (not "buy now" Ã¢ÂÂ more like "worth a quick look?")
+- End with a soft CTA (not "buy now" — more like "worth a quick look?")
 - Each follow-up should try a different angle
 
 Return ONLY valid JSON in this exact format:
@@ -395,7 +394,7 @@ app.post('/nih-grants-search', async (req, res) => {
 });
 
 
-// Ã¢ÂÂÃ¢ÂÂ NIH PI direct lookup Ã¢ÂÂ gets phone, email, department Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ── NIH PI direct lookup — gets phone, email, department ─────────────────────
 app.post('/lookup-pi', async (req, res) => {
   const { firstName, lastName, organisation } = req.body;
   if (!firstName || !lastName) return res.status(400).json({ error: 'Missing name' });
@@ -437,7 +436,7 @@ app.post('/lookup-pi', async (req, res) => {
 });
 
 
-// Ã¢ÂÂÃ¢ÂÂ Create Instantly campaign Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ── Create Instantly campaign ─────────────────────────────────────────────────
 app.post('/instantly-create-campaign', async (req, res) => {
   const { instantlyKey, name, senderEmail, subject, body, trackingDomain } = req.body;
   if (!instantlyKey) return res.status(400).json({ error: 'Missing key' });
@@ -460,7 +459,7 @@ app.post('/instantly-add-lead', async (req, res) => {
   const { instantlyKey, campaignId, email, firstName, lastName } = req.body;
   if (!instantlyKey || !campaignId || !email) return res.status(400).json({ error: 'Missing fields' });
   try {
-    const r = await fetch(`https://api.instantly.ai/api/v2/leads`, {
+    const r = await fetch('https://api.instantly.ai/api/v2/leads', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + instantlyKey, 'Content-Type': 'application/json' },
       body: JSON.stringify({ campaign: campaignId, email, first_name: firstName||'', last_name: lastName||'' })
@@ -483,7 +482,7 @@ app.post('/instantly-launch', async (req, res) => {
 
 app.listen(PORT, () => console.log(`Fida SDR backend running on port ${PORT}`));
 
-// Ã¢ÂÂÃ¢ÂÂ Google Custom Search Ã¢ÂÂ LinkedIn finder + location validator Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ── Google Custom Search — LinkedIn finder + location validator ──────────────
 app.post('/find-linkedin', async (req, res) => {
   const { firstName, lastName, organisation, googleApiKey, googleCseId } = req.body;
   if (!googleApiKey || !googleCseId) {
@@ -533,7 +532,7 @@ function parseLinkedInResult(items, firstName, lastName, org, withOrg) {
   // Pick the best result
   const fullName = `${firstName} ${lastName}`.toLowerCase();
 
-  // Score each result Ã¢ÂÂ prefer ones that mention name + org in snippet
+  // Score each result — prefer ones that mention name + org in snippet
   const scored = items.map(item => {
     const titleLower = (item.title || '').toLowerCase();
     const snippetLower = (item.snippet || '').toLowerCase();
@@ -564,8 +563,8 @@ function parseLinkedInResult(items, firstName, lastName, org, withOrg) {
 
   // Extract location from snippet
   // LinkedIn snippets typically look like:
-  // "John Smith - Professor at MIT ÃÂ· Greater Boston"
-  // "Jane Doe ÃÂ· Ann Arbor, Michigan, United States ÃÂ· Professor"
+  // "John Smith - Professor at MIT · Greater Boston"
+  // "Jane Doe · Ann Arbor, Michigan, United States · Professor"
   const snippet = best.snippet || '';
   const location = extractLocationFromSnippet(snippet);
 
@@ -610,12 +609,12 @@ function extractLocationFromSnippet(snippet) {
 
   // Pattern: "City, State, United States" or "Greater X Area" or "City, ST"
   // LinkedIn location formats:
-  // "San Francisco Bay Area" Ã¢ÂÂ CA
-  // "Greater Boston" Ã¢ÂÂ MA
-  // "Ann Arbor, Michigan, United States" Ã¢ÂÂ MI
-  // "New York, New York, United States" Ã¢ÂÂ NY
-  // "Chicago, Illinois, United States" Ã¢ÂÂ IL
-  // "Dallas-Fort Worth Metroplex" Ã¢ÂÂ TX
+  // "San Francisco Bay Area" → CA
+  // "Greater Boston" → MA
+  // "Ann Arbor, Michigan, United States" → MI
+  // "New York, New York, United States" → NY
+  // "Chicago, Illinois, United States" → IL
+  // "Dallas-Fort Worth Metroplex" → TX
 
   const s = snippet.toLowerCase();
 
@@ -646,8 +645,8 @@ function extractLocationFromSnippet(snippet) {
     }
   }
 
-  // Check for 2-letter state abbr in " ÃÂ· City, ST ÃÂ· " pattern
-  const abbrMatch = snippet.match(/ÃÂ·\s*([^ÃÂ·]+),\s+([A-Z]{2})\s*[ÃÂ·,]/);
+  // Check for 2-letter state abbr in " · City, ST · " pattern
+  const abbrMatch = snippet.match(/·\s*([^·]+),\s+([A-Z]{2})\s*[·,]/);
   if (abbrMatch && stateAbbrs.includes(abbrMatch[2])) {
     return {
       raw: abbrMatch[0].trim(),
@@ -680,7 +679,7 @@ function extractLocationFromSnippet(snippet) {
   return null;
 }
 
-// Ã¢ÂÂÃ¢ÂÂ Lead enrichment Ã¢ÂÂ NIH + Semantic Scholar + PubMed in parallel Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ── Lead enrichment — NIH + Semantic Scholar + PubMed in parallel ────────────
 app.post('/enrich-lead', async (req, res) => {
   const { firstName, lastName, organisation } = req.body;
   if (!firstName || !lastName) return res.status(400).json({ error: 'Missing name' });
@@ -691,7 +690,7 @@ app.post('/enrich-lead', async (req, res) => {
   // Run all 3 in parallel
   await Promise.allSettled([
 
-    // Ã¢ÂÂÃ¢ÂÂ 1. NIH Reporter Ã¢ÂÂ funding data Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+    // ── 1. NIH Reporter — funding data ─────────────────────────────────────
     (async () => {
       try {
         const query = `${firstName} ${lastName}`;
@@ -769,7 +768,7 @@ app.post('/enrich-lead', async (req, res) => {
       } catch(e) { errors.nih = e.message; }
     })(),
 
-    // Ã¢ÂÂÃ¢ÂÂ 2. Semantic Scholar Ã¢ÂÂ research impact Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+    // ── 2. Semantic Scholar — research impact ───────────────────────────────
     (async () => {
       try {
         const query = encodeURIComponent(`${firstName} ${lastName}`);
@@ -823,7 +822,7 @@ app.post('/enrich-lead', async (req, res) => {
       } catch(e) { errors.semanticScholar = e.message; }
     })(),
 
-    // Ã¢ÂÂÃ¢ÂÂ 3. PubMed Ã¢ÂÂ publication count + affiliation details Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+    // ── 3. PubMed — publication count + affiliation details ─────────────────
     (async () => {
       try {
         const query = encodeURIComponent(`${firstName} ${lastName}[Author]${organisation ? ` AND "${organisation.split(' ')[0]}"[Affiliation]` : ''}`);
