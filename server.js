@@ -46,7 +46,7 @@ async function getRelevantResources(applicationFocus, researchContext) {
       .filter(r => r.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, 5)
-      .map(r => `[${r.type}] ${r.title} — ${r.url}`);
+      .map(r => `[${r.type}] ${r.title} â ${r.url}`);
   } catch(e) {
     console.warn('Resource lookup failed:', e.message);
     return [];
@@ -57,10 +57,10 @@ app.use(express.json({ limit: '10mb' }));
 
 const PORT = process.env.PORT || 3000;
 
-// ── Health check ─────────────────────────────────────────────────────────────
+// ââ Health check âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 app.get('/health', (req, res) => res.json({ ok: true }));
 
-// ── Test Anthropic key ───────────────────────────────────────────────────────
+// ââ Test Anthropic key âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 app.post('/test-anthropic', async (req, res) => {
   const { anthropicKey } = req.body;
   try {
@@ -75,7 +75,7 @@ app.post('/test-anthropic', async (req, res) => {
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
-// ── Test ZeroBounce key ──────────────────────────────────────────────────────
+// ââ Test ZeroBounce key ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 app.post('/test-zerobounce', async (req, res) => {
   const { zeroBounceKey } = req.body;
   try {
@@ -86,7 +86,7 @@ app.post('/test-zerobounce', async (req, res) => {
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
-// ── Verify emails bulk (ZeroBounce) ─────────────────────────────────────────
+// ââ Verify emails bulk (ZeroBounce) âââââââââââââââââââââââââââââââââââââââââ
 app.post('/verify-emails-bulk', async (req, res) => {
   const { emails, zeroBounceKey } = req.body;
   if (!emails?.length) return res.json({ verified: [] });
@@ -107,13 +107,14 @@ app.post('/verify-emails-bulk', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── Test Instantly key ──────────────────────────────────────────────────────
+// ââ Test Instantly key ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 app.post('/test-instantly', async (req, res) => {
   const { instantlyKey } = req.body;
   if (!instantlyKey) return res.status(400).json({ ok: false, error: 'Missing key' });
   try {
     const r = await fetch('https://api.instantly.ai/api/v2/campaigns?limit=1', {
-      headers: { 'Authorization': 'Bearer ' + instantlyKey }
+      headers: { 'Authorization': 'Bearer ' + instantlyKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
     });
     const d = await r.json();
     if (r.ok) res.json({ ok: true, message: 'Instantly V2 connected' });
@@ -121,7 +122,7 @@ app.post('/test-instantly', async (req, res) => {
   } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-// ── List Instantly accounts ──────────────────────────────────────────────────
+// ââ List Instantly accounts ââââââââââââââââââââââââââââââââââââââââââââââââââ
 app.get('/instantly-accounts', async (req, res) => {
   const key = req.headers['x-instantly-key'];
   if (!key) return res.status(400).json({ error: 'Missing key' });
@@ -134,7 +135,7 @@ app.get('/instantly-accounts', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── List Instantly campaigns ─────────────────────────────────────────────────
+// ââ List Instantly campaigns âââââââââââââââââââââââââââââââââââââââââââââââââ
 app.get('/instantly-campaigns', async (req, res) => {
   const key = req.headers['x-instantly-key'];
   if (!key) return res.status(400).json({ error: 'Missing key' });
@@ -147,12 +148,12 @@ app.get('/instantly-campaigns', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── Create Instantly campaign + push leads ───────────────────────────────────
+// ââ Create Instantly campaign + push leads âââââââââââââââââââââââââââââââââââ
 app.post('/instantly-push', async (req, res) => {
   const { instantlyKey, campaignName, leads, emailAccount, dailyLimit, campaign_schedule, campaign } = req.body;
   if (!instantlyKey) return res.status(400).json({ error: 'Missing key' });
   try {
-    // Build campaign — support both new format (campaignName) and old format (campaign object)
+    // Build campaign â support both new format (campaignName) and old format (campaign object)
     const campaignBody = campaign || {
       name: campaignName || 'Fida SDR Campaign',
       email_list: emailAccount ? [emailAccount] : [],
@@ -199,7 +200,7 @@ app.post('/instantly-push', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── Claude proxy — for AI Auto-Discover and other frontend Claude calls ──────
+// ââ Claude proxy â for AI Auto-Discover and other frontend Claude calls ââââââ
 app.post('/claude-proxy', async (req, res) => {
   const { apiKey, prompt, maxTokens = 800 } = req.body;
   if (!apiKey) return res.status(400).json({ error: 'Missing apiKey' });
@@ -223,7 +224,7 @@ app.post('/claude-proxy', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── Generate email sequence ──────────────────────────────────────────────────
+// ââ Generate email sequence ââââââââââââââââââââââââââââââââââââââââââââââââââ
 app.post('/generate', async (req, res) => {
   const { lead, anthropicKey, knowledgeBase = [], tone = 'industry', campaignContext = 'scileads', applicationFocus = 'general', sequenceLength = 3 } = req.body;
 
@@ -240,8 +241,8 @@ Research Focus: ${lead.focusedAreas || 'protein research'}
 Location: ${lead.state}, ${lead.country}
 
 Search for:
-1. Their recent publications (PubMed) — what specific proteins/systems are they working on?
-2. Their LinkedIn profile — current role, recent activity
+1. Their recent publications (PubMed) â what specific proteins/systems are they working on?
+2. Their LinkedIn profile â current role, recent activity
 3. Any recent grants or conference presentations
 
 Return a JSON object with:
@@ -285,12 +286,12 @@ Return ONLY valid JSON, no markdown.`;
 
   // Application focus descriptions
   const focusDescriptions = {
-    general: 'native-state protein characterization — Rh, aggregation, polydispersity in 40nL',
-    spr_biacore: 'SPR/Biacore companion — verify reagent quality before runs, orthogonal KD confirmation',
-    antibody_dev: 'antibody developability screening — rapid aggregation check with 40nL, no labeling',
+    general: 'native-state protein characterization â Rh, aggregation, polydispersity in 40nL',
+    spr_biacore: 'SPR/Biacore companion â verify reagent quality before runs, orthogonal KD confirmation',
+    antibody_dev: 'antibody developability screening â rapid aggregation check with 40nL, no labeling',
     drug_discovery: 'label-free target engagement and fragment binding confirmation in native conditions',
-    structural_biology: 'pre-cryo-EM/crystallography screening — confirm monodispersity before committing samples',
-    de_novo_proteins: 'solution-phase validation of designed proteins — confirm folding and monodispersity'
+    structural_biology: 'pre-cryo-EM/crystallography screening â confirm monodispersity before committing samples',
+    de_novo_proteins: 'solution-phase validation of designed proteins â confirm folding and monodispersity'
   };
 
   const appDesc = focusDescriptions[researchContext?.application_match || applicationFocus] || focusDescriptions.general;
@@ -309,12 +310,12 @@ Return ONLY valid JSON, no markdown.`;
   // Fetch relevant Fida resources from Supabase
   const relevantResources = await getRelevantResources(applicationFocus, researchContext);
   const resourcesText = relevantResources.length > 0
-    ? `\nRELEVANT FIDA RESOURCES (use the most appropriate link in one of the emails — hyperlink it naturally):\n${relevantResources.join('\n')}`
+    ? `\nRELEVANT FIDA RESOURCES (use the most appropriate link in one of the emails â hyperlink it naturally):\n${relevantResources.join('\n')}`
     : '';
 
   // Generate the email sequence
   const emailPrompt = `You are an expert biotech sales email writer for Fida Bio, selling the Fida Neo instrument.
-IMPORTANT RULE: If you include a resource link in an email, embed it naturally as a hyperlink in the body text — do NOT add it as a bare URL at the end. Example: "I thought you might find <a href='URL'>this application note on SPR companion workflows</a> relevant to your work."
+IMPORTANT RULE: If you include a resource link in an email, embed it naturally as a hyperlink in the body text â do NOT add it as a bare URL at the end. Example: "I thought you might find <a href='URL'>this application note on SPR companion workflows</a> relevant to your work."
 ${resourcesText}
 
 LEAD INFORMATION:
@@ -326,14 +327,14 @@ Research Focus: ${lead.focusedAreas || 'protein research'}
 Tone: ${tone} (academic = collegial/peer-to-peer; industry = professional/ROI-focused)
 
 RESEARCH CONTEXT:
-${researchContext ? JSON.stringify(researchContext, null, 2) : 'No specific research found — use general biotech context'}
+${researchContext ? JSON.stringify(researchContext, null, 2) : 'No specific research found â use general biotech context'}
 
 FIDA NEO VALUE PROPOSITION:
 - Measures hydrodynamic radius (Rh), polydispersity, and aggregation in native conditions
-- Only 40nL sample needed — no wasted precious material
+- Only 40nL sample needed â no wasted precious material
 - Label-free, solution-phase measurements
 - Application focus for this lead: ${appDesc}
-- Cytiva/Biacore partner — positioned as companion, NOT competitor
+- Cytiva/Biacore partner â positioned as companion, NOT competitor
 
 CAMPAIGN CONTEXT: ${contextDescriptions[campaignContext] || contextDescriptions.generic}
 
@@ -343,7 +344,7 @@ Write ${emailCount === 1 ? "a single cold outreach email" : `a ${emailCount}-ema
 - Be concise (150-200 words max)
 - Reference their specific research when possible
 - Have a clear, non-spammy subject line
-- End with a soft CTA (not "buy now" — more like "worth a quick look?")
+- End with a soft CTA (not "buy now" â more like "worth a quick look?")
 - Each follow-up should try a different angle
 
 Return ONLY valid JSON in this exact format:
@@ -394,7 +395,7 @@ app.post('/nih-grants-search', async (req, res) => {
 });
 
 
-// ── NIH PI direct lookup — gets phone, email, department ─────────────────────
+// ââ NIH PI direct lookup â gets phone, email, department âââââââââââââââââââââ
 app.post('/lookup-pi', async (req, res) => {
   const { firstName, lastName, organisation } = req.body;
   if (!firstName || !lastName) return res.status(400).json({ error: 'Missing name' });
@@ -436,7 +437,7 @@ app.post('/lookup-pi', async (req, res) => {
 });
 
 
-// ── Create Instantly campaign ─────────────────────────────────────────────────
+// ââ Create Instantly campaign âââââââââââââââââââââââââââââââââââââââââââââââââ
 app.post('/instantly-create-campaign', async (req, res) => {
   const { instantlyKey, name, senderEmail, subject, body, trackingDomain } = req.body;
   if (!instantlyKey) return res.status(400).json({ error: 'Missing key' });
@@ -482,7 +483,7 @@ app.post('/instantly-launch', async (req, res) => {
 
 app.listen(PORT, () => console.log(`Fida SDR backend running on port ${PORT}`));
 
-// ── Google Custom Search — LinkedIn finder + location validator ──────────────
+// ââ Google Custom Search â LinkedIn finder + location validator ââââââââââââââ
 app.post('/find-linkedin', async (req, res) => {
   const { firstName, lastName, organisation, googleApiKey, googleCseId } = req.body;
   if (!googleApiKey || !googleCseId) {
@@ -532,7 +533,7 @@ function parseLinkedInResult(items, firstName, lastName, org, withOrg) {
   // Pick the best result
   const fullName = `${firstName} ${lastName}`.toLowerCase();
 
-  // Score each result — prefer ones that mention name + org in snippet
+  // Score each result â prefer ones that mention name + org in snippet
   const scored = items.map(item => {
     const titleLower = (item.title || '').toLowerCase();
     const snippetLower = (item.snippet || '').toLowerCase();
@@ -563,8 +564,8 @@ function parseLinkedInResult(items, firstName, lastName, org, withOrg) {
 
   // Extract location from snippet
   // LinkedIn snippets typically look like:
-  // "John Smith - Professor at MIT · Greater Boston"
-  // "Jane Doe · Ann Arbor, Michigan, United States · Professor"
+  // "John Smith - Professor at MIT Â· Greater Boston"
+  // "Jane Doe Â· Ann Arbor, Michigan, United States Â· Professor"
   const snippet = best.snippet || '';
   const location = extractLocationFromSnippet(snippet);
 
@@ -609,12 +610,12 @@ function extractLocationFromSnippet(snippet) {
 
   // Pattern: "City, State, United States" or "Greater X Area" or "City, ST"
   // LinkedIn location formats:
-  // "San Francisco Bay Area" → CA
-  // "Greater Boston" → MA
-  // "Ann Arbor, Michigan, United States" → MI
-  // "New York, New York, United States" → NY
-  // "Chicago, Illinois, United States" → IL
-  // "Dallas-Fort Worth Metroplex" → TX
+  // "San Francisco Bay Area" â CA
+  // "Greater Boston" â MA
+  // "Ann Arbor, Michigan, United States" â MI
+  // "New York, New York, United States" â NY
+  // "Chicago, Illinois, United States" â IL
+  // "Dallas-Fort Worth Metroplex" â TX
 
   const s = snippet.toLowerCase();
 
@@ -645,8 +646,8 @@ function extractLocationFromSnippet(snippet) {
     }
   }
 
-  // Check for 2-letter state abbr in " · City, ST · " pattern
-  const abbrMatch = snippet.match(/·\s*([^·]+),\s+([A-Z]{2})\s*[·,]/);
+  // Check for 2-letter state abbr in " Â· City, ST Â· " pattern
+  const abbrMatch = snippet.match(/Â·\s*([^Â·]+),\s+([A-Z]{2})\s*[Â·,]/);
   if (abbrMatch && stateAbbrs.includes(abbrMatch[2])) {
     return {
       raw: abbrMatch[0].trim(),
@@ -679,7 +680,7 @@ function extractLocationFromSnippet(snippet) {
   return null;
 }
 
-// ── Lead enrichment — NIH + Semantic Scholar + PubMed in parallel ────────────
+// ââ Lead enrichment â NIH + Semantic Scholar + PubMed in parallel ââââââââââââ
 app.post('/enrich-lead', async (req, res) => {
   const { firstName, lastName, organisation } = req.body;
   if (!firstName || !lastName) return res.status(400).json({ error: 'Missing name' });
@@ -690,7 +691,7 @@ app.post('/enrich-lead', async (req, res) => {
   // Run all 3 in parallel
   await Promise.allSettled([
 
-    // ── 1. NIH Reporter — funding data ─────────────────────────────────────
+    // ââ 1. NIH Reporter â funding data âââââââââââââââââââââââââââââââââââââ
     (async () => {
       try {
         const query = `${firstName} ${lastName}`;
@@ -768,7 +769,7 @@ app.post('/enrich-lead', async (req, res) => {
       } catch(e) { errors.nih = e.message; }
     })(),
 
-    // ── 2. Semantic Scholar — research impact ───────────────────────────────
+    // ââ 2. Semantic Scholar â research impact âââââââââââââââââââââââââââââââ
     (async () => {
       try {
         const query = encodeURIComponent(`${firstName} ${lastName}`);
@@ -822,7 +823,7 @@ app.post('/enrich-lead', async (req, res) => {
       } catch(e) { errors.semanticScholar = e.message; }
     })(),
 
-    // ── 3. PubMed — publication count + affiliation details ─────────────────
+    // ââ 3. PubMed â publication count + affiliation details âââââââââââââââââ
     (async () => {
       try {
         const query = encodeURIComponent(`${firstName} ${lastName}[Author]${organisation ? ` AND "${organisation.split(' ')[0]}"[Affiliation]` : ''}`);
