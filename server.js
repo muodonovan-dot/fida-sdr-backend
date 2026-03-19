@@ -435,6 +435,44 @@ app.post('/lookup-pi', async (req, res) => {
   }
 });
 
+
+// ── Create Instantly campaign ──────────────────────────────────────────
+app.post('/instantly-create-campaign', async (req, res) => {
+  const { instantlyKey, name, senderEmail, subject, body, trackingDomain } = req.body;
+  if (!instantlyKey) return res.status(400).json({ error: 'Missing key' });
+  try {
+    const r = await fetch('https://api.instantly.ai/api/v2/campaigns', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + instantlyKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email_list: [senderEmail], sequences: [{ steps: [{ type: 'email', delay: 0, variants: [{ subject, body }] }] }], daily_limit: 10, stop_on_reply: true, stop_on_auto_reply: true, tracking_domain: trackingDomain || 'inst.fida-connect.com' })
+    });
+    res.json(await r.json());
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/instantly-add-lead', async (req, res) => {
+  const { instantlyKey, campaignId, email, firstName, lastName } = req.body;
+  if (!instantlyKey || !campaignId || !email) return res.status(400).json({ error: 'Missing fields' });
+  try {
+    const r = await fetch('https://api.instantly.ai/api/v2/campaigns/' + campaignId + '/leads', {
+      method: 'POST', headers: { 'Authorization': 'Bearer ' + instantlyKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ leads: [{ email, first_name: firstName||'', last_name: lastName||'' }] })
+    });
+    res.json(await r.json());
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/instantly-launch', async (req, res) => {
+  const { instantlyKey, campaignId } = req.body;
+  if (!instantlyKey || !campaignId) return res.status(400).json({ error: 'Missing fields' });
+  try {
+    const r = await fetch('https://api.instantly.ai/api/v2/campaigns/' + campaignId + '/activate', {
+      method: 'POST', headers: { 'Authorization': 'Bearer ' + instantlyKey, 'Content-Type': 'application/json' }
+    });
+    res.json(await r.json());
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.listen(PORT, () => console.log(`Fida SDR backend running on port ${PORT}`));
 
 // ── Google Custom Search — LinkedIn finder + location validator ──────────────
