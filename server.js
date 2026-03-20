@@ -222,15 +222,18 @@ app.post('/instantly-push', async (req, res) => {
         first_name: lead.firstName || lead.first_name || '',
         last_name: lead.lastName || lead.last_name || '',
         company_name: lead.organisation || lead.company || '',
+        website: lead._linkedinUrl || '',
+        phone: '',
         custom_variables: {
-          email1_subject: emails.email1?.subject || '',
-          email1_body:    emails.email1?.body    || '',
-          email2_subject: emails.email2?.subject || '',
-          email2_body:    emails.email2?.body    || '',
-          email3_subject: emails.email3?.subject || '',
-          email3_body:    emails.email3?.body    || '',
+          email1_subject: (emails.email1?.subject || '').substring(0, 200),
+          email1_body:    (emails.email1?.body    || '').substring(0, 2000),
+          email2_subject: (emails.email2?.subject || '').substring(0, 200),
+          email2_body:    (emails.email2?.body    || '').substring(0, 2000),
+          email3_subject: (emails.email3?.subject || '').substring(0, 200),
+          email3_body:    (emails.email3?.body    || '').substring(0, 2000),
         }
       };
+      console.log('Pushing lead:', lead.email, 'payload size:', JSON.stringify(payload).length);
       const lr = await fetch('https://api.instantly.ai/api/v2/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + instantlyKey },
