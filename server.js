@@ -220,20 +220,18 @@ app.post('/instantly-push', async (req, res) => {
     const campaignId = campData.id;
     let pushed = 0, failed = 0;
 
-    // V2 API: POST /leads takes a SINGLE object per call (not an array)
-    // Campaign is linked via the "campaign" field (not "campaign_id")
+    // Instantly V2 correct flow per support:
+    // Step 1: POST /leads to create in CRM (no campaign field needed)
+    // Step 2: POST /leads/move-to-campaign to attach to campaign
     for (const lead of leads) {
       const emails = lead.generatedEmails || lead.emails || {};
-      const payload = {
-        campaign: campaignId,          // <-- correct V2 field name
+      const createPayload = {
         email: lead.email,
         first_name: lead.firstName || lead.first_name || '',
         last_name: lead.lastName || lead.last_name || '',
         company_name: lead.organisation || lead.company || '',
         website: lead._linkedinUrl || '',
         phone: lead.phone || '',
-        skip_if_in_workspace: false,
-        skip_if_in_campaign: false,
         custom_variables: {
           email1_subject: (emails.email1?.subject || '').substring(0, 200),
           email1_body:    (emails.email1?.body    || '').substring(0, 2000),
@@ -251,20 +249,57 @@ app.post('/instantly-push', async (req, res) => {
           email7_body:    (emails.email7?.body    || '').substring(0, 2000),
         }
       };
-      console.log('Pushing lead:', lead.email, '| campaign:', campaignId, '| payload size:', JSON.stringify(payload).length);
-      const lr = await fetch('https://api.instantly.ai/api/v2/leads', {
+
+      console.log('Step 1: Creating lead in CRM:', lead.email);
+      const createRes = await fetch('https://api.instantly.ai/api/v2/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + instantlyKey },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(createPayload)
       });
-      if (lr.ok) {
+
+      let leadId = null;
+      if (createRes.ok) {
+        const createData = await createRes.json();
+        leadId = createData.id;
+        console.log('Lead created in CRM:', lead.email, '| id:', leadId);
+      } else {
+        const errText = await createRes.text();
+        console.error('Lead create failed:', lead.email, createRes.status, errText.substring(0, 200));
+        // Try to find existing lead by email
+        const listRes = await fetch('https://api.instantly.ai/api/v2/leads/list', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + instantlyKey },
+          body: JSON.stringify({ email: lead.email, limit: 1 })
+        });
+        if (listRes.ok) {
+          const listData = await listRes.json();
+          leadId = listData.items?.[0]?.id;
+          if (leadId) console.log('Found existing lead:', lead.email, '| id:', leadId);
+        }
+      }
+
+      if (!leadId) { failed++; continue; }
+
+      // Step 2: Move lead to campaign
+      console.log('Step 2: Moving lead to campaign:', leadId, '->', campaignId);
+      const moveRes = await fetch('https://api.instantly.ai/api/v2/leads/move-to-campaign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + instantlyKey },
+        body: JSON.stringify({
+          ids: [leadId],
+          to_campaign_id: campaignId,
+          in_campaign: true,
+          in_list: false
+        })
+      });
+      if (moveRes.ok) {
         pushed++;
-        const okData = await lr.json();
-        console.log('Lead pushed OK:', lead.email, '| id:', okData.id, '| campaign:', okData.campaign);
+        const moveData = await moveRes.json();
+        console.log('Lead moved to campaign OK:', lead.email, '| job:', moveData.id || JSON.stringify(moveData).substring(0,100));
       } else {
         failed++;
-        const errText = await lr.text();
-        console.error('Lead push failed:', lead.email, lr.status, errText.substring(0, 300));
+        const errText = await moveRes.text();
+        console.error('Move to campaign failed:', lead.email, moveRes.status, errText.substring(0, 200));
       }
     }
 
