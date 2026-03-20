@@ -250,7 +250,9 @@ app.post('/instantly-push', async (req, res) => {
         }
       };
 
-      console.log('Step 1: Creating lead in CRM:', lead.email);
+      // Include campaign directly in create payload — simplest possible approach
+      createPayload.campaign = campaignId;
+      console.log('Step 1: Creating lead with campaign directly:', lead.email, '->', campaignId);
       const createRes = await fetch('https://api.instantly.ai/api/v2/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + instantlyKey },
@@ -261,7 +263,7 @@ app.post('/instantly-push', async (req, res) => {
       if (createRes.ok) {
         const createData = await createRes.json();
         leadId = createData.id;
-        console.log('Lead created in CRM:', lead.email, '| id:', leadId);
+        console.log('Lead created:', lead.email, '| id:', leadId, '| campaign in response:', createData.campaign);
       } else {
         const errText = await createRes.text();
         console.error('Lead create failed:', lead.email, createRes.status, errText.substring(0, 200));
