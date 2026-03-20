@@ -230,7 +230,7 @@ app.post('/claude-proxy', async (req, res) => {
 
 // ── Generate email sequence ──────────────────────────────────────────────────
 app.post('/generate', async (req, res) => {
-  const { lead, anthropicKey, knowledgeBase = [], tone = 'industry', campaignContext = 'scileads', applicationFocus = 'general', sequenceLength = 3 } = req.body;
+  const { lead, anthropicKey, knowledgeBase = [], tone = 'industry', campaignContext = 'scileads', applicationFocus = 'general', sequenceLength = 3, senderName = 'Mike O\'Donovan' } = req.body;
 
   // Research: get LinkedIn + PubMed context via Claude with web search
   let researchContext = '';
@@ -349,6 +349,7 @@ Write ${emailCount === 1 ? "a single cold outreach email" : `a ${emailCount}-ema
 - Reference their specific research when possible
 - Have a clear, non-spammy subject line
 - End with a soft CTA (not "buy now" — more like "worth a quick look?")
+- Sign off as: Best,\n${senderName}\nFida Bio
 - Each follow-up should try a different angle
 
 Return ONLY valid JSON in this exact format:
