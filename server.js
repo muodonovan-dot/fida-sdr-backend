@@ -283,14 +283,14 @@ app.post('/instantly-push', async (req, res) => {
       // Step 2: Move lead to campaign
       console.log('Step 2: Moving lead to campaign:', leadId, '->', campaignId);
       // Step 2: Move lead to campaign
-      // POST /api/v2/leads/move - use email_address not ids (ids requires source campaign)
+      // POST /api/v2/leads/move with email_address + to_campaign_id
       console.log('Step 2: Moving lead via email_address to campaign:', lead.email, '->', campaignId);
       const moveRes = await fetch('https://api.instantly.ai/api/v2/leads/move', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + instantlyKey },
         body: JSON.stringify({
           email_address: lead.email,
-          campaign: campaignId,
+          to_campaign_id: campaignId,
           in_campaign: true,
           in_list: false
         })
