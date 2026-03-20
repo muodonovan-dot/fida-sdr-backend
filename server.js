@@ -220,11 +220,12 @@ app.post('/instantly-push', async (req, res) => {
     const campaignId = campData.id;
     let pushed = 0, failed = 0;
 
-    // V2 API requires leads as an ARRAY, with skip flags instead of allow_duplicates
-    const leadPayloads = leads.map(lead => {
+    // V2 API: POST /leads takes a SINGLE object per call (not an array)
+    // Campaign is linked via the "campaign" field (not "campaign_id")
+    for (const lead of leads) {
       const emails = lead.generatedEmails || lead.emails || {};
-      return {
-        campaign_id: campaignId,
+      const payload = {
+        campaign: campaignId,          // <-- correct V2 field name
         email: lead.email,
         first_name: lead.firstName || lead.first_name || '',
         last_name: lead.lastName || lead.last_name || '',
@@ -235,59 +236,37 @@ app.post('/instantly-push', async (req, res) => {
         skip_if_in_campaign: false,
         custom_variables: {
           email1_subject: (emails.email1?.subject || '').substring(0, 200),
-          email1_body: (emails.email1?.body || '').substring(0, 2000),
+          email1_body:    (emails.email1?.body    || '').substring(0, 2000),
           email2_subject: (emails.email2?.subject || '').substring(0, 200),
-          email2_body: (emails.email2?.body || '').substring(0, 2000),
+          email2_body:    (emails.email2?.body    || '').substring(0, 2000),
           email3_subject: (emails.email3?.subject || '').substring(0, 200),
-          email3_body: (emails.email3?.body || '').substring(0, 2000),
+          email3_body:    (emails.email3?.body    || '').substring(0, 2000),
           email4_subject: (emails.email4?.subject || '').substring(0, 200),
-          email4_body: (emails.email4?.body || '').substring(0, 2000),
+          email4_body:    (emails.email4?.body    || '').substring(0, 2000),
           email5_subject: (emails.email5?.subject || '').substring(0, 200),
-          email5_body: (emails.email5?.body || '').substring(0, 2000),
+          email5_body:    (emails.email5?.body    || '').substring(0, 2000),
           email6_subject: (emails.email6?.subject || '').substring(0, 200),
-          email6_body: (emails.email6?.body || '').substring(0, 2000),
+          email6_body:    (emails.email6?.body    || '').substring(0, 2000),
           email7_subject: (emails.email7?.subject || '').substring(0, 200),
-          email7_body: (emails.email7?.body || '').substring(0, 2000),
+          email7_body:    (emails.email7?.body    || '').substring(0, 2000),
         }
       };
-    });
-
-    console.log('Pushing', leadPayloads.length, 'leads as array to campaign', campaignId);
-    console.log('First lead email:', leadPayloads[0]?.email);
-    console.log('Payload size:', JSON.stringify(leadPayloads).length);
-
-    const lr = await fetch('https://api.instantly.ai/api/v2/leads', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + instantlyKey },
-      body: JSON.stringify(leadPayloads)
-    });
-
-    if (lr.ok) {
-      const okData = await lr.json();
-      pushed = leadPayloads.length;
-      console.log('Leads pushed OK:', JSON.stringify(okData).substring(0, 300));
-    } else {
-      failed = leadPayloads.length;
-      const errText = await lr.text();
-      console.error('Lead push failed:', lr.status, errText.substring(0, 300));
-    }
-
-    // Legacy loop kept for error detail — remove after confirmed working
-    if (false) { for (const lead of leads) {
-      const emails = lead.generatedEmails || lead.emails || {};
-      const payload = { email: lead.email };
-      console.log('Pushing lead:', lead.email, 'payload size:', JSON.stringify(payload).length);
-      const lr2 = await fetch('https://api.instantly.ai/api/v2/leads', {
+      console.log('Pushing lead:', lead.email, '| campaign:', campaignId, '| payload size:', JSON.stringify(payload).length);
+      const lr = await fetch('https://api.instantly.ai/api/v2/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + instantlyKey },
         body: JSON.stringify(payload)
       });
-      if (lr2.ok) {
+      if (lr.ok) {
         pushed++;
+        const okData = await lr.json();
+        console.log('Lead pushed OK:', lead.email, '| id:', okData.id, '| campaign:', okData.campaign);
       } else {
         failed++;
+        const errText = await lr.text();
+        console.error('Lead push failed:', lead.email, lr.status, errText.substring(0, 300));
       }
-    } } // end if(false) legacy block
+    }
 
     await fetch(`https://api.instantly.ai/api/v2/campaigns/${campaignId}/activate`, {
       method: 'POST',
