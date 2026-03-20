@@ -159,6 +159,11 @@ app.post('/instantly-push', async (req, res) => {
       daily_limit: dailyLimit || 30,
       daily_max_leads: dailyLimit || 30,
       stop_on_reply: true,
+      // Tracking — confirmed field names from Instantly V2 API docs
+      open_tracking: true,
+      link_tracking: true,
+      // BCC odonovan@fidabio.com on all outgoing emails for reply visibility
+      bcc_list: ['odonovan@fidabio.com'],
       campaign_schedule: campaign_schedule || {
         schedules: [{
           name: 'Business Hours',
