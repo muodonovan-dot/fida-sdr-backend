@@ -60,6 +60,20 @@ const PORT = process.env.PORT || 3000;
 // ── Health check ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => res.json({ ok: true }));
 
+// Debug — check lead custom variables
+app.post('/check-lead', async (req, res) => {
+  const { instantlyKey, email } = req.body;
+  try {
+    const r = await fetch('https://api.instantly.ai/api/v2/leads/list', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + instantlyKey },
+      body: JSON.stringify({ email })
+    });
+    const d = await r.json();
+    res.json({ ok: true, lead: d.items?.[0] || null });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── Test Anthropic key ───────────────────────────────────────────────────────
 app.post('/test-anthropic', async (req, res) => {
   const { anthropicKey } = req.body;
