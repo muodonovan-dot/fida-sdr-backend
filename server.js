@@ -170,6 +170,13 @@ app.post('/instantly-push', async (req, res) => {
         }]
       }
     };
+    // Force valid Instantly timezone on all schedules — client may send invalid values
+    if (campaignBody.campaign_schedule?.schedules) {
+      campaignBody.campaign_schedule.schedules.forEach(s => {
+        s.timezone = 'America/Chicago';
+      });
+    }
+
     // If no email account specified, auto-fetch first active account from Instantly
     if (!campaignBody.email_list || campaignBody.email_list.length === 0) {
       try {
