@@ -224,6 +224,7 @@ app.post('/instantly-push', async (req, res) => {
         company_name: lead.organisation || lead.company || '',
         website: lead._linkedinUrl || '',
         phone: '',
+        allow_duplicates: true,
         custom_variables: {
           email1_subject: (emails.email1?.subject || '').substring(0, 200),
           email1_body:    (emails.email1?.body    || '').substring(0, 2000),
@@ -239,7 +240,11 @@ app.post('/instantly-push', async (req, res) => {
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + instantlyKey },
         body: JSON.stringify(payload)
       });
-      if (lr.ok) pushed++;
+      if (lr.ok) {
+        pushed++;
+        const okText = await lr.text();
+        console.log('Lead pushed OK:', lead.email, '| response:', okText.substring(0, 150));
+      }
       else {
         failed++;
         const errText = await lr.text();
