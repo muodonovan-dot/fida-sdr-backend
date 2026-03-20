@@ -170,6 +170,21 @@ app.post('/instantly-push', async (req, res) => {
         }]
       }
     };
+    // If no email account specified, auto-fetch first active account from Instantly
+    if (!campaignBody.email_list || campaignBody.email_list.length === 0) {
+      try {
+        const acctResp = await fetch('https://api.instantly.ai/api/v2/accounts?limit=5&status=1', {
+          headers: { 'Authorization': 'Bearer ' + instantlyKey }
+        });
+        const acctData = await acctResp.json();
+        const firstAccount = acctData.items?.[0]?.email;
+        if (firstAccount) {
+          campaignBody.email_list = [firstAccount];
+          console.log('Auto-selected sending account:', firstAccount);
+        }
+      } catch(e) { console.warn('Could not fetch Instantly accounts:', e.message); }
+    }
+
     const campResp = await fetch('https://api.instantly.ai/api/v2/campaigns', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + instantlyKey },
