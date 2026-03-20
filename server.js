@@ -161,6 +161,13 @@ app.post('/instantly-push', async (req, res) => {
       stop_on_reply: true,
       open_tracking: true,
       link_tracking: true,
+      sequences: [{
+        steps: [
+          { type: 'email', delay: 0,  variants: [{ subject: '{{email1_subject}}', body: '{{email1_body}}' }] },
+          { type: 'email', delay: 3,  variants: [{ subject: '{{email2_subject}}', body: '{{email2_body}}' }] },
+          { type: 'email', delay: 5,  variants: [{ subject: '{{email3_subject}}', body: '{{email3_body}}' }] }
+        ]
+      }],
       campaign_schedule: campaign_schedule || {
         schedules: [{
           name: 'Business Hours',
@@ -205,15 +212,36 @@ app.post('/instantly-push', async (req, res) => {
     
     const campaignId = campData.id;
     
-    // Push leads
+    // Push leads — clean payload with only fields Instantly accepts
     let pushed = 0, failed = 0;
     for (const lead of leads) {
+      const emails = lead.generatedEmails || lead.emails || {};
+      const payload = {
+        campaign_id: campaignId,
+        email: lead.email,
+        first_name: lead.firstName || lead.first_name || '',
+        last_name: lead.lastName || lead.last_name || '',
+        company_name: lead.organisation || lead.company || '',
+        custom_variables: {
+          email1_subject: emails.email1?.subject || '',
+          email1_body:    emails.email1?.body    || '',
+          email2_subject: emails.email2?.subject || '',
+          email2_body:    emails.email2?.body    || '',
+          email3_subject: emails.email3?.subject || '',
+          email3_body:    emails.email3?.body    || '',
+        }
+      };
       const lr = await fetch('https://api.instantly.ai/api/v2/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + instantlyKey },
-        body: JSON.stringify({ ...lead, campaign_id: campaignId })
+        body: JSON.stringify(payload)
       });
-      if (lr.ok) pushed++; else failed++;
+      if (lr.ok) pushed++;
+      else {
+        failed++;
+        const errText = await lr.text();
+        console.error('Lead push failed for', lead.email, ':', lr.status, errText.substring(0, 200));
+      }
     }
     
     // Activate
