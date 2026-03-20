@@ -166,7 +166,7 @@ app.post('/instantly-push', async (req, res) => {
           name: 'Business Hours',
           timing: { from: '09:00', to: '11:00' },
           days: { monday: false, tuesday: true, wednesday: true, thursday: true, friday: false, saturday: false, sunday: false },
-          timezone: 'America/New_York'
+          timezone: 'America/Chicago'
         }]
       }
     };
