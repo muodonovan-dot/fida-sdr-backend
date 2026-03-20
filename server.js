@@ -191,7 +191,10 @@ app.post('/instantly-push', async (req, res) => {
       body: JSON.stringify(campaignBody)
     });
     const campData = await campResp.json();
-    if (!campResp.ok) return res.status(campResp.status).json({ error: campData.error || 'Campaign creation failed' });
+    if (!campResp.ok) {
+      console.error('Instantly campaign creation failed:', campResp.status, JSON.stringify(campData));
+      return res.status(campResp.status).json({ error: campData.error || campData.message || JSON.stringify(campData) });
+    }
     
     const campaignId = campData.id;
     
