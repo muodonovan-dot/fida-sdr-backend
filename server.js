@@ -480,7 +480,6 @@ app.post('/instantly-launch', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-app.listen(PORT, () => console.log(`Fida SDR backend running on port ${PORT}`));
 
 // ── Google Custom Search — LinkedIn finder + location validator ──────────────
 app.post('/find-linkedin', async (req, res) => {
@@ -883,3 +882,76 @@ app.post('/enrich-lead', async (req, res) => {
 
   res.json({ results, errors });
 });
+
+// ── Bug Report endpoint ───────────────────────────────────────────────────────
+app.post('/api/bug-report', async (req, res) => {
+  const { description, reporterEmail, debug } = req.body;
+  if (!description) return res.status(400).json({ error: 'Description required' });
+
+  try {
+    // Format a clean email body
+    const body = [
+      '🐛 FIDA NEO BUG REPORT',
+      '═══════════════════════════════',
+      '',
+      `📝 Description: ${description}`,
+      `📧 Reporter: ${reporterEmail || 'anonymous'}`,
+      `🕐 Time: ${debug?.timestamp || new Date().toISOString()}`,
+      '',
+      '── User Info ──',
+      `User ID: ${debug?.userId || 'unknown'}`,
+      `App URL: ${debug?.appUrl || 'unknown'}`,
+      `Active Tab: ${debug?.activeTab || 'unknown'}`,
+      `Browser: ${debug?.browser || 'unknown'}`,
+      '',
+      '── App State ──',
+      `Supabase Connected: ${debug?.supabaseConnected}`,
+      `Total Leads: ${debug?.totalLeads || 0}`,
+      `Playbooks: ${JSON.stringify(debug?.playbooks || [])}`,
+      '',
+      '── API Keys ──',
+      `Anthropic: ${debug?.apiKeys?.anthropic}`,
+      `ZeroBounce: ${debug?.apiKeys?.zeroBounce}`,
+      `Instantly: ${debug?.apiKeys?.instantly}`,
+      '',
+      '── Recent JS Errors ──',
+      JSON.stringify(debug?.recentErrors || [], null, 2),
+    ].join('\n');
+
+    // Send via Instantly API (reuse the existing integration)
+    const instantlyPayload = {
+      api_key: process.env.INSTANTLY_API_KEY || '',
+      to: ['odonovan@fidabio.com'],
+      from: 'mike@fida-connect.com',
+      from_name: 'Fida Neo Bug Reporter',
+      subject: `🐛 Bug Report: ${description.substring(0, 60)}`,
+      body: body.replace(/\n/g, '<br>'),
+      reply_to: reporterEmail || 'odonovan@fidabio.com'
+    };
+
+    // Try Instantly first, fall back to just logging
+    let sent = false;
+    if (process.env.INSTANTLY_API_KEY) {
+      try {
+        const r = await fetch('https://api.instantly.ai/api/v1/email/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(instantlyPayload)
+        });
+        sent = r.ok;
+      } catch(e) { console.error('Instantly send failed:', e.message); }
+    }
+
+    // Always log to console (Render logs) as backup
+    console.log('=== BUG REPORT ===');
+    console.log(body);
+    console.log('==================');
+
+    res.json({ ok: true, sent });
+  } catch(e) {
+    console.error('Bug report error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.listen(PORT, () => console.log(`Fida SDR backend running on port ${PORT}`));
