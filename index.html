@@ -631,27 +631,7 @@ html, body { height:100%; overflow:hidden; }
 .rib:hover::after { opacity:1; }
 
 
-.drawer-edit-label {
-  font-size:.65rem;font-weight:600;color:var(--muted);
-  text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;
-}
-.drawer-edit-input {
-  width:100%;box-sizing:border-box;
-  background:var(--bg3);
-  border:1px solid var(--border);
-  border-radius:7px;
-  padding:7px 10px;
-  color:var(--text);
-  font-family:inherit;
-  font-size:.8rem;
-  outline:none;
-  transition:border-color .15s;
-}
-.drawer-edit-input:focus {
-  border-color:var(--orange);
-  background:rgba(239,77,5,.04);
-}
-.drawer-edit-input::placeholder { color:rgba(255,255,255,.2); }
+
 
 
 @keyframes spin { to { transform:rotate(360deg); } }
@@ -678,6 +658,51 @@ footer a { color: var(--orange-light, #ff7a3d); text-decoration: none; }
 tr:hover .row-actions-inline { display:flex; }
 .contact-row { transition: background .1s; }
 .contact-row td { vertical-align: middle; }
+
+.drawer-section { padding:16px 20px 16px 22px;border-bottom:1px solid rgba(255,255,255,.05); }
+.drawer-section:last-child { border-bottom:none; }
+.drawer-label { font-size:.58rem;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px; }
+.drawer-field { display:flex;align-items:flex-start;gap:8px;margin-bottom:5px; }
+.drawer-field-icon { font-size:.8rem;margin-top:1px;flex-shrink:0;width:16px;text-align:center; }
+.drawer-field-val { font-size:.78rem;color:var(--text);line-height:1.5; }
+.drawer-field-val.muted { color:var(--muted); }
+.drawer-edit-label { font-size:.58rem;font-weight:600;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px; }
+#contactDrawer .drawer-edit-input,
+#contactDrawerOverlay .drawer-edit-input {
+  width:100% !important;
+  box-sizing:border-box !important;
+  background:rgba(255,255,255,.05) !important;
+  border:none !important;
+  border-bottom:1.5px solid rgba(255,255,255,.15) !important;
+  border-radius:0 !important;
+  padding:6px 0 !important;
+  color:#fff !important;
+  font-family:inherit !important;
+  font-size:.82rem !important;
+  outline:none !important;
+  transition:border-bottom-color .15s !important;
+  -webkit-appearance:none !important;
+  box-shadow:none !important;
+}
+#contactDrawer .drawer-edit-input:focus,
+#contactDrawerOverlay .drawer-edit-input:focus {
+  border-bottom-color:var(--orange) !important;
+  background:rgba(239,77,5,.03) !important;
+}
+#contactDrawer .drawer-edit-input::placeholder,
+#contactDrawerOverlay .drawer-edit-input::placeholder { color:rgba(255,255,255,.2) !important; }
+.drawer-edit-input { background:rgba(255,255,255,.05); border:none; border-bottom:1.5px solid rgba(255,255,255,.15); border-radius:0; padding:6px 2px; color:#fff; font-family:inherit; font-size:.82rem; outline:none; transition:border-bottom-color .15s; -webkit-appearance:none; box-shadow:none; }
+.drawer-edit-input:focus { border-bottom-color:var(--orange); }
+.drawer-edit-input::placeholder { color:rgba(255,255,255,.2); }
+.drawer-note-input {
+  width:100%;box-sizing:border-box;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:8px;
+  padding:9px 12px;color:var(--text);font-size:.78rem;
+  font-family:inherit;resize:vertical;min-height:64px;line-height:1.6;
+}
+.drawer-note-input:focus { outline:none;border-color:rgba(239,77,5,.35); }
 
 /* ── LOCATION BADGES ── */
 .loc-badge {
@@ -734,33 +759,6 @@ tr:hover .row-actions-inline { display:flex; }
 .pg-btn:disabled { opacity:.35;cursor:default; }
 
 /* Contact drawer */
-.drawer-section { padding:16px 20px;border-bottom:1px solid var(--border); }
-.drawer-label { font-size:.65rem;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px; }
-.drawer-field { display:flex;align-items:flex-start;gap:10px;margin-bottom:8px; }
-.drawer-field-icon { font-size:.85rem;margin-top:1px;flex-shrink:0;width:18px;text-align:center; }
-.drawer-field-val { font-size:.8rem;color:var(--text);line-height:1.5; }
-.drawer-field-val.muted { color:var(--muted); }
-.drawer-note-input {
-  width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border);
-  border-radius:7px;padding:8px 10px;color:var(--text);font-size:.78rem;
-  font-family:inherit;resize:vertical;min-height:60px;line-height:1.5;
-}
-.drawer-note-input:focus { outline:none;border-color:rgba(239,77,5,.5); }
-
-</div>
-/* ── Import Leads page ─────────────────────────────────── */
-.import-source-btn {
-  padding:5px 14px;border-radius:20px;border:1px solid rgba(255,255,255,.12);
-  background:transparent;color:rgba(255,255,255,.45);font-size:.75rem;cursor:pointer;
-  font-family:inherit;transition:.15s;
-}
-.import-source-btn:hover { border-color:rgba(239,77,5,.4);color:rgba(255,255,255,.8); }
-.import-source-btn.active { background:rgba(239,77,5,.15);border-color:var(--orange);color:#fff;font-weight:600; }
-.import-field-row { display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:.8rem; }
-.import-field-label { width:130px;color:rgba(255,255,255,.5);flex-shrink:0; }
-.import-field-mapped { color:#fff;font-weight:500; }
-.import-field-none { color:rgba(255,255,255,.2);font-style:italic; }
-
 </style>
 </head>
 <body>
@@ -794,9 +792,6 @@ tr:hover .row-actions-inline { display:flex; }
     </button>
     <button class="sidebar-item" id="navLinkedin" onclick="switchTab('linkedin')">
       <span class="si">💼</span><span>LinkedIn</span>
-    </button>
-    <button class="sidebar-item" id="navImport" onclick="switchTab('import')">
-      <span class="si">📥</span><span>Import Leads</span>
     </button>
     <button class="sidebar-item" id="navSdr" onclick="switchTab('sdr')">
       <span class="si">⚡</span><span>Generate</span>
@@ -1614,33 +1609,6 @@ tr:hover .row-actions-inline { display:flex; }
   </div>
 </div><!-- end #pageLinkedin -->
 
-<!-- ══════════════════════════════════════════════════════════
-     PAGE: IMPORT LEADS
-════════════════════════════════════════════════════════════ -->
-<div id="pageImport" style="display:none;height:calc(100vh - 52px);display:none;align-items:center;justify-content:center">
-  <div style="text-align:center;max-width:520px;width:100%;padding:32px">
-
-    <div style="font-size:2.5rem;margin-bottom:16px">📂</div>
-    <div style="font-family:Outfit,sans-serif;font-size:1.4rem;font-weight:700;color:#fff;margin-bottom:8px">Import Leads</div>
-    <div style="font-size:.84rem;color:var(--muted);margin-bottom:32px;line-height:1.6">Drop a CSV or Excel export from SciLeads, LeadGeeks,<br>HubSpot, LinkedIn, ZoomInfo, or any other source.</div>
-
-    <!-- Big drop zone -->
-    <div id="importDropzone"
-      style="border:2px dashed rgba(255,255,255,.15);border-radius:16px;padding:52px 32px;cursor:pointer;transition:all .2s;position:relative;background:rgba(255,255,255,.02)"
-      ondragover="importDragOver(event)" ondragleave="importDragLeave(event)" ondrop="importDrop(event)"
-      onclick="document.getElementById('importFileInput').click()">
-      <div style="font-size:2.8rem;margin-bottom:12px;opacity:.4">⬆️</div>
-      <div style="font-size:1rem;color:var(--text);font-weight:600;margin-bottom:6px">Drop file here</div>
-      <div style="font-size:.76rem;color:rgba(255,255,255,.3)">or <span style="color:var(--orange-light);text-decoration:underline">browse your computer</span></div>
-      <div style="font-size:.7rem;color:rgba(255,255,255,.2);margin-top:10px">CSV · XLSX · XLS</div>
-      <input type="file" id="importFileInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleImportFile(this)"/>
-    </div>
-
-  </div>
-  <!-- Modal injected here after file drop -->
-  <div id="importPreview"></div>
-</div>
-
 
 <!-- ══════════════════════════════════════════════
      CONTACTS PAGE
@@ -1790,14 +1758,15 @@ tr:hover .row-actions-inline { display:flex; }
 </div><!-- end #pageContacts -->
 
 <!-- ── CONTACT DETAIL DRAWER ── -->
-<div id="contactDrawerOverlay" onclick="closeContactDrawer()" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,.75);z-index:999;display:none;align-items:center;justify-content:center;backdrop-filter:blur(5px)">
-<div id="contactDrawer" onclick="event.stopPropagation()" style="background:#13111f;border:1px solid rgba(255,255,255,.09);border-radius:16px;width:700px;max-width:96vw;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(0,0,0,.7);overflow:hidden">
-  <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
-    <div style="font-family:Outfit,sans-serif;font-weight:700;font-size:.9rem;color:#fff">Contact Details</div>
-    <button onclick="closeContactDrawer()" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:4px 8px">✕</button>
+<!-- Contact Modal (centered) -->
+<div id="contactDrawerOverlay" onclick="closeContactDrawer()" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,.75);z-index:1000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(5px)">
+  <div id="contactDrawer" onclick="event.stopPropagation()" style="background:#13111f;border:1px solid rgba(255,255,255,.09);border-radius:16px;width:700px;max-width:96vw;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(0,0,0,.7);overflow:hidden">
+    <div style="padding:14px 24px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <div style="font-family:Outfit,sans-serif;font-weight:700;font-size:.7rem;color:rgba(255,255,255,.35);letter-spacing:.12em;text-transform:uppercase">Contact Details</div>
+      <button onclick="closeContactDrawer()" style="background:transparent;border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.35);font-size:.72rem;cursor:pointer;padding:4px 12px;border-radius:6px;font-family:inherit;transition:.15s" onmouseover="this.style.color='#fff';this.style.borderColor='rgba(255,255,255,.3)'" onmouseout="this.style.color='rgba(255,255,255,.35)';this.style.borderColor='rgba(255,255,255,.1)'">✕ Close</button>
+    </div>
+    <div id="contactDrawerBody" style="overflow-y:auto;flex:1;padding:0;scrollbar-gutter:stable"></div>
   </div>
-  <div id="contactDrawerBody" style="overflow-y:auto;flex:1;padding:0"></div>
-</div>
 </div>
 
 </div><!-- close stray div -->
@@ -2057,13 +2026,11 @@ const SUPABASE_URL = 'https://cqsdsztzyvxtnzrruxeb.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_oWLb_blZHL_rayCldsPfMw_OoQs0HMR';
 
 function getUserId() {
-  let uid = localStorage.getItem('fidaUserId');
-  if (!uid) {
-    // Auto-generate a stable unique ID on first load
-    uid = 'fida_' + Math.random().toString(36).slice(2,8) + Math.random().toString(36).slice(2,8);
-    localStorage.setItem('fidaUserId', uid);
-  }
-  return uid;
+  // Always use the fixed user ID — never auto-generate a random one
+  // This ensures all tabs/sessions (including Chrome extension) query the same Supabase data
+  const FIXED_USER_ID = 'michael@fida';
+  localStorage.setItem('fidaUserId', FIXED_USER_ID);
+  return FIXED_USER_ID;
 }
 let sb = null;
 let currentUser = null;
@@ -2102,6 +2069,7 @@ const BACKEND = 'https://fida-sdr-backend.onrender.com';
 
 // Contacts page state (declared early to avoid initialization errors)
 let contactsData = [];
+let filteredContactsData = []; // The currently visible/filtered subset — used by select-all
 let contactsFilter = 'all';
 let contactsSortDir = -1;
 let contactsSearch = '';
@@ -2826,6 +2794,32 @@ async function syncPlaybooksToSupabase() {
   const SUPA_URL = 'https://cqsdsztzyvxtnzrruxeb.supabase.co';
   const SUPA_KEY = 'sb_publishable_oWLb_blZHL_rayCldsPfMw_OoQs0HMR';
 
+  // Always upsert playbook rows first — this is what loads on fresh tabs
+  const pbRows = playbooks.map(pb => ({
+    id: pb.id,
+    user_id: userId,
+    name: pb.name || '',
+    color: pb.color || '#EF4D05',
+    brief: pb.brief || '',
+    keywords: pb.keywords || '',
+    angle: pb.angle || '',
+    tone: pb.tone || 'industry',
+    methodology: pb.methodology || '',
+    created_at: pb.createdAt || pb.created_at || new Date().toISOString()
+  }));
+  try {
+    await fetch(SUPA_URL + '/rest/v1/playbooks', {
+      method: 'POST',
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': 'Bearer ' + SUPA_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify(pbRows)
+    });
+  } catch(e) { console.warn('[Supabase playbooks sync error]', e.message); }
+
   const leads = playbooks.flatMap(pb => (pb.leads || []).map(l => ({
     id: l.id,
     playbook_id: pb.id,
@@ -2861,7 +2855,10 @@ async function syncPlaybooksToSupabase() {
     added_at: l.createdAt || l.added_at || Date.now()
   })));
 
-  if (!leads.length) return;
+  if (!leads.length) {
+    if (syncEl) { syncEl.textContent = '✓ Saved to DB'; setTimeout(() => { if(syncEl) syncEl.textContent=''; }, 2000); }
+    return;
+  }
 
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/leads', {
@@ -3209,13 +3206,13 @@ function switchTab(tab) {
   // Map tab names to page IDs
   const pageMap = {
     playbooks: 'pagePlaybooks', contacts: 'pageContacts',
-    aiDiscover: 'pageAiDiscover', searchLeads: 'pageSearchLeads', linkedin: 'pageLinkedin', import: 'pageImport',
+    aiDiscover: 'pageAiDiscover', searchLeads: 'pageSearchLeads', linkedin: 'pageLinkedin',
     sdr: 'pageSdr', analytics: 'pageAnalytics', settings: 'pageSettings'
   };
   // Show/hide pages
   Object.entries(pageMap).forEach(([t, pid]) => {
     const el = document.getElementById(pid);
-    if (el) el.style.display = t === tab ? (pid === 'pageImport' ? 'flex' : 'block') : 'none';
+    if (el) el.style.display = t === tab ? 'block' : 'none';
   });
   // Search leads uses flex layout for two-panel
   const slPage = document.getElementById('pageSearchLeads');
@@ -3224,7 +3221,7 @@ function switchTab(tab) {
   // Update sidebar active state
   const navMap = {
     playbooks:'navPlaybooks', contacts:'navContacts',
-    aiDiscover:'navAiDiscover', searchLeads:'navSearchLeads', linkedin:'navLinkedin', import:'navImport',
+    aiDiscover:'navAiDiscover', searchLeads:'navSearchLeads', linkedin:'navLinkedin',
     sdr:'navSdr', analytics:'navAnalytics', settings:'navSettings'
   };
   Object.entries(navMap).forEach(([t, id]) => {
@@ -3234,7 +3231,7 @@ function switchTab(tab) {
   // Header title
   const titles = {
     playbooks:'Playbooks', contacts:'Contacts',
-    aiDiscover:'AI Discover', searchLeads:'Search Leads', linkedin:'LinkedIn Leads', import:'Import Leads',
+    aiDiscover:'AI Discover', searchLeads:'Search Leads', linkedin:'LinkedIn Leads',
     sdr:'Generate Emails', analytics:'Analytics', settings:'Settings'
   };
   const titleEl = document.getElementById('contentTitle');
@@ -4087,21 +4084,145 @@ function handleXlsx(input) { handleXlsxFile(input.files[0]); }
 async function handleXlsxFile(file) {
   if (!file) return;
   const wb = XLSX.read(await file.arrayBuffer(), {type:'array'});
-  const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1});
-  const headers = rows[0].map(h => (h||'').toString().toLowerCase().trim());
-  const col = n => headers.findIndex(h => h && h.includes(n));
-  const [iFirst,iLast,iEmail,iJob,iOrg,iState,iCountry,iFocus] =
-    ['first','last','email','job','organ','state','country','focus'].map(col);
 
-  const parsedLeads = rows.slice(1).filter(r => r[iFirst]||r[iEmail]).map((r,i) => ({
-    firstName:r[iFirst]||'', lastName:r[iLast]||'', email:r[iEmail]||'',
-    jobTitle:r[iJob]||'', organisation:r[iOrg]||'', state:r[iState]||'', country:r[iCountry]||'',
-    focusedAreas:r[iFocus]||'', tone: detectTone(r[iEmail]||'')
-  }));
+  // Smart sheet selection: pick the sheet with the most rows (SciLeads files have multiple sheets)
+  let bestSheet = wb.SheetNames[0];
+  let bestRowCount = 0;
+  for (const name of wb.SheetNames) {
+    const range = wb.Sheets[name]['!ref'];
+    if (!range) continue;
+    const match = range.match(/:.*?(\d+)$/);
+    const rowCount = match ? parseInt(match[1]) : 0;
+    if (rowCount > bestRowCount) { bestRowCount = rowCount; bestSheet = name; }
+  }
+  console.log(`[Import] Using sheet "${bestSheet}" (${bestRowCount} rows) from ${wb.SheetNames.length} sheets`);
+
+  const rows = XLSX.utils.sheet_to_json(wb.Sheets[bestSheet], {header:1, raw:false, defval:''});
+  if (!rows.length || !rows[0]) { alert('No data found in file.'); return; }
+
+  const headers = rows[0].map(h => (h||'').toString().toLowerCase().trim());
+
+  // Flexible column finder — tries exact match first, then partial
+  function findCol(...names) {
+    for (const n of names) {
+      // Exact match
+      const exact = headers.findIndex(h => h === n);
+      if (exact >= 0) return exact;
+    }
+    for (const n of names) {
+      // Partial match
+      const partial = headers.findIndex(h => h && h.includes(n));
+      if (partial >= 0) return partial;
+    }
+    return -1;
+  }
+
+  // Map all relevant columns — handles SciLeads, LinkedIn exports, HubSpot, generic CSV
+  const iFirst     = findCol('first name', 'first', 'firstname', 'given name');
+  const iLast      = findCol('last name', 'last', 'lastname', 'surname', 'family name');
+  const iEmail     = findCol('email', 'email address', 'e-mail', 'work email');
+  const iJob       = findCol('job title', 'title', 'position', 'role');
+  const iOrg       = findCol('organisation', 'organization', 'company', 'institution', 'employer');
+  const iState     = findCol('state/province', 'state', 'region/state');
+  const iCountry   = findCol('country', 'nation');
+  const iCity      = findCol('city', 'town');
+  const iZip       = findCol('zip postcode', 'zip', 'postcode', 'postal code');
+  const iLinkedIn  = findCol('linkedin profile', 'linkedin', 'linkedin url', 'linkedin link');
+  const iFocus     = findCol('focused research areas', 'focus', 'research areas', 'research interest');
+  const iBroad     = findCol('broad research categories', 'broad research', 'research categories');
+  const iPhone     = findCol('phone', 'telephone', 'phone number');
+  const iFunding   = findCol('funding usd', 'funding', 'total funding');
+  const iImpact    = findCol('research impact', 'impact', 'h-index');
+  const iRelevance = findCol('relevance score', 'relevance', 'score');
+  const iOrgCat    = findCol('organisation category', 'organization category', 'company type', 'industry');
+  const iGrants    = findCol('no. of relevant grants', 'relevant grants', 'grants');
+  const iPubs      = findCol('no. of relevant publications', 'relevant publications', 'publications');
+  const iTrials    = findCol('no. of relevant clinical trials', 'clinical trials', 'trials');
+  const iCollabs   = findCol('no. of collaborators', 'collaborators');
+  const iKeywords  = findCol('keywords found', 'fidabio keywords', 'keywords');
+  const iProfile   = findCol('scileads profile', 'profile url', 'profile');
+  const iMiddle    = findCol('middle name', 'middle');
+  const iAddress   = findCol('address', 'street');
+  const iRegion    = findCol('region');
+  const iPubMatch  = findCol('publication matches', 'pub matches');
+  const iFundMatch = findCol('funding matches', 'fund matches');
+
+  console.log(`[Import] Column mapping: first=${iFirst} last=${iLast} email=${iEmail} org=${iOrg} linkedin=${iLinkedIn} state=${iState} city=${iCity} focus=${iFocus}`);
+
+  // Helper to extract URL from HYPERLINK formula or plain text
+  function extractUrl(val) {
+    if (!val) return '';
+    const s = val.toString();
+    // =HYPERLINK("url","display") — extract the URL
+    const hMatch = s.match(/=HYPERLINK\("([^"]+)"/i);
+    if (hMatch) return hMatch[1];
+    // Plain URL
+    if (s.startsWith('http')) return s.trim();
+    return '';
+  }
+
+  // Helper to get cell value, handling empty/undefined
+  function getVal(row, idx) {
+    if (idx < 0 || idx >= row.length) return '';
+    const v = row[idx];
+    if (v === undefined || v === null) return '';
+    return v.toString().trim();
+  }
+
+  const parsedLeads = rows.slice(1).filter(r => {
+    // Must have at least a first name or email
+    return (iFirst >= 0 && r[iFirst]) || (iEmail >= 0 && r[iEmail]);
+  }).map(r => {
+    const email = getVal(r, iEmail);
+    const linkedinRaw = iLinkedIn >= 0 ? (r[iLinkedIn]||'').toString() : '';
+    const linkedinUrl = extractUrl(linkedinRaw);
+    const profileRaw = iProfile >= 0 ? (r[iProfile]||'').toString() : '';
+    const profileUrl = extractUrl(profileRaw);
+    const funding3yr = iFunding >= 0 ? parseFloat(r[iFunding]) || 0 : 0;
+
+    return {
+      firstName: getVal(r, iFirst),
+      lastName: getVal(r, iLast),
+      email: email,
+      jobTitle: getVal(r, iJob),
+      organisation: getVal(r, iOrg),
+      state: getVal(r, iState),
+      country: getVal(r, iCountry),
+      _city: getVal(r, iCity),
+      _zip: getVal(r, iZip),
+      _phone: getVal(r, iPhone),
+      _linkedinUrl: linkedinUrl,
+      focusedAreas: getVal(r, iFocus),
+      _broadResearch: getVal(r, iBroad),
+      _orgCategory: getVal(r, iOrgCat),
+      _funding3yr: funding3yr,
+      _fundingFormatted: funding3yr >= 1000000 ? `$${(funding3yr/1000000).toFixed(1)}M` : funding3yr >= 1000 ? `$${Math.round(funding3yr/1000)}K` : funding3yr > 0 ? `$${funding3yr}` : '',
+      _researchImpact: iImpact >= 0 ? parseFloat(r[iImpact]) || 0 : 0,
+      _relevanceScore: iRelevance >= 0 ? parseFloat(r[iRelevance]) || 0 : 0,
+      _nihGrantCount: iGrants >= 0 ? parseInt(r[iGrants]) || 0 : 0,
+      _pubmedCount: iPubs >= 0 ? parseInt(r[iPubs]) || 0 : 0,
+      _clinicalTrials: iTrials >= 0 ? parseInt(r[iTrials]) || 0 : 0,
+      _collaboratorCount: iCollabs >= 0 ? parseInt(r[iCollabs]) || 0 : 0,
+      _sciLeadsProfile: profileUrl,
+      _keywords: getVal(r, iKeywords),
+      _pubMatches: getVal(r, iPubMatch),
+      _fundMatches: getVal(r, iFundMatch),
+      _middleName: getVal(r, iMiddle),
+      _address: getVal(r, iAddress),
+      _region: getVal(r, iRegion),
+      tone: detectTone(email)
+    };
+  });
 
   if (!parsedLeads.length) { alert('No leads found in file.'); return; }
 
-  // Show playbook assignment modal
+  // Log import stats
+  const withEmail = parsedLeads.filter(l => l.email).length;
+  const withLinkedIn = parsedLeads.filter(l => l._linkedinUrl).length;
+  const withFunding = parsedLeads.filter(l => l._funding3yr > 0).length;
+  console.log(`[Import] Parsed ${parsedLeads.length} leads: ${withEmail} have email, ${withLinkedIn} have LinkedIn, ${withFunding} have funding data`);
+
+  // Show playbook assignment modal with richer stats
   showCsvPlaybookModal(parsedLeads, file.name);
 }
 
@@ -4109,13 +4230,25 @@ function showCsvPlaybookModal(parsedLeads, filename) {
   const existing = document.getElementById('csvPlaybookModal');
   if (existing) existing.remove();
 
+  const withEmail = parsedLeads.filter(l => l.email).length;
+  const withLinkedIn = parsedLeads.filter(l => l._linkedinUrl).length;
+  const withFunding = parsedLeads.filter(l => l._funding3yr > 0).length;
+  // Derive a playbook name from filename
+  const suggestedName = filename.replace(/\.(xlsx?|csv|tsv)$/i, '').replace(/[_-]/g, ' ').trim();
+
   const modal = document.createElement('div');
   modal.id = 'csvPlaybookModal';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
   modal.innerHTML = `
     <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:28px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto">
-      <h3 style="font-family:'Outfit',sans-serif;font-size:1.1rem;margin:0 0 6px;color:var(--text)">Import ${parsedLeads.length} Leads from CSV</h3>
-      <div style="font-size:.78rem;color:var(--muted);margin-bottom:20px">${filename}</div>
+      <h3 style="font-family:'Outfit',sans-serif;font-size:1.1rem;margin:0 0 6px;color:var(--text)">Import ${parsedLeads.length} Leads</h3>
+      <div style="font-size:.78rem;color:var(--muted);margin-bottom:12px">${filename}</div>
+
+      <div style="display:flex;gap:12px;margin-bottom:18px;font-size:.78rem;color:var(--muted)">
+        <span>📧 ${withEmail} emails</span>
+        <span>🔗 ${withLinkedIn} LinkedIn</span>
+        ${withFunding ? `<span>💰 ${withFunding} with funding</span>` : ''}
+      </div>
 
       <div style="display:flex;gap:10px;margin-bottom:18px">
         <button id="csvModeManual" class="btn btn-primary btn-sm" onclick="setCsvMode('manual')" style="flex:1">Assign to Playbook</button>
@@ -4124,10 +4257,15 @@ function showCsvPlaybookModal(parsedLeads, filename) {
 
       <div id="csvManualSection">
         <div class="field-label">Select Playbook</div>
-        <select id="csvPlaybookSelect" style="width:100%;margin-bottom:16px">
-          <option value="">-- Select a playbook --</option>
-          ${playbooks.map(pb => `<option value="${pb.id}" ${pb.id === activePlaybookId ? 'selected' : ''}>${pb.name}</option>`).join('')}
+        <select id="csvPlaybookSelect" style="width:100%;margin-bottom:8px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:.85rem">
+          <option value="">-- Select existing playbook --</option>
+          ${playbooks.map(pb => `<option value="${pb.id}" ${pb.id === activePlaybookId ? 'selected' : ''}>${pb.name} (${(pb.leads||[]).length} leads)</option>`).join('')}
+          <option value="__new__">➕ Create new playbook</option>
         </select>
+        <div id="csvNewPbSection" style="display:none;margin-bottom:12px">
+          <input type="text" id="csvNewPbName" value="${suggestedName}" placeholder="New playbook name"
+            style="width:100%;padding:8px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;font-size:.85rem;box-sizing:border-box">
+        </div>
       </div>
 
       <div id="csvAiSection" style="display:none">
@@ -4139,15 +4277,24 @@ function showCsvPlaybookModal(parsedLeads, filename) {
       <div id="csvImportStatus" style="font-size:.8rem;color:var(--muted);margin-bottom:12px;min-height:18px"></div>
 
       <div style="display:flex;gap:10px;justify-content:flex-end">
-        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('csvPlaybookModal').remove()">Cancel</button>
+        <button class="btn btn-ghost btn-sm" onclick="closeCsvModal()">Cancel</button>
         <button class="btn btn-primary btn-sm" id="csvImportBtn" onclick="executeCsvImport()">Import Leads</button>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
-  // Store leads for import
   modal._leads = parsedLeads;
   modal._mode = 'manual';
+
+  // Toggle new playbook name field
+  document.getElementById('csvPlaybookSelect').addEventListener('change', function() {
+    document.getElementById('csvNewPbSection').style.display = this.value === '__new__' ? 'block' : 'none';
+  });
+}
+
+function closeCsvModal() {
+  const m = document.getElementById('csvPlaybookModal');
+  if (m) m.remove();
 }
 
 function setCsvMode(mode) {
@@ -4171,31 +4318,51 @@ async function executeCsvImport() {
   btn.textContent = 'Importing...';
 
   if (mode === 'manual') {
-    const pbId = document.getElementById('csvPlaybookSelect').value;
+    let pbId = document.getElementById('csvPlaybookSelect').value;
     if (!pbId) { status.textContent = 'Please select a playbook first.'; btn.disabled = false; btn.textContent = 'Import Leads'; return; }
+
+    // Create new playbook if requested
+    if (pbId === '__new__') {
+      const newName = (document.getElementById('csvNewPbName')?.value || '').trim();
+      if (!newName) { status.textContent = 'Please enter a playbook name.'; btn.disabled = false; btn.textContent = 'Import Leads'; return; }
+      pbId = 'pb_' + Date.now();
+      playbooks.push({ id: pbId, name: newName, brief: '', keywords: '', leads: [], createdAt: Date.now() });
+    }
+
     const pb = playbooks.find(p => p.id === pbId);
     if (!pb.leads) pb.leads = [];
     let added = 0, skipped = 0, blocked = 0;
 
+    // Build global dedup index
+    const globalEmailIndex = new Set();
+    playbooks.forEach(p => (p.leads||[]).forEach(l => {
+      if (l.email) globalEmailIndex.add(l.email.toLowerCase().trim());
+    }));
+
     parsedLeads.forEach(l => {
+      // Global dedup by email
+      if (l.email && globalEmailIndex.has(l.email.toLowerCase().trim())) { skipped++; return; }
+      // Dedup by name+org within playbook
       const existingInPb = pb.leads.find(e =>
-        (e.email && l.email && e.email === l.email) ||
         (e.firstName === l.firstName && e.lastName === l.lastName && e.organisation === l.organisation)
       );
       if (existingInPb) {
         if (existingInPb.status === LEAD_STATUS.IN_SEQUENCE) { blocked++; return; }
         skipped++; return;
       }
-      pb.leads.push({
+      const newLead = {
         id: 'lead_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
         status: LEAD_STATUS.NEW,
         addedAt: Date.now(),
         ...l,
-        verifyTag: '--', verifyStatus: '',
+        verifyTag: l.email ? '--' : '',
+        verifyStatus: '',
         _source: 'csv_upload',
         _playbookId: pb.id,
         _playbookName: pb.name
-      });
+      };
+      pb.leads.push(newLead);
+      if (l.email) globalEmailIndex.add(l.email.toLowerCase().trim());
       added++;
     });
 
@@ -4403,6 +4570,12 @@ async function runVerification() {
   document.getElementById('statVerified').textContent = valid + ca;
   document.getElementById('statVerified').className = 'nav-stat-val ok';
   document.getElementById('verifyBtn').disabled = false;
+
+  // Auto-show invalid email modal if any found after verification
+  if (inv > 0) {
+    const invalidLeads = allLeads.filter(l => l.verifyTag === 'invalid');
+    setTimeout(() => showInvalidEmailsModal(invalidLeads), 400);
+  }
 }
 
 // Generate
@@ -4456,9 +4629,150 @@ async function testOneLead() {
   }
 }
 
+function showInvalidEmailsModal(invalidLeads) {
+  return new Promise(resolve => {
+    const existing = document.getElementById('invalidEmailModal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'invalidEmailModal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(4px)';
+
+    const rows = invalidLeads.map(l => `
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:8px 10px;font-size:.8rem;color:var(--text)">${l.firstName||''} ${l.lastName||''}</td>
+        <td style="padding:8px 10px;font-size:.78rem;color:var(--muted)">${l.organisation||'—'}</td>
+        <td style="padding:8px 10px;font-size:.78rem;color:#f87171">${l.email||'—'}</td>
+        <td style="padding:8px 10px" onclick="event.stopPropagation()">
+          <div style="display:flex;gap:6px">
+            <button onclick="invalidEmailAction('remove','${l.id}')" 
+              style="padding:4px 10px;border-radius:5px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.1);color:#f87171;cursor:pointer;font-size:.72rem;font-family:inherit">
+              🗑️ Remove
+            </button>
+            <button onclick="invalidEmailAction('skip','${l.id}')"
+              style="padding:4px 10px;border-radius:5px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);cursor:pointer;font-size:.72rem;font-family:inherit">
+              ⏭️ Skip
+            </button>
+          </div>
+        </td>
+      </tr>`).join('');
+
+    modal.innerHTML = `
+      <div style="background:var(--bg2);border:1px solid rgba(239,68,68,.3);border-radius:14px;width:620px;max-width:95vw;overflow:hidden">
+        <div style="padding:20px 24px;border-bottom:1px solid var(--border)">
+          <div style="font-family:Outfit,sans-serif;font-weight:700;font-size:1rem;color:#f87171">⚠️ ${invalidLeads.length} Invalid Email${invalidLeads.length>1?'s':''} Found</div>
+          <div style="font-size:.75rem;color:var(--muted);margin-top:4px">These contacts have undeliverable emails. Remove them or skip for now before generating.</div>
+        </div>
+        <div style="max-height:320px;overflow-y:auto">
+          <table style="width:100%;border-collapse:collapse">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border);background:var(--bg3)">
+                <th style="padding:8px 10px;font-size:.7rem;color:var(--muted);text-align:left;font-weight:600">NAME</th>
+                <th style="padding:8px 10px;font-size:.7rem;color:var(--muted);text-align:left;font-weight:600">COMPANY</th>
+                <th style="padding:8px 10px;font-size:.7rem;color:var(--muted);text-align:left;font-weight:600">BAD EMAIL</th>
+                <th style="padding:8px 10px;font-size:.7rem;color:var(--muted);text-align:left;font-weight:600">ACTION</th>
+              </tr>
+            </thead>
+            <tbody id="invalidEmailRows">${rows}</tbody>
+          </table>
+        </div>
+        <div style="padding:14px 24px;border-top:1px solid var(--border);display:flex;gap:10px;align-items:center">
+          <button onclick="invalidEmailBulkAction('remove_all')"
+            style="padding:8px 16px;border-radius:8px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.1);color:#f87171;cursor:pointer;font-family:inherit;font-size:.8rem">
+            🗑️ Remove All Invalid
+          </button>
+          <button onclick="invalidEmailBulkAction('skip_all')"
+            style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);cursor:pointer;font-family:inherit;font-size:.8rem">
+            ⏭️ Skip All
+          </button>
+          <div style="flex:1"></div>
+          <button onclick="document.getElementById('invalidEmailModal').remove();window._invalidResolve(false)"
+            style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:.8rem">
+            Cancel
+          </button>
+          <button id="invalidProceedBtn" onclick="document.getElementById('invalidEmailModal').remove();window._invalidResolve(true)"
+            style="padding:8px 20px;border-radius:8px;border:none;background:var(--orange);color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:.88rem">
+            ✅ Proceed with Valid Only
+          </button>
+        </div>
+      </div>`;
+
+    window._invalidResolve = resolve;
+    document.body.appendChild(modal);
+  });
+}
+
+function invalidEmailAction(action, leadId) {
+  const pb = getActivePlaybook();
+  if (!pb) return;
+  const lead = pb.leads?.find(l => l.id === leadId);
+  if (!lead) return;
+
+  if (action === 'remove') {
+    pb.leads = pb.leads.filter(l => l.id !== leadId);
+    // Also remove from results array
+    const idx = results.findIndex(r => r.id === leadId);
+    if (idx >= 0) results.splice(idx, 1);
+    savePlaybooksToStorage();
+    showToast(`🗑️ Removed ${lead.firstName || lead.email}`);
+  } else if (action === 'skip') {
+    lead.verifyTag = 'skipped_invalid';
+    const r = results.find(r => r.id === leadId);
+    if (r) r.verifyTag = 'skipped_invalid';
+    savePlaybooksToStorage();
+  }
+
+  // Remove row from modal table
+  const row = document.querySelector(`#invalidEmailRows button[onclick*="${leadId}"]`)?.closest('tr');
+  if (row) row.remove();
+
+  // If no more rows, auto-proceed
+  const remaining = document.querySelectorAll('#invalidEmailRows tr').length;
+  if (remaining === 0) {
+    document.getElementById('invalidEmailModal')?.remove();
+    window._invalidResolve(true);
+  }
+}
+
+function invalidEmailBulkAction(action) {
+  const pb = getActivePlaybook();
+  if (!pb) return;
+  const invalidIds = results.filter(r => r.verifyTag === 'invalid').map(r => r.id);
+
+  if (action === 'remove_all') {
+    pb.leads = pb.leads.filter(l => !invalidIds.includes(l.id));
+    invalidIds.forEach(id => {
+      const idx = results.findIndex(r => r.id === id);
+      if (idx >= 0) results.splice(idx, 1);
+    });
+    savePlaybooksToStorage();
+    showToast(`🗑️ Removed ${invalidIds.length} invalid contacts`);
+  } else if (action === 'skip_all') {
+    invalidIds.forEach(id => {
+      const r = results.find(r => r.id === id);
+      if (r) r.verifyTag = 'skipped_invalid';
+      const lead = pb.leads?.find(l => l.id === id);
+      if (lead) lead.verifyTag = 'skipped_invalid';
+    });
+    savePlaybooksToStorage();
+    showToast(`⏭️ Skipped ${invalidIds.length} invalid contacts`);
+  }
+
+  document.getElementById('invalidEmailModal')?.remove();
+  window._invalidResolve(true);
+}
+
 async function startGeneration() {
   const apiKey = document.getElementById('apiKey').value.trim();
   if (!apiKey) { alert('Enter your Anthropic API key in Step 1.'); return; }
+
+  // Check for invalid emails before generating — show resolution modal
+  const invalidLeads = results.filter(r => r.verifyTag === 'invalid');
+  if (invalidLeads.length > 0) {
+    const proceed = await showInvalidEmailsModal(invalidLeads);
+    if (!proceed) return; // user cancelled
+  }
+
   stopFlag = false;
   const batchSize = parseInt(document.getElementById('batchSize').value);
   const parallel = parseInt(document.getElementById('parallelCount').value);
@@ -4646,299 +4960,6 @@ function closeModal() { document.getElementById('previewModal').classList.remove
 document.getElementById('previewModal').addEventListener('click', e => { if (e.target===document.getElementById('previewModal')) closeModal(); });
 
 // Export CSV
-// ══════════════════════════════════════════════════════════
-// IMPORT LEADS — CSV/Excel upload with Claude field mapping
-// ══════════════════════════════════════════════════════════
-
-window._importSource = 'scileads';
-
-function setImportSource(source, btn) {
-  window._importSource = source;
-  document.querySelectorAll('.import-source-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-}
-
-function importDragOver(e) {
-  e.preventDefault();
-  document.getElementById('importDropzone').style.borderColor = 'var(--orange)';
-  document.getElementById('importDropzone').style.background = 'rgba(239,77,5,.04)';
-}
-function importDragLeave(e) {
-  document.getElementById('importDropzone').style.borderColor = 'rgba(255,255,255,.12)';
-  document.getElementById('importDropzone').style.background = '';
-}
-function importDrop(e) {
-  e.preventDefault();
-  importDragLeave(e);
-  const file = e.dataTransfer.files[0];
-  if (file) processImportFile(file);
-}
-function handleImportFile(input) {
-  const file = input.files[0];
-  if (file) processImportFile(file);
-  input.value = '';
-}
-
-async function processImportFile(file) {
-  const preview = document.getElementById('importPreview');
-  preview.style.display = 'block';
-  preview.innerHTML = '<div style="color:var(--muted);font-size:.82rem;padding:16px 0">\u23f3 Reading file...</div>';
-
-  try {
-    const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
-    if (!rows.length) { preview.innerHTML = '<div style="color:var(--orange)">No data found in file.</div>'; return; }
-
-    const headers = (rows[0] || []).map(h => (h || '').toString().trim());
-    const sampleRows = rows.slice(1, 6);
-
-    preview.innerHTML = '<div style="color:var(--muted);font-size:.82rem;padding:16px 0">\ud83e\udd16 Mapping ' + headers.length + ' columns with Claude...</div>';
-
-    const apiKey = localStorage.getItem('fidaApiKey');
-    let mapping = null;
-
-    if (apiKey) {
-      try {
-        const prompt = "You are mapping CSV column headers to a contact schema for a biotech sales tool.\n\nHeaders from the uploaded file:\n" +
-          headers.map(function(h, i) { return i + ': "' + h + '"'; }).join('\\n') +
-          "\n\nSample row 1: " + JSON.stringify(sampleRows[0] || []) +
-          "\n\nMap these headers to our schema fields. Return ONLY a JSON object where keys are our schema fields and values are the column index (0-based integer) or null if not present:\n{\n  \"firstName\": <index or null>,\n  \"lastName\": <index or null>,\n  \"email\": <index or null>,\n  \"jobTitle\": <index or null>,\n  \"organisation\": <index or null>,\n  \"state\": <index or null>,\n  \"country\": <index or null>,\n  \"linkedinUrl\": <index or null>,\n  \"phone\": <index or null>,\n  \"department\": <index or null>,\n  \"focusedAreas\": <index or null>,\n  \"city\": <index or null>\n}\n\nRules:\n- First Name, firstname, fname, first -> firstName\n- Last Name, lastname, lname, last, surname -> lastName\n- Email, email address, work email -> email\n- Title, job title, position, role -> jobTitle\n- Company, organization, organisation, institution, employer -> organisation\n- LinkedIn, linkedin url, profile url -> linkedinUrl\n- Department, dept, lab, division -> department\nReturn ONLY valid JSON, no markdown.";
-
-        const resp = await callClaude(apiKey, prompt, 400);
-        const cleaned = resp.replace(/```json|```/g, '').trim();
-        mapping = JSON.parse(cleaned);
-      } catch(e) {
-        console.warn('[Import] Claude mapping failed:', e.message);
-      }
-    }
-
-    // Fallback heuristic mapping
-    if (!mapping) {
-      mapping = {};
-      const hLower = headers.map(h => h.toLowerCase());
-      const find = function() {
-        for (let i = 0; i < arguments.length; i++) {
-          const idx = hLower.findIndex(h => h.includes(arguments[i]));
-          if (idx >= 0) return idx;
-        }
-        return null;
-      };
-      mapping.firstName = find('first name','firstname','fname','first');
-      mapping.lastName = find('last name','lastname','lname','surname');
-      mapping.email = find('email');
-      mapping.jobTitle = find('title','job','position','role');
-      mapping.organisation = find('company','organization','organisation','institution','employer');
-      mapping.state = find('state','province');
-      mapping.country = find('country');
-      mapping.linkedinUrl = find('linkedin');
-      mapping.phone = find('phone','telephone','mobile');
-      mapping.department = find('department','dept','lab','division');
-      mapping.focusedAreas = find('focus','research','specialty','keywords');
-      mapping.city = find('city','location');
-    }
-
-    const parsedLeads = rows.slice(1).filter(r => r.length > 0).map(function(r) {
-      return {
-        firstName: mapping.firstName !== null && mapping.firstName !== undefined ? String(r[mapping.firstName] || '') : '',
-        lastName: mapping.lastName !== null && mapping.lastName !== undefined ? String(r[mapping.lastName] || '') : '',
-        email: mapping.email !== null && mapping.email !== undefined ? String(r[mapping.email] || '') : '',
-        jobTitle: mapping.jobTitle !== null && mapping.jobTitle !== undefined ? String(r[mapping.jobTitle] || '') : '',
-        organisation: mapping.organisation !== null && mapping.organisation !== undefined ? String(r[mapping.organisation] || '') : '',
-        state: mapping.state !== null && mapping.state !== undefined ? String(r[mapping.state] || '') : '',
-        country: mapping.country !== null && mapping.country !== undefined ? String(r[mapping.country] || '') : '',
-        _linkedinUrl: mapping.linkedinUrl !== null && mapping.linkedinUrl !== undefined ? String(r[mapping.linkedinUrl] || '') : '',
-        phone: mapping.phone !== null && mapping.phone !== undefined ? String(r[mapping.phone] || '') : '',
-        _department: mapping.department !== null && mapping.department !== undefined ? String(r[mapping.department] || '') : '',
-        focusedAreas: mapping.focusedAreas !== null && mapping.focusedAreas !== undefined ? String(r[mapping.focusedAreas] || '') : '',
-        _city: mapping.city !== null && mapping.city !== undefined ? String(r[mapping.city] || '') : '',
-        _source: window._importSource,
-      };
-    }).filter(function(l) { return l.firstName || l.email; });
-
-    showImportPreview(parsedLeads, mapping, headers, sampleRows, file.name);
-
-  } catch(e) {
-    preview.innerHTML = '<div style="color:var(--orange)">Error reading file: ' + e.message + '</div>';
-  }
-}
-
-function closeImportModal() {
-  const m = document.getElementById('importModal');
-  if (m) m.remove();
-}
-
-function showImportPreview(leads, mapping, headers, sampleRows, filename) {
-  const source = window._importSource || 'scileads';
-
-  const fieldLabels = {
-    firstName:'First Name', lastName:'Last Name', email:'Email',
-    jobTitle:'Job Title', organisation:'Organisation', state:'State',
-    country:'Country', linkedinUrl:'LinkedIn URL', phone:'Phone',
-    department:'Department', focusedAreas:'Research Focus', city:'City'
-  };
-
-  // Build mapping rows - only show fields that were found
-  let mappedRows = '';
-  let unmappedRows = '';
-  Object.entries(fieldLabels).forEach(function(entry) {
-    const field = entry[0], label = entry[1];
-    const colIdx = mapping[field];
-    const colName = (colIdx !== null && colIdx !== undefined) ? headers[colIdx] : null;
-    const sampleVal = (colIdx !== null && colIdx !== undefined && sampleRows[0]) ? String(sampleRows[0][colIdx] || '') : '';
-    if (colName) {
-      mappedRows += '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04)">' +
-        '<div style="width:110px;font-size:.72rem;color:rgba(255,255,255,.35);flex-shrink:0">' + label + '</div>' +
-        '<div style="font-size:.75rem;color:rgba(255,255,255,.5)">← ' + colName + '</div>' +
-        (sampleVal ? '<div style="font-size:.7rem;color:rgba(255,255,255,.25);margin-left:auto;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + sampleVal.substring(0,30) + '</div>' : '') +
-      '</div>';
-    } else {
-      unmappedRows += '<span style="font-size:.7rem;background:rgba(255,255,255,.05);border-radius:4px;padding:2px 7px;color:rgba(255,255,255,.25)">' + label + '</span>';
-    }
-  });
-
-  const pbOptions = playbooks.map(function(pb) {
-    return '<option value="' + pb.id + '">' + pb.name + '</option>';
-  }).join('');
-
-  const sourceLabels = { scileads:'SciLeads', leadgeeks:'LeadGeeks', linkedin_export:'LinkedIn Export',
-    hubspot:'HubSpot', zoominfo:'ZoomInfo', salesforce:'Salesforce', manual:'Manual / Other' };
-  const sourceOptions = Object.entries(sourceLabels).map(function(entry) {
-    return '<option value="' + entry[0] + '"' + (entry[0] === source ? ' selected' : '') + '>' + entry[1] + '</option>';
-  }).join('');
-
-  // Build modal HTML
-  const modal = document.createElement('div');
-  modal.id = 'importModal';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)';
-  modal.onclick = function(e) { if (e.target === modal) closeImportModal(); };
-
-  modal.innerHTML =
-    '<div onclick="event.stopPropagation()" style="background:#13111f;border:1px solid rgba(255,255,255,.1);border-radius:16px;width:580px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.7);overflow:hidden">' +
-
-      // Header
-      '<div style="padding:18px 24px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">' +
-        '<div>' +
-          '<div style="font-family:Outfit,sans-serif;font-weight:700;font-size:1rem;color:#fff">' + leads.length + ' leads ready to import</div>' +
-          '<div style="font-size:.72rem;color:rgba(255,255,255,.3);margin-top:2px">' + filename + '</div>' +
-        '</div>' +
-        '<button onclick="closeImportModal()" style="background:transparent;border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.4);padding:4px 12px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:.72rem">✕ Cancel</button>' +
-      '</div>' +
-
-      // Scrollable body
-      '<div style="overflow-y:auto;flex:1;padding:20px 24px">' +
-
-        // Source selector
-        '<div style="margin-bottom:20px">' +
-          '<div style="font-size:.65rem;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Source</div>' +
-          '<select id="importSourceSelect" style="width:100%;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.84rem">' +
-            sourceOptions +
-          '</select>' +
-        '</div>' +
-
-        // Column mapping
-        '<div style="margin-bottom:20px">' +
-          '<div style="font-size:.65rem;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">Column Mapping</div>' +
-          '<div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:12px 14px">' +
-            mappedRows +
-          '</div>' +
-          (unmappedRows ? '<div style="margin-top:8px;font-size:.68rem;color:rgba(255,255,255,.25)">Not found: ' + unmappedRows + '</div>' : '') +
-        '</div>' +
-
-        // Playbook selector
-        '<div style="margin-bottom:4px">' +
-          '<div style="font-size:.65rem;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Assign to Playbook</div>' +
-          '<select id="importPlaybookSelect" style="width:100%;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.84rem">' +
-            '<option value="">— Create new playbook from source name —</option>' +
-            pbOptions +
-          '</select>' +
-        '</div>' +
-
-      '</div>' +
-
-      // Footer
-      '<div style="padding:14px 24px;border-top:1px solid rgba(255,255,255,.06);flex-shrink:0">' +
-        '<button onclick="executeImportLeads()" style="width:100%;padding:11px;border-radius:8px;border:none;background:var(--orange);color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:.88rem;transition:.2s">📥 Import ' + leads.length + ' Leads</button>' +
-      '</div>' +
-
-    '</div>';
-
-  // Store leads on modal for executeImportLeads
-  modal._leads = leads;
-  document.body.appendChild(modal);
-}
-
-
-async function executeImportLeads() {
-  const modal = document.getElementById('importModal');
-  const leads = modal ? modal._leads : null;
-  if (!leads || !leads.length) return;
-
-  const pbSelect = document.getElementById('importPlaybookSelect');
-  const selectedPbId = pbSelect ? pbSelect.value : '';
-  // Read source from the modal select (user may have changed it)
-  const sourceSelect = document.getElementById('importSourceSelect');
-  const source = sourceSelect ? sourceSelect.value : (window._importSource || 'manual');
-
-  let targetPb;
-  if (selectedPbId) {
-    targetPb = playbooks.find(p => p.id === selectedPbId);
-  } else {
-    const sourceNames = { scileads:'SciLeads Import', leadgeeks:'LeadGeeks Import', linkedin_export:'LinkedIn Export',
-      hubspot:'HubSpot Import', zoominfo:'ZoomInfo Import', salesforce:'Salesforce Import', manual:'Manual Import' };
-    const pbName = (sourceNames[source] || 'Imported Leads') + ' \u2014 ' + new Date().toLocaleDateString();
-    targetPb = { id: 'pb_' + Date.now(), name: pbName, color: '#5ba4cf',
-      brief: '', keywords: '', angle: '', tone: 'academic', methodology: '', leads: [], created_at: new Date().toISOString() };
-    playbooks.push(targetPb);
-  }
-
-  // Build a global email index across ALL playbooks for dedup
-  const globalEmailIndex = new Set();
-  playbooks.forEach(function(pb) {
-    (pb.leads || []).forEach(function(l) {
-      if (l.email) globalEmailIndex.add(l.email.toLowerCase().trim());
-    });
-  });
-
-  let added = 0, dupes = 0, crossPlaybookDupes = 0;
-  leads.forEach(function(l) {
-    const emailLower = (l.email || '').toLowerCase().trim();
-    if (emailLower && globalEmailIndex.has(emailLower)) {
-      // Already exists somewhere in the app
-      const inTargetPb = targetPb.leads.find(e => (e.email || '').toLowerCase() === emailLower);
-      dupes++;
-      if (!inTargetPb) crossPlaybookDupes++;
-      return;
-    }
-    targetPb.leads.push(Object.assign({}, l, {
-      id: 'lead_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
-      status: 'pending',
-      verifyTag: l.email ? 'unknown' : null,
-      addedAt: new Date().toISOString(),
-    }));
-    if (emailLower) globalEmailIndex.add(emailLower); // prevent within-file dupes too
-    added++;
-  });
-
-  await savePlaybooksToStorage();
-  buildContactsData();
-  syncPlaybooksToSupabase();
-
-  let toastMsg = '\u2705 Imported ' + added + ' leads \u2192 ' + targetPb.name;
-  if (dupes > 0) {
-    toastMsg += ' (' + dupes + ' duplicate' + (dupes > 1 ? 's' : '') + ' skipped';
-    if (crossPlaybookDupes > 0) toastMsg += ', ' + crossPlaybookDupes + ' already in other playbooks';
-    toastMsg += ')';
-  }
-  showToast(toastMsg, 5000);
-  if (modal) modal.remove();
-
-  setTimeout(function() {
-    setActivePlaybook(targetPb.id);
-    switchTab('contacts');
-  }, 800);
-}
-
 function exportCSV() {
   const cap = document.getElementById('dailyCap').value;
   const done = results.filter(r => r.status==='done' && !isDNC(r) && r.verifyTag!=='invalid');
@@ -5168,7 +5189,7 @@ async function openLeadDrawer(type) {
     const typeColors = { opened: 'var(--orange-light)', replied: 'var(--green)', bounced: 'var(--red)' };
     const drawer = document.createElement('div');
     drawer.id = 'leadDrawer';
-    drawer.style.cssText = 'position:fixed;top:0;right:0;width:420px;height:100vh;background:var(--bg2);border-left:1px solid var(--border);z-index:999;overflow-y:auto;display:flex;flex-direction:column;box-shadow:-8px 0 32px rgba(0,0,0,.4)';
+    // drawer is now a centered modal, no inline style override needed
     drawer.innerHTML = `
       <div style="padding:20px 20px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
         <div>
@@ -6629,6 +6650,9 @@ function applyContactsFiltersAndRender() {
 
   renderContactsTable(pageData, filtered.length);
   renderContactsPagination(filtered.length, totalPages);
+
+  // Store the filtered list so toggleSelectAll only selects visible contacts
+  filteredContactsData = filtered;
 }
 
 function renderContactsTable(data, total) {
@@ -6905,24 +6929,24 @@ function openContactDrawer(leadId, pbId) {
 
   body.innerHTML = `
     <!-- ── HEADER ── -->
-    <div class="drawer-section" style="background:linear-gradient(135deg,rgba(239,77,5,.08),transparent);padding:18px 20px">
-      <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:12px">
-        <div class="c-avi" style="background:${getAvatarColor(lead.firstName+lead.lastName)};width:52px;height:52px;font-size:1.1rem;flex-shrink:0;overflow:hidden">
+    <div style="padding:20px 24px;background:linear-gradient(160deg,rgba(239,77,5,.06) 0%,transparent 65%);border-bottom:1px solid rgba(255,255,255,.06)">
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
+        <div class="c-avi" style="background:${getAvatarColor(lead.firstName+lead.lastName)};width:54px;height:54px;font-size:1.1rem;flex-shrink:0;overflow:hidden;border-radius:12px">
           ${lead._profilePhotoUrl
             ? `<img src="${lead._profilePhotoUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','${getInitials(lead.firstName,lead.lastName)}')">`
             : getInitials(lead.firstName, lead.lastName)}
         </div>
         <div style="flex:1;min-width:0">
-          <div style="font-family:Outfit,sans-serif;font-weight:700;font-size:1.05rem;color:#fff;margin-bottom:2px">
+          <div style="font-family:Outfit,sans-serif;font-weight:700;font-size:1.08rem;color:#fff;margin-bottom:3px;letter-spacing:.01em">
             ${lead.firstName||''} ${lead.lastName||''}
           </div>
-          <div style="font-size:.78rem;color:var(--muted);margin-bottom:6px">${lead._department || lead.jobTitle || (src === 'Sales Navigator' ? 'LinkedIn Contact' : '')}</div>
-          <div style="font-size:.77rem;color:var(--muted);margin-bottom:8px">${lead.organisation || '—'}${locationStr ? ` · <span style="color:var(--orange-light)">${locationStr}</span>` : ''}</div>
-          <div style="display:flex;gap:5px;flex-wrap:wrap">
+          <div style="font-size:.78rem;color:rgba(255,255,255,.5);margin-bottom:2px">${lead.jobTitle || lead._department || ''}</div>
+          <div style="font-size:.74rem;color:rgba(255,255,255,.3);margin-bottom:9px">${lead.organisation || ''}${locationStr ? ` <span style="color:rgba(239,77,5,.6)">· ${locationStr}</span>` : ''}</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
             ${getStatusBadge(lead.status)}
-            ${liUrl ? `<a href="${liUrl}" target="_blank" style="font-size:.65rem;background:rgba(0,119,181,.2);color:#5ba4cf;border:1px solid rgba(0,119,181,.3);border-radius:5px;padding:2px 8px;text-decoration:none">🔗 LinkedIn</a>` : ''}
-            ${lead._s2ProfileUrl ? `<a href="${lead._s2ProfileUrl}" target="_blank" style="font-size:.65rem;background:rgba(91,164,207,.1);color:#5ba4cf;border:1px solid rgba(91,164,207,.25);border-radius:5px;padding:2px 8px;text-decoration:none">📚 S2</a>` : ''}
-            ${lead._stateConflict ? `<span style="font-size:.65rem;background:rgba(240,192,64,.15);color:#f0c040;border:1px solid rgba(240,192,64,.3);border-radius:5px;padding:2px 8px">⚠️ Location conflict</span>` : ''}
+            ${liUrl ? `<a href="${liUrl}" target="_blank" style="font-size:.62rem;background:rgba(0,119,181,.12);color:#5ba4cf;border:1px solid rgba(0,119,181,.2);border-radius:4px;padding:2px 8px;text-decoration:none">LinkedIn ↗</a>` : ''}
+            ${lead._s2ProfileUrl ? `<a href="${lead._s2ProfileUrl}" target="_blank" style="font-size:.62rem;background:rgba(91,164,207,.08);color:#5ba4cf;border:1px solid rgba(91,164,207,.15);border-radius:4px;padding:2px 8px;text-decoration:none">Scholar ↗</a>` : ''}
+            ${lead._stateConflict ? `<span style="font-size:.62rem;background:rgba(240,192,64,.1);color:#f0c040;border:1px solid rgba(240,192,64,.2);border-radius:4px;padding:2px 7px">⚠️ Location conflict</span>` : ''}
           </div>
         </div>
       </div>
@@ -6952,9 +6976,10 @@ function openContactDrawer(leadId, pbId) {
     <!-- ── CONTACT INFO — all fields editable ── -->
     <div class="drawer-section">
       <div class="drawer-label">Contact Info</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px 16px">
 
-      <!-- First + Last name -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <!-- First + Last name span full width -->
+      <div style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:12px 20px">
         <div>
           <div class="drawer-edit-label" style="display:flex;justify-content:space-between">
             <span>First Name</span>
@@ -6973,7 +6998,7 @@ function openContactDrawer(leadId, pbId) {
       </div>
 
       <!-- Job Title -->
-      <div style="margin-bottom:8px">
+      <div>
         <div class="drawer-edit-label">Job Title</div>
         <input class="drawer-edit-input" value="${lead.jobTitle||''}"
           oninput="updateLeadField('${lead.id}','${pbId}','jobTitle',this.value)"
@@ -6981,14 +7006,14 @@ function openContactDrawer(leadId, pbId) {
       </div>
       ${(lead._department || lead._labName) ? `<div style="margin-bottom:8px">
         <div class="drawer-edit-label">Department / Lab</div>
-        <div style="font-size:.75rem;color:var(--muted);background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:7px 10px">
+        <div style="font-size:.78rem;color:rgba(255,255,255,.45);background:transparent;border:none;border-bottom:1.5px solid rgba(255,255,255,.1);padding:6px 0;line-height:1.4">
           ${lead._labName ? `<div>🧪 ${lead._labName}</div>` : ''}
           ${lead._department ? `<div style="margin-top:${lead._labName?'4px':'0'}">🏛️ ${lead._department}</div>` : ''}
         </div>
       </div>` : ''}
 
       <!-- Organisation — key field for email finding -->
-      <div style="margin-bottom:8px">
+      <div style="grid-column:1/-1">
         <div class="drawer-edit-label" style="display:flex;justify-content:space-between;align-items:center">
           <span>Organisation / Institution</span>
           ${lead.organisation && isLocationString(lead.organisation)
@@ -7003,7 +7028,7 @@ function openContactDrawer(leadId, pbId) {
       </div>
 
       <!-- Email -->
-      <div style="margin-bottom:8px">
+      <div style="grid-column:1/-1">
         <div class="drawer-edit-label" style="display:flex;justify-content:space-between;align-items:center">
           <span>Email</span>
           ${hasEmail 
@@ -7027,7 +7052,7 @@ function openContactDrawer(leadId, pbId) {
       </div>
 
       <!-- Phone -->
-      <div style="margin-bottom:8px">
+      <div>
         <div class="drawer-edit-label" style="display:flex;justify-content:space-between">
           <span>Phone</span>
           ${(lead.phone||lead._phone) ? '<span style="font-size:.62rem;color:#00c87a">From NIH</span>' : ''}
@@ -7038,8 +7063,8 @@ function openContactDrawer(leadId, pbId) {
           type="tel"/>
       </div>
 
-      <!-- State / Location -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <!-- State / Location span full width -->
+      <div style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div>
           <div class="drawer-edit-label">City</div>
           <input class="drawer-edit-input" value="${lead._city||''}"
@@ -7054,6 +7079,7 @@ function openContactDrawer(leadId, pbId) {
         </div>
       </div>
 
+      </div><!-- close 2-col grid -->
     </div>
 
     <!-- ── NIH FUNDING ── -->
@@ -7204,17 +7230,18 @@ function openContactDrawer(leadId, pbId) {
     drawerShell.appendChild(saveBar);
   }
 
-  // Force-style all inputs — beats global input[type="text"] rule
-  body.querySelectorAll('input').forEach(el => {
-    el.style.cssText = 'background:rgba(255,255,255,0.04)!important;border:none!important;border-bottom:1.5px solid rgba(255,255,255,0.15)!important;border-radius:0!important;padding:6px 0!important;color:#fff!important;width:100%!important;box-sizing:border-box!important;font-size:.82rem!important;font-family:inherit!important;outline:none!important;overflow:hidden!important;text-overflow:ellipsis!important;';
+  // Force-style all inputs inside the drawer — beats any global CSS
+  body.querySelectorAll('input.drawer-edit-input, .drawer-edit-input').forEach(el => {
+    el.style.cssText = 'background:rgba(255,255,255,0.04)!important;border:none!important;border-bottom:1.5px solid rgba(255,255,255,0.15)!important;border-radius:0!important;padding:6px 0 6px 0!important;color:#fff!important;width:100%!important;box-sizing:border-box!important;font-size:.81rem!important;font-family:inherit!important;outline:none!important;overflow:hidden!important;text-overflow:ellipsis!important;';
     el.addEventListener('focus', function(){ this.style.borderBottomColor='#EF4D05'; });
     el.addEventListener('blur', function(){ this.style.borderBottomColor='rgba(255,255,255,0.15)'; });
-    el.addEventListener('input', function(){ markDrawerDirty(_sbLeadId); });
+    el.addEventListener('input', function(){ markDrawerDirty('${lead.id}'); });
   });
-  const notesEl = body.querySelector('textarea');
-  if (notesEl) notesEl.addEventListener('input', () => markDrawerDirty(_sbLeadId));
+  // Also watch the notes textarea
+  const notesEl = body.querySelector('.drawer-note-input');
+  if (notesEl) notesEl.addEventListener('input', () => markDrawerDirty('${lead.id}'));
 
-  // Open as centered modal
+  // Open drawer
   const overlay = document.getElementById('contactDrawerOverlay');
   overlay.style.display = 'flex';
 }
@@ -7222,10 +7249,12 @@ function openContactDrawer(leadId, pbId) {
 function closeContactDrawer() {
   document.getElementById('contactDrawerOverlay').style.display = 'none';
   window._drawerDirty = false;
+  window._drawerLeadId = null;
 }
 
 function markDrawerDirty(leadId) {
   window._drawerDirty = true;
+  window._drawerLeadId = leadId;
   const btn = document.getElementById('drawerSaveBtn_' + leadId);
   if (btn && !btn._dirty) {
     btn._dirty = true;
@@ -7252,6 +7281,7 @@ function saveContactDrawer(leadId, pbId) {
       btn.disabled = false;
     }, 2000);
   }
+  // Immediate save — don't wait for debounce
   savePlaybooksToStorage();
   buildContactsData();
   if (document.getElementById('pageContacts')?.style.display !== 'none') {
@@ -7987,87 +8017,129 @@ function showPlaybookPicker(callback, title) {
 
 
 // ══════════════════════════════════════════════════════════
-// EMAIL ENRICHMENT — 4-step waterfall: NIH → OpenAlex/ORCID → Claude web search → pattern guess
+// EMAIL ENRICHMENT — Claude + ZeroBounce waterfall
 // ══════════════════════════════════════════════════════════
 
 async function enrichLeadEmail(lead, playbookId) {
-  // Skip if already has a verified email
-  if (lead.email && lead.email.trim() && lead.verifyTag === 'valid') return { status: 'skip', email: lead.email };
+  // Skip if already has email
+  if (lead.email && lead.email.trim()) return { status: 'skip', email: lead.email };
 
+  const apiKey = localStorage.getItem('fidaApiKey');
   const zbKey = localStorage.getItem('fidaZbKey');
 
-  // Step 0: Check local pattern cache first (instant, free)
-  const domain = guessInstitutionDomain(lead.organisation || lead.company || '');
-  if (domain) {
+  const org = lead.organisation || lead.company || lead.institution || '';
+  const name = `${lead.firstName || ''} ${lead.lastName || ''}`.trim();
+  if (!name) return { status: 'error', msg: 'No name' };
+
+  // GUARD: Reject location strings masquerading as organisations
+  if (org && isLocationString(org)) {
+    return { status: 'error', msg: `"${org}" looks like a location, not a company — cannot find email` };
+  }
+
+  // ── LOCAL FAST CHECK: learned domain pattern (free, instant) ──
+  const localDomain = guessInstitutionDomain(org);
+  if (localDomain) {
     const patterns = getAllDomainPatterns();
-    if (patterns[domain]) {
-      const guessed = applyEmailPattern(patterns[domain], lead.firstName, lead.lastName, domain);
-      if (guessed && zbKey) {
-        const zbResult = await verifyEmailZB(guessed, zbKey);
-        if (zbResult.valid) {
-          updateLeadEmail(lead, playbookId, guessed, zbResult.tag);
-          return { status: 'found', email: guessed, method: 'pattern+zb' };
+    if (patterns[localDomain]) {
+      const guessed = applyEmailPattern(patterns[localDomain], lead.firstName, lead.lastName, localDomain);
+      if (guessed) {
+        if (zbKey) {
+          const zbResult = await verifyEmailZB(guessed, zbKey);
+          if (zbResult) {
+            updateLeadEmail(lead, playbookId, guessed);
+            lead._emailGuessed = false;
+            lead.verifyTag = 'valid';
+            return { status: 'found', email: guessed, method: 'pattern+zb' };
+          }
+        } else {
+          updateLeadEmail(lead, playbookId, guessed);
+          lead._emailGuessed = true;
+          return { status: 'found', email: guessed, method: 'pattern' };
         }
       }
     }
   }
 
-  // Steps 1-4: Backend waterfall (NIH → OpenAlex/ORCID → Claude web search → pattern)
-  const org = lead.organisation || lead.company || lead.institution || '';
-  if (!lead.firstName || !lead.lastName) return { status: 'error', msg: 'Insufficient info' };
-  if (isLocationString(org)) return { status: 'error', msg: `"${org}" looks like a location, not a company` };
-
+  // ── BACKEND WATERFALL: NIH → OpenAlex → Claude+WebSearch → Pattern ──
   try {
-    const apiKey = localStorage.getItem('fidaApiKey');
     const resp = await fetch(BACKEND + '/find-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         firstName: lead.firstName,
         lastName: lead.lastName,
-        organisation: org,
-        anthropicKey: apiKey || null,
-        s2ProfileUrl: lead._s2ProfileUrl || null,
-        linkedinUrl: lead._linkedinUrl || null
+        organisation: lead._affiliation || org,
+        jobTitle: lead.jobTitle || lead.title || '',
+        linkedinUrl: lead._linkedinUrl || '',
+        anthropicKey: apiKey || ''
       })
     });
-    const data = await resp.json();
 
-    console.log('[FindEmail] waterfall result:', data.method, data.confidence, data.email);
-
-    if (!data.email) return { status: 'notfound' };
-
-    const email = data.email;
-    lead._emailSource = data.method;
-
-    if (data.confidence === 'high') {
-      // NIH/ORCID — verified source, no ZeroBounce needed
-      updateLeadEmail(lead, playbookId, email, 'valid');
-      if (data.domain) learnDomainPattern(data.domain, detectEmailPattern(lead.firstName, lead.lastName, email.split('@')[0]) || 'first.last');
-      return { status: 'found', email, method: data.method, confidence: 'high' };
-
-    } else if (data.confidence === 'medium') {
-      // Claude web search — verify with ZeroBounce if available
-      if (zbKey) {
-        const zbResult = await verifyEmailZB(email, zbKey);
-        updateLeadEmail(lead, playbookId, email, zbResult.tag);
-        return { status: 'found', email, method: data.method, zbStatus: zbResult.tag };
-      } else {
-        updateLeadEmail(lead, playbookId, email, 'unverified');
-        return { status: 'found', email, method: data.method };
-      }
-
-    } else {
-      // Low confidence pattern guess — mark as guessed
-      lead._emailGuessed = true;
-      lead._emailDomain = data.domain;
-      updateLeadEmail(lead, playbookId, email, 'unverified');
-      return { status: 'found', email, method: data.method };
+    if (!resp.ok) {
+      const errData = await resp.json().catch(() => ({}));
+      return { status: 'error', msg: errData.error || `Backend error ${resp.status}` };
     }
 
-  } catch(e) {
-    console.warn('[FindEmail] backend error:', e.message);
-    return { status: 'error', msg: `Email search failed: ${e.message}` };
+    const result = await resp.json();
+    console.log('[FindEmail] Waterfall result:', result.method, result.confidence, result.steps?.length, 'steps');
+
+    if (result.email) {
+      const foundEmail = result.email.toLowerCase().trim();
+      const isHighConfidence = result.confidence === 'high';
+      const needsVerification = !isHighConfidence && zbKey;
+
+      if (needsVerification) {
+        // Verify medium/low confidence emails with ZeroBounce
+        const zbValid = await verifyEmailZB(foundEmail, zbKey);
+        if (zbValid) {
+          updateLeadEmail(lead, playbookId, foundEmail);
+          lead._emailGuessed = false;
+          lead.verifyTag = 'valid';
+          lead._emailSource = result.method;
+          // Learn the pattern for this domain
+          const parts = foundEmail.split('@');
+          if (parts.length === 2) {
+            const pattern = detectEmailPattern(lead.firstName, lead.lastName, parts[0]);
+            if (pattern) learnDomainPattern(parts[1], pattern);
+          }
+          return { status: 'found', email: foundEmail, method: result.method + '+zb' };
+        }
+        // ZB rejected — still use if from NIH (those are always real)
+        if (result.method === 'nih_reporter' || result.method === 'orcid') {
+          updateLeadEmail(lead, playbookId, foundEmail);
+          lead._emailGuessed = false;
+          lead._emailSource = result.method;
+          lead.verifyTag = 'catch-all'; // NIH emails are real but may be catch-all
+          return { status: 'found', email: foundEmail, method: result.method };
+        }
+        // Medium confidence but ZB rejected — mark as guessed
+        updateLeadEmail(lead, playbookId, foundEmail);
+        lead._emailGuessed = true;
+        lead._emailSource = result.method;
+        lead.verifyTag = 'guessed';
+        return { status: 'found', email: foundEmail, method: result.method + '_unverified' };
+      }
+
+      // High confidence (NIH, ORCID) or no ZeroBounce — use directly
+      updateLeadEmail(lead, playbookId, foundEmail);
+      lead._emailGuessed = !isHighConfidence;
+      lead._emailSource = result.method;
+      lead.verifyTag = isHighConfidence ? 'valid' : 'guessed';
+      // Learn pattern from high-confidence finds
+      if (isHighConfidence) {
+        const parts = foundEmail.split('@');
+        if (parts.length === 2) {
+          const pattern = detectEmailPattern(lead.firstName, lead.lastName, parts[0]);
+          if (pattern) learnDomainPattern(parts[1], pattern);
+        }
+      }
+      return { status: 'found', email: foundEmail, method: result.method };
+    }
+
+    return { status: 'notfound' };
+  } catch (e) {
+    console.error('[FindEmail] Backend error:', e);
+    return { status: 'error', msg: `Find email failed: ${e.message}` };
   }
 }
 
@@ -8309,7 +8381,15 @@ async function pushToInstantlyWithSchedule(schedule) {
   const pb = getActivePlaybook();
   if (!pb) { showToast('No active playbook selected'); return; }
 
-  const readyLeads = (pb.leads || []).filter(l => l.status === LEAD_STATUS.GENERATED && l.email);
+  // Never push invalid emails to Instantly — filter them out hard
+  const readyLeads = (pb.leads || []).filter(l => 
+    l.status === LEAD_STATUS.GENERATED && 
+    l.email && 
+    l.verifyTag !== 'invalid' &&
+    l.verifyTag !== 'skipped_invalid'
+  );
+  const invalidBlocked = (pb.leads || []).filter(l => l.status === LEAD_STATUS.GENERATED && l.email && (l.verifyTag === 'invalid' || l.verifyTag === 'skipped_invalid')).length;
+  if (invalidBlocked > 0) showToast(`⚠️ ${invalidBlocked} invalid email${invalidBlocked>1?'s':''} excluded from push`, 4000);
   const alreadyInSequence = (pb.leads || []).filter(l => l.status === LEAD_STATUS.IN_SEQUENCE).length;
   if (alreadyInSequence > 0 && readyLeads.length === 0) {
     showToast(`⚠️ ${alreadyInSequence} contacts already pushed to Instantly — generate new emails first`, 5000);
@@ -12222,17 +12302,18 @@ function toggleContactSelection(id) {
 }
 
 function toggleSelectAll() {
-  // Use contactsData directly (module scope), fall back to window
-  const visible = (typeof contactsData !== 'undefined' ? contactsData : null) || window.contactsData || [];
-  const allSelected = selectedContactIds.size >= visible.length && visible.length > 0;
+  // CRITICAL: Only select contacts that are currently visible (filtered by playbook, search, etc.)
+  const visible = filteredContactsData || [];
+  const allSelected = visible.length > 0 && visible.every(c => selectedContactIds.has(c.id));
   if (allSelected) {
-    selectedContactIds.clear();
+    // Deselect only the visible ones (preserve selections from other filters)
+    visible.forEach(c => selectedContactIds.delete(c.id));
   } else {
     visible.forEach(c => selectedContactIds.add(c.id));
   }
   // Update all row checkboxes
   document.querySelectorAll('input[id^="cb_"]:not(#cb_master)').forEach(cb => {
-    cb.checked = !allSelected;
+    cb.checked = selectedContactIds.has(cb.dataset.id);
   });
   const masterCb = document.getElementById('cb_master');
   if (masterCb) masterCb.checked = !allSelected;
@@ -12258,10 +12339,11 @@ function updateBulkActionBar() {
     cb.checked = selectedContactIds.has(cb.dataset.id);
   });
   const masterCb = document.getElementById('cb_master');
-  const visible = window.contactsData || [];
+  const visible = filteredContactsData || [];
   if (masterCb) {
-    masterCb.checked = count === visible.length;
-    masterCb.indeterminate = count > 0 && count < visible.length;
+    const visibleSelected = visible.filter(c => selectedContactIds.has(c.id)).length;
+    masterCb.checked = visible.length > 0 && visibleSelected === visible.length;
+    masterCb.indeterminate = visibleSelected > 0 && visibleSelected < visible.length;
   }
 }
 
