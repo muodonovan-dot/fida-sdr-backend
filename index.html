@@ -12942,12 +12942,24 @@ document.addEventListener('click', function(e) {
 // ── DB Sync Health Check ──────────────────────────────────────────────────────
 async function forceDbSync(btn) {
   if (btn) { btn.textContent = '⏳ Syncing...'; btn.disabled = true; }
-  await syncPlaybooksToSupabase();
-  // Close old modal and re-open with fresh data
+  try {
+    await syncPlaybooksToSupabase();
+    showToast('✅ Sync complete — refreshing status...', 2000);
+  } catch(e) {
+    console.warn('[Force sync error]', e.message);
+    showToast('⚠️ Sync error: ' + e.message, 5000);
+  }
+  // Always close old modal and re-check, even if sync failed
   var oldModal = document.getElementById('dbStatusModal');
   if (oldModal) oldModal.remove();
-  showToast('✅ Sync complete — refreshing status...');
-  await checkDbSync();
+  // Small delay so user sees the toast before modal reappears
+  await new Promise(function(r) { setTimeout(r, 800); });
+  try {
+    await checkDbSync();
+  } catch(e2) {
+    console.warn('[DB check error]', e2.message);
+    showToast('⚠️ Could not refresh DB status: ' + e2.message, 5000);
+  }
 }
 
 async function checkDbSync() {
