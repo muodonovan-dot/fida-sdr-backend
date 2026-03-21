@@ -3218,6 +3218,17 @@ async function autoGenerateKeywords() {
   try {
     // Step 1: Fetch all resource titles via backend (avoids CORS/RLS issues)
     var resp = await fetch(BACKEND + '/list-resources');
+    if (!resp.ok) {
+      var errText = await resp.text();
+      console.warn('[AutoKeywords] Backend error:', resp.status, errText.substring(0, 200));
+      if (statusEl) { statusEl.textContent = '⚠️ Backend not ready — make sure server.js is deployed. Try again in 1-2 minutes.'; }
+      return;
+    }
+    var contentType = resp.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      if (statusEl) { statusEl.textContent = '⚠️ Backend returned non-JSON — it may still be deploying. Try again in 1-2 minutes.'; }
+      return;
+    }
     var data = await resp.json();
     var resources = data.resources || [];
 
