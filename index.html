@@ -2995,6 +2995,56 @@ async function syncPlaybooksToSupabase() {
     console.log('[Supabase sync] Saved', totalSaved, 'leads across', pbRows.length, 'playbooks');
     if (syncEl) { syncEl.textContent = '✓ ' + totalSaved + ' saved'; syncEl.style.color = '#00c87a'; setTimeout(function() { if(syncEl) syncEl.textContent=''; }, 5000); }
   }
+
+  // ── Step 3: Delete orphan playbooks & leads (in DB but not local) ──
+  try {
+    var dbPbRes = await fetch(SUPA_URL + '/rest/v1/playbooks?user_id=eq.' + encodeURIComponent(userId) + '&select=id', {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+    });
+    var dbPbList = await dbPbRes.json();
+    if (Array.isArray(dbPbList)) {
+      var localPbIds = playbooks.map(function(p) { return p.id; });
+      var orphanPbIds = dbPbList.filter(function(p) { return localPbIds.indexOf(p.id) === -1; }).map(function(p) { return p.id; });
+      if (orphanPbIds.length > 0) {
+        console.log('[Supabase] Deleting', orphanPbIds.length, 'orphan playbooks');
+        // Delete orphan leads first (FK), then playbooks
+        for (var oi = 0; oi < orphanPbIds.length; oi++) {
+          await fetch(SUPA_URL + '/rest/v1/leads?playbook_id=eq.' + orphanPbIds[oi], {
+            method: 'DELETE', headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+          });
+          await fetch(SUPA_URL + '/rest/v1/playbooks?id=eq.' + orphanPbIds[oi], {
+            method: 'DELETE', headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+          });
+        }
+        console.log('[Supabase] Cleaned up', orphanPbIds.length, 'deleted playbooks');
+      }
+    }
+
+    // Also delete orphan leads (lead exists in DB but not in any local playbook)
+    var localLeadIds = new Set();
+    playbooks.forEach(function(pb) { (pb.leads || []).forEach(function(l) { localLeadIds.add(l.id); }); });
+    var dbLeadRes = await fetch(SUPA_URL + '/rest/v1/leads?user_id=eq.' + encodeURIComponent(userId) + '&select=id', {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+    });
+    var dbLeadList = await dbLeadRes.json();
+    if (Array.isArray(dbLeadList)) {
+      var orphanLeadIds = dbLeadList.filter(function(l) { return !localLeadIds.has(l.id); }).map(function(l) { return l.id; });
+      if (orphanLeadIds.length > 0) {
+        console.log('[Supabase] Deleting', orphanLeadIds.length, 'orphan leads');
+        var delBatchSize = 50;
+        for (var di = 0; di < orphanLeadIds.length; di += delBatchSize) {
+          var delBatch = orphanLeadIds.slice(di, di + delBatchSize);
+          var idList = delBatch.map(function(id) { return '"' + id + '"'; }).join(',');
+          await fetch(SUPA_URL + '/rest/v1/leads?id=in.(' + idList + ')', {
+            method: 'DELETE', headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+          });
+        }
+        console.log('[Supabase] Cleaned up', orphanLeadIds.length, 'deleted leads');
+      }
+    }
+  } catch(e) {
+    console.warn('[Supabase] Orphan cleanup error:', e.message);
+  }
 }
 
 
