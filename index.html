@@ -1100,9 +1100,82 @@ tr:hover .row-actions-inline { display:flex; }
 <div id="pageAnalytics" style="display:none">
 <div class="main main-wide">
 
+  <!-- DEMO MODE TOGGLE -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+    <div>
+      <span style="font-family:Outfit,sans-serif;font-weight:800;font-size:1.1rem;color:#fff">Pipeline Analytics</span>
+      <span id="analyticsLastUpdated" style="font-size:.65rem;color:var(--muted);margin-left:10px"></span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.72rem;color:var(--muted)">
+        <input type="checkbox" id="analyticsDemoToggle" onchange="toggleAnalyticsDemo()" style="accent-color:var(--orange)" />
+        Demo Data
+      </label>
+      <button class="btn btn-ghost btn-sm" onclick="renderPipelineOverview()" style="font-size:.72rem">🔄 Refresh</button>
+    </div>
+  </div>
+
+  <!-- ROW 1: KPI SUMMARY -->
+  <div id="pipelineKpis" style="display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:20px"></div>
+
+  <!-- ROW 2: FUNNEL -->
+  <div class="card" style="margin-bottom:18px;padding:20px 24px">
+    <div style="font-family:Outfit,sans-serif;font-weight:700;font-size:.85rem;color:#fff;margin-bottom:14px">Lead Conversion Funnel</div>
+    <div id="pipelineFunnel"></div>
+  </div>
+
+  <!-- ROW 3: DONUT + TERRITORY SIDE BY SIDE -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px">
+    <!-- Lead Source Chart -->
+    <div class="card" style="padding:20px 24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-family:Outfit,sans-serif;font-weight:700;font-size:.85rem;color:#fff">Lead Sources</div>
+        <div style="display:flex;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:2px;gap:1px">
+          <button id="srcToggleCount" onclick="setSourceView('count')" class="cf-btn active" style="padding:3px 10px;font-size:.62rem">Count</button>
+          <button id="srcToggleReply" onclick="setSourceView('reply')" class="cf-btn" style="padding:3px 10px;font-size:.62rem">Reply Rate</button>
+        </div>
+      </div>
+      <div id="sourceDonutChart" style="display:flex;align-items:center;justify-content:center;gap:20px;min-height:200px"></div>
+    </div>
+
+    <!-- Territory Performance -->
+    <div class="card" style="padding:20px 24px">
+      <div style="font-family:Outfit,sans-serif;font-weight:700;font-size:.85rem;color:#fff;margin-bottom:14px">Territory Performance</div>
+      <div id="territoryChart" style="min-height:200px"></div>
+    </div>
+  </div>
+
+  <!-- ROW 4: PLAYBOOK SEQUENCE STATUS CARDS -->
+  <div style="margin-bottom:18px">
+    <div style="font-family:Outfit,sans-serif;font-weight:700;font-size:.85rem;color:#fff;margin-bottom:12px">Playbook Performance</div>
+    <div id="sequenceStatusCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px"></div>
+  </div>
+
+  <!-- ROW 5: DEAL PIPELINE -->
+  <div id="dealPipelineCard" class="card" style="margin-bottom:18px;padding:20px 24px;display:none">
+    <div style="font-family:Outfit,sans-serif;font-weight:700;font-size:.85rem;color:#fff;margin-bottom:14px">💰 Deal Pipeline</div>
+    <div id="dealPipelineContent"></div>
+  </div>
+
+  <!-- ROW 6: BATCH TIMELINE -->
+  <div class="card" style="margin-bottom:18px;padding:20px 24px">
+    <div style="font-family:Outfit,sans-serif;font-weight:700;font-size:.85rem;color:#fff;margin-bottom:14px">📅 Sequence Timeline</div>
+    <div style="font-size:.68rem;color:var(--muted);margin-bottom:12px">Shows when lead batches were pushed to sequence and their current status</div>
+    <div id="batchTimeline"></div>
+  </div>
+
+  <!-- ROW 7: EMAIL VERIFICATION HEALTH -->
+  <div class="card" style="margin-bottom:24px;padding:20px 24px">
+    <div style="font-family:Outfit,sans-serif;font-weight:700;font-size:.85rem;color:#fff;margin-bottom:14px">📧 Email Verification Health</div>
+    <div id="emailHealthChart" style="display:flex;align-items:center;gap:24px"></div>
+  </div>
+
+  <div style="border-top:1px solid var(--border);margin:8px 0 20px;opacity:.3"></div>
+
+  <!-- ROW 8: CAMPAIGN ANALYTICS (Instantly) -->
   <div class="card">
     <div class="card-header">
-      <div class="step-badge">📊</div>
+      <div class="step-badge">📧</div>
       <div class="card-title">Campaign Analytics</div>
       <div class="card-tag opt">Requires Instantly.ai API key</div>
     </div>
@@ -1112,9 +1185,6 @@ tr:hover .row-actions-inline { display:flex; }
         <div style="display:flex;gap:10px">
           <select id="analyticsCampaignSelect" style="flex:1" onchange="onCampaignSelectChange(this.value)">
             <option value="">— Select a campaign —</option>
-            <option value="__demo_spr__">🎭 DEMO: SPR/Biacore Outreach — Q1 2025</option>
-            <option value="__demo_antibody__">🎭 DEMO: Antibody Dev Campaign — Q1 2025</option>
-            <option value="__demo_drug__">🎭 DEMO: Drug Discovery Campaign — Q2 2025</option>
           </select>
           <button class="btn btn-ghost btn-sm" onclick="loadCampaigns()">🔄 Refresh</button>
         </div>
@@ -1124,63 +1194,40 @@ tr:hover .row-actions-inline { display:flex; }
       </div>
     </div>
     <div id="analyticsMsg" style="font-size:.78rem;color:var(--muted);margin-top:10px"></div>
-    <div id="demoBadge" style="display:none;margin-top:10px;padding:8px 14px;background:rgba(239,77,5,.12);border:1px solid rgba(239,77,5,.3);border-radius:8px;font-size:.78rem;color:var(--orange-light)">
-      🎭 <strong>Demo Mode</strong> — Showing sample data for Fida Bio presentation. Real campaigns load when API key is connected.
-    </div>
   </div>
 
-  <!-- KPI cards -->
-  <div id="kpiRow" style="display:none;display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:18px">
+  <div id="kpiRow" style="display:none;grid-template-columns:repeat(5,1fr);gap:14px;margin:18px 0">
     <div class="kpi-card"><div class="kpi-val" id="kpiContacted">—</div><div class="kpi-label">Contacted</div></div>
     <div class="kpi-card"><div class="kpi-val" id="kpiDelivered">—</div><div class="kpi-label">Delivered</div></div>
-    <div class="kpi-card kpi-clickable" onclick="openLeadDrawer('opened')" title="Click to see who opened"><div class="kpi-val" id="kpiOpens" style="color:var(--orange-light)">—</div><div class="kpi-label">Opens <span style="font-size:.6rem;opacity:.5">▼ drill down</span></div></div>
-    <div class="kpi-card kpi-clickable" onclick="openLeadDrawer('replied')" title="Click to see who replied"><div class="kpi-val" id="kpiReplies" style="color:var(--green)">—</div><div class="kpi-label">Replies <span style="font-size:.6rem;opacity:.5">▼ drill down</span></div></div>
-    <div class="kpi-card kpi-clickable" onclick="openLeadDrawer('bounced')" title="Click to see bounced contacts"><div class="kpi-val" id="kpiBounces" style="color:var(--red)">—</div><div class="kpi-label">Bounces <span style="font-size:.6rem;opacity:.5">▼ drill down</span></div></div>
+    <div class="kpi-card kpi-clickable" onclick="openLeadDrawer('opened')"><div class="kpi-val" id="kpiOpens" style="color:var(--orange-light)">—</div><div class="kpi-label">Opens</div></div>
+    <div class="kpi-card kpi-clickable" onclick="openLeadDrawer('replied')"><div class="kpi-val" id="kpiReplies" style="color:var(--green)">—</div><div class="kpi-label">Replies</div></div>
+    <div class="kpi-card kpi-clickable" onclick="openLeadDrawer('bounced')"><div class="kpi-val" id="kpiBounces" style="color:var(--red)">—</div><div class="kpi-label">Bounces</div></div>
   </div>
 
-  <!-- Rate cards -->
-  <div id="rateRow" style="display:none;display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px">
+  <div id="rateRow" style="display:none;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px">
     <div class="kpi-card">
-      <div class="kpi-val" id="rateOpen" style="color:var(--orange-light)">—</div>
-      <div class="kpi-label">Open Rate</div>
+      <div class="kpi-val" id="rateOpen" style="color:var(--orange-light)">—</div><div class="kpi-label">Open Rate</div>
       <div class="kpi-bar-bg"><div class="kpi-bar" id="barOpen" style="background:var(--orange-light)"></div></div>
-      <div style="font-size:.68rem;color:var(--muted);margin-top:4px">Industry avg: 40–60% for cold bio outreach</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-val" id="rateReply" style="color:var(--green)">—</div>
-      <div class="kpi-label">Reply Rate</div>
+      <div class="kpi-val" id="rateReply" style="color:var(--green)">—</div><div class="kpi-label">Reply Rate</div>
       <div class="kpi-bar-bg"><div class="kpi-bar" id="barReply" style="background:var(--green)"></div></div>
-      <div style="font-size:.68rem;color:var(--muted);margin-top:4px">Industry avg: 5–15% for targeted cold outreach</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-val" id="rateBounce" style="color:var(--red)">—</div>
-      <div class="kpi-label">Bounce Rate</div>
+      <div class="kpi-val" id="rateBounce" style="color:var(--red)">—</div><div class="kpi-label">Bounce Rate</div>
       <div class="kpi-bar-bg"><div class="kpi-bar" id="barBounce" style="background:var(--red)"></div></div>
-      <div style="font-size:.68rem;color:var(--muted);margin-top:4px">Keep below 5% to protect domain reputation</div>
     </div>
   </div>
 
-  <!-- Step breakdown -->
   <div id="stepsCard" class="card" style="display:none">
-    <div class="card-header">
-      <div class="card-title">📧 Email Step Breakdown</div>
-    </div>
+    <div class="card-header"><div class="card-title">📧 Email Step Breakdown</div></div>
     <div class="tbl-wrap">
-      <table>
-        <thead><tr>
-          <th>Step</th><th>Sent</th><th>Opened</th><th>Open Rate</th><th>Replied</th><th>Reply Rate</th>
-        </tr></thead>
-        <tbody id="stepsBody"></tbody>
-      </table>
+      <table><thead><tr><th>Step</th><th>Sent</th><th>Opened</th><th>Open Rate</th><th>Replied</th><th>Reply Rate</th></tr></thead><tbody id="stepsBody"></tbody></table>
     </div>
   </div>
 
-  <!-- Retarget section -->
   <div id="retargetCard" class="card" style="display:none">
-    <div class="card-header">
-      <div class="card-title">🎯 Retargeting</div>
-      <div class="card-tag opt">Export filtered leads</div>
-    </div>
+    <div class="card-header"><div class="card-title">🎯 Retargeting</div></div>
     <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">
       <button class="btn btn-ghost btn-sm" onclick="retargetExport('opened_no_reply')">📤 Opened — No Reply</button>
       <button class="btn btn-ghost btn-sm" onclick="retargetExport('not_opened')">📤 Not Opened</button>
@@ -1191,6 +1238,7 @@ tr:hover .row-actions-inline { display:flex; }
 
 </div>
 </div><!-- end #pageAnalytics -->
+
 
 <!-- ═══════════════════════════════════════════════════════════ FIND LEADS TAB -->
 
@@ -3414,7 +3462,7 @@ function switchTab(tab) {
   const titleEl = document.getElementById('contentTitle');
   if (titleEl) titleEl.textContent = titles[tab] || tab;
   // Page-specific init
-  if (tab === 'analytics') loadCampaigns();
+  if (tab === 'analytics') { loadCampaigns(); renderPipelineOverview(); }
   if (tab === 'sdr') { updateSdrBanner(); if (typeof buildStep5 === 'function') buildStep5(); }
   if (tab === 'playbooks') renderPlaybooks();
   if (tab === 'aiDiscover') updateAiDiscoverUI();
@@ -3834,6 +3882,518 @@ async function loadAnalytics() {
     msg.innerHTML = `<span style="color:var(--green)">✓ Analytics loaded</span>`;
   } catch(e) { msg.innerHTML = `<span style="color:var(--red)">✗ ${e.message}</span>`; }
 }
+
+// ══════════════════════════════════════════════════════════
+// PIPELINE OVERVIEW — renders from local data
+// ══════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════
+// PIPELINE ANALYTICS — comprehensive dashboard
+// ══════════════════════════════════════════════════════════
+
+var _analyticsSourceView = 'count';
+
+function generateDemoData() {
+  var sources = ['scileads','leadgeeks','conference','linkedin','manual'];
+  var states = ['IL','TX','CO','MN','IN','WI','MI','MO','KS','TN','KY','IA','NE','OK','AR'];
+  var statuses = ['new','new','new','generated','generated','in_sequence','in_sequence','in_sequence','replied','replied'];
+  var orgs = ['AbbVie','Eli Lilly','Baxter','Abbott','Takeda','Amgen','Regeneron','Genentech','Merck','Pfizer','Novartis','BMS','Gilead','Biogen','Vertex'];
+  var firstNames = ['Sarah','James','Emily','David','Maria','Robert','Jennifer','Michael','Lisa','William','Anna','Chris','Laura','Kevin','Rachel','Thomas','Nicole','Andrew','Diana','Mark'];
+  var lastNames = ['Chen','Johnson','Williams','Brown','Garcia','Miller','Davis','Rodriguez','Martinez','Anderson','Taylor','Thomas','Moore','Jackson','Martin','Lee','Harris','Clark','Lewis','Walker'];
+  var demoLeads = [];
+  for (var i = 0; i < 340; i++) {
+    var src = sources[Math.floor(Math.random() * sources.length)];
+    var st = statuses[Math.floor(Math.random() * statuses.length)];
+    var state = states[Math.floor(Math.random() * states.length)];
+    var daysAgo = Math.floor(Math.random() * 45);
+    var addedDate = new Date(); addedDate.setDate(addedDate.getDate() - daysAgo);
+    var hasEmail = Math.random() > 0.08;
+    var isEnriched = hasEmail && Math.random() > 0.25;
+    var dealStage = null, dealValue = null;
+    if (st === 'replied' && Math.random() > 0.5) { dealStage = Math.random() > 0.3 ? 'opportunity' : (Math.random() > 0.5 ? 'won' : 'lost'); dealValue = [25000,35000,45000,55000,65000,85000,95000,120000][Math.floor(Math.random()*8)]; }
+    var verifyTag = hasEmail ? (['valid','valid','valid','catch-all','catch-all','invalid','unknown'][Math.floor(Math.random()*7)]) : null;
+    var pushDate = null;
+    if (st === 'in_sequence' || st === 'replied') { pushDate = new Date(); pushDate.setDate(pushDate.getDate() - Math.floor(Math.random() * 14) - 1); }
+    demoLeads.push({
+      id: 'demo_' + i, firstName: firstNames[i % firstNames.length], lastName: lastNames[i % lastNames.length],
+      email: hasEmail ? (firstNames[i%firstNames.length].toLowerCase() + '.' + lastNames[i%lastNames.length].toLowerCase() + '@' + orgs[i%orgs.length].toLowerCase().replace(/\s/g,'') + '.com') : '',
+      organisation: orgs[i % orgs.length], state: state, status: st,
+      source: src, _source: src, _enrichedAt: isEnriched ? addedDate.toISOString() : null,
+      _nihGrantCount: isEnriched ? Math.floor(Math.random() * 8) : 0,
+      _priorityScore: Math.floor(Math.random() * 80) + 10,
+      verifyTag: verifyTag, addedAt: addedDate.toISOString(),
+      _pushedAt: pushDate ? pushDate.toISOString() : null,
+      dealStage: dealStage, dealValue: dealValue,
+      dealCreatedAt: dealStage ? new Date(addedDate.getTime() + 86400000 * 5).toISOString() : null,
+      generatedEmails: (st !== 'new') ? { email1: { subject: 'test', body: 'test' } } : null,
+      _pbName: '', _pbId: '', _pbColor: '#EF4D05'
+    });
+  }
+  // Distribute into playbooks
+  var demoPbs = [
+    { name: 'SPR / Biacore Collaborators', color: '#EF4D05', id: 'demo_pb_1' },
+    { name: 'Drug Discovery Contacts', color: '#5ba4cf', id: 'demo_pb_2' },
+    { name: 'AACR 2026 Follow-Up', color: '#a855f7', id: 'demo_pb_3' },
+    { name: 'SciLeads Import — Mar 2026', color: '#f59e0b', id: 'demo_pb_4' }
+  ];
+  demoLeads.forEach(function(l, i) {
+    var pb = demoPbs[i % demoPbs.length];
+    l._pbName = pb.name; l._pbId = pb.id; l._pbColor = pb.color;
+  });
+  return demoLeads;
+}
+
+function toggleAnalyticsDemo() {
+  renderPipelineOverview();
+}
+
+function getAnalyticsLeads() {
+  var useDemo = document.getElementById('analyticsDemoToggle')?.checked;
+  if (useDemo) return generateDemoData();
+  var all = [];
+  playbooks.forEach(function(pb) {
+    (pb.leads || []).forEach(function(l) {
+      all.push(Object.assign({}, l, { _pbName: pb.name, _pbId: pb.id, _pbColor: pb.color || '#EF4D05' }));
+    });
+  });
+  return all;
+}
+
+function renderPipelineOverview() {
+  var leads = getAnalyticsLeads();
+  var total = leads.length;
+  var ts = document.getElementById('analyticsLastUpdated');
+  if (ts) ts.textContent = 'Updated ' + new Date().toLocaleTimeString();
+
+  renderKpiCards(leads);
+  renderFunnel(leads);
+  renderSourceDonut(leads);
+  renderTerritoryChart(leads);
+  renderSequenceCards(leads);
+  renderDealPipeline(leads);
+  renderBatchTimeline(leads);
+  renderEmailHealth(leads);
+}
+
+// ── KPI CARDS ──
+function renderKpiCards(leads) {
+  var el = document.getElementById('pipelineKpis');
+  if (!el) return;
+  var total = leads.length;
+  var withEmail = leads.filter(function(l){return l.email}).length;
+  var inSeq = leads.filter(function(l){return l.status==='in_sequence'}).length;
+  var replied = leads.filter(function(l){return l.status==='replied'}).length;
+  var opps = leads.filter(function(l){return l.dealStage==='opportunity'}).length;
+  var pipeline = leads.filter(function(l){return l.dealStage==='opportunity'}).reduce(function(s,l){return s+(l.dealValue||0)},0);
+  var wonVal = leads.filter(function(l){return l.dealStage==='won'}).reduce(function(s,l){return s+(l.dealValue||0)},0);
+
+  var kpis = [
+    {val:total, label:'Total Leads', color:'#6eb5ff', icon:'👤'},
+    {val:withEmail, label:'With Email', color:'#5ba4cf', icon:'📧'},
+    {val:inSeq, label:'In Sequence', color:'#EF4D05', icon:'📤'},
+    {val:replied, label:'Replied', color:'#00c87a', icon:'💬'},
+    {val:opps, label:'Opportunities', color:'#f59e0b', icon:'💰'},
+    {val:'$'+(pipeline>=1000?Math.round(pipeline/1000)+'K':pipeline), label:'Pipeline', color:'#f0c040', icon:'📊'},
+    {val:'$'+(wonVal>=1000?Math.round(wonVal/1000)+'K':wonVal), label:'Won Revenue', color:'#10b981', icon:'🏆'}
+  ];
+
+  el.innerHTML = kpis.map(function(k) {
+    return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 12px;text-align:center;border-top:2px solid '+k.color+'">' +
+      '<div style="font-size:.65rem;color:var(--muted);margin-bottom:4px">'+k.icon+' '+k.label+'</div>' +
+      '<div style="font-size:1.3rem;font-weight:800;color:'+k.color+';font-family:Outfit,sans-serif">'+k.val+'</div>' +
+    '</div>';
+  }).join('');
+}
+
+// ── FUNNEL ──
+function renderFunnel(leads) {
+  var el = document.getElementById('pipelineFunnel');
+  if (!el) return;
+  var total = leads.length;
+  var withEmail = leads.filter(function(l){return l.email}).length;
+  var enriched = leads.filter(function(l){return l._enrichedAt||l._nihGrantCount>0}).length;
+  var generated = leads.filter(function(l){return l.generatedEmails||l.status==='generated'||l.status==='in_sequence'||l.status==='replied'}).length;
+  var inSeq = leads.filter(function(l){return l.status==='in_sequence'||l.status==='replied'}).length;
+  var replied = leads.filter(function(l){return l.status==='replied'}).length;
+  var opps = leads.filter(function(l){return l.dealStage}).length;
+  var won = leads.filter(function(l){return l.dealStage==='won'}).length;
+
+  var stages = [
+    {label:'Total Leads',count:total,color:'#6eb5ff'},
+    {label:'Has Email',count:withEmail,color:'#5ba4cf'},
+    {label:'Enriched',count:enriched,color:'#a78bfa'},
+    {label:'Emails Generated',count:generated,color:'#f59e0b'},
+    {label:'In Sequence',count:inSeq,color:'#EF4D05'},
+    {label:'Replied',count:replied,color:'#00c87a'},
+    {label:'Opportunity',count:opps,color:'#f0c040'},
+    {label:'Won',count:won,color:'#10b981'}
+  ];
+
+  var maxCount = Math.max(total, 1);
+  var html = '';
+  stages.forEach(function(s, i) {
+    var pct = (s.count / maxCount * 100);
+    var barW = Math.max(pct, 3);
+    var prevCount = i > 0 ? stages[i-1].count : total;
+    var convRate = prevCount > 0 ? (s.count / prevCount * 100).toFixed(0) : '—';
+    var totalConv = total > 0 ? (s.count / total * 100).toFixed(1) : '0';
+
+    html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">' +
+      '<div style="width:120px;font-size:.7rem;color:var(--muted);text-align:right;flex-shrink:0">' + s.label + '</div>' +
+      '<div style="flex:1;position:relative;height:26px;background:rgba(255,255,255,.025);border-radius:5px;overflow:hidden">' +
+        '<div style="height:100%;width:' + barW + '%;background:linear-gradient(90deg,' + s.color + ',' + s.color + 'cc);border-radius:5px;display:flex;align-items:center;padding-left:10px;min-width:50px;transition:width .6s cubic-bezier(.4,0,.2,1)">' +
+          '<span style="font-size:.72rem;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.3)">' + s.count.toLocaleString() + '</span>' +
+        '</div>' +
+      '</div>' +
+      '<div style="width:50px;text-align:right;flex-shrink:0">' +
+        (i > 0 ? '<span style="font-size:.62rem;color:' + (parseInt(convRate) >= 50 ? '#00c87a' : parseInt(convRate) >= 20 ? '#f59e0b' : '#ff6b6b') + ';font-weight:600">' + convRate + '%</span>' : '<span style="font-size:.62rem;color:var(--muted)">—</span>') +
+      '</div>' +
+    '</div>';
+  });
+
+  el.innerHTML = html;
+}
+
+// ── SOURCE DONUT ──
+function setSourceView(view) {
+  _analyticsSourceView = view;
+  document.getElementById('srcToggleCount')?.classList.toggle('active', view === 'count');
+  document.getElementById('srcToggleReply')?.classList.toggle('active', view === 'reply');
+  renderSourceDonut(getAnalyticsLeads());
+}
+
+function renderSourceDonut(leads) {
+  var el = document.getElementById('sourceDonutChart');
+  if (!el) return;
+
+  var srcData = {};
+  leads.forEach(function(l) {
+    var src = l.source || l._source || 'manual';
+    if (!srcData[src]) srcData[src] = {total:0, replied:0, inSeq:0};
+    srcData[src].total++;
+    if (l.status === 'replied') srcData[src].replied++;
+    if (l.status === 'in_sequence' || l.status === 'replied') srcData[src].inSeq++;
+  });
+
+  var srcLabelMap = {scileads:'SciLeads',leadgeeks:'LeadGeeks',conference:'Conference',linkedin:'LinkedIn',linkedin_extension:'LinkedIn',ai_autodiscover:'Auto-Discover',manual:'Manual',prospect_finder:'Finder',hubspot:'HubSpot',zoominfo:'ZoomInfo'};
+  var colors = ['#EF4D05','#5ba4cf','#a855f7','#00c87a','#f59e0b','#f0c040','#6eb5ff','#ff6b6b','#10b981','#ec4899'];
+
+  var sorted = Object.entries(srcData).sort(function(a,b){return b[1].total-a[1].total});
+  var isReplyView = _analyticsSourceView === 'reply';
+  var totalForDonut = isReplyView ? sorted.reduce(function(s,e){return s+e[1].replied},0) : leads.length;
+  if (totalForDonut === 0) totalForDonut = 1;
+
+  // Build SVG donut
+  var size = 180, cx = size/2, cy = size/2, r = 65, stroke = 28;
+  var circumference = 2 * Math.PI * r;
+  var offset = 0;
+
+  var svg = '<svg width="'+size+'" height="'+size+'" viewBox="0 0 '+size+' '+size+'">';
+  // Background circle
+  svg += '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="rgba(255,255,255,.04)" stroke-width="'+stroke+'"/>';
+
+  sorted.forEach(function(entry, i) {
+    var val = isReplyView ? entry[1].replied : entry[1].total;
+    if (val === 0) return;
+    var pct = val / totalForDonut;
+    var dashLen = circumference * pct;
+    var gapLen = circumference - dashLen;
+    var color = colors[i % colors.length];
+    svg += '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="'+stroke+'" stroke-dasharray="'+dashLen+' '+gapLen+'" stroke-dashoffset="'+ (-offset) +'" transform="rotate(-90 '+cx+' '+cy+')" style="transition:all .5s"/>';
+    offset += dashLen;
+  });
+
+  // Center text
+  var centerVal = isReplyView ? sorted.reduce(function(s,e){return s+e[1].replied},0) : leads.length;
+  var centerLabel = isReplyView ? 'replies' : 'total';
+  svg += '<text x="'+cx+'" y="'+(cy-4)+'" text-anchor="middle" fill="#fff" font-size="22" font-weight="800" font-family="Outfit,sans-serif">'+centerVal+'</text>';
+  svg += '<text x="'+cx+'" y="'+(cy+12)+'" text-anchor="middle" fill="rgba(255,255,255,.35)" font-size="10" font-family="Outfit,sans-serif">'+centerLabel+'</text>';
+  svg += '</svg>';
+
+  // Legend
+  var legend = '<div style="display:flex;flex-direction:column;gap:6px">';
+  sorted.forEach(function(entry, i) {
+    var src = entry[0], d = entry[1];
+    var label = srcLabelMap[src] || src;
+    var color = colors[i % colors.length];
+    var val = isReplyView ? d.replied : d.total;
+    var pct = totalForDonut > 0 ? (val / totalForDonut * 100).toFixed(1) : '0';
+    var replyRate = d.inSeq > 0 ? (d.replied / d.inSeq * 100).toFixed(0) + '% reply' : '';
+    legend += '<div style="display:flex;align-items:center;gap:8px">' +
+      '<div style="width:10px;height:10px;border-radius:2px;background:'+color+';flex-shrink:0"></div>' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-size:.75rem;font-weight:600;color:var(--text)">' + label + '</div>' +
+        '<div style="font-size:.62rem;color:var(--muted)">' + val + (isReplyView ? ' replies' : ' leads') + ' · ' + pct + '%' + (replyRate && !isReplyView ? ' · ' + replyRate : '') + '</div>' +
+      '</div>' +
+    '</div>';
+  });
+  legend += '</div>';
+
+  el.innerHTML = svg + legend;
+}
+
+// ── TERRITORY CHART ──
+function renderTerritoryChart(leads) {
+  var el = document.getElementById('territoryChart');
+  if (!el) return;
+
+  var stateData = {};
+  leads.forEach(function(l) {
+    var s = l.state || '';
+    if (!s || s.length > 3) return;
+    if (!stateData[s]) stateData[s] = {total:0,inSeq:0,replied:0,deals:0,dealVal:0};
+    stateData[s].total++;
+    if (l.status === 'in_sequence') stateData[s].inSeq++;
+    if (l.status === 'replied') stateData[s].replied++;
+    if (l.dealStage) { stateData[s].deals++; stateData[s].dealVal += (l.dealValue||0); }
+  });
+
+  var sorted = Object.entries(stateData).sort(function(a,b){return b[1].total-a[1].total}).slice(0,12);
+  var maxTotal = sorted.length ? sorted[0][1].total : 1;
+
+  var html = '<div style="display:flex;flex-direction:column;gap:5px">';
+  sorted.forEach(function(entry) {
+    var state = entry[0], d = entry[1];
+    var barW = Math.max((d.total / maxTotal) * 100, 4);
+    // Stacked bar: new (blue) + sending (orange) + replied (green)
+    var newCount = d.total - d.inSeq - d.replied;
+    var seqPct = d.total > 0 ? (d.inSeq/d.total*100) : 0;
+    var replyPct = d.total > 0 ? (d.replied/d.total*100) : 0;
+    var newPct = 100 - seqPct - replyPct;
+
+    html += '<div style="display:flex;align-items:center;gap:8px">' +
+      '<div style="width:28px;font-size:.72rem;font-weight:700;color:var(--text);flex-shrink:0">' + state + '</div>' +
+      '<div style="flex:1;height:18px;background:rgba(255,255,255,.03);border-radius:4px;overflow:hidden;position:relative;display:flex">' +
+        '<div style="width:'+newPct+'%;background:#5ba4cf;height:100%"></div>' +
+        '<div style="width:'+seqPct+'%;background:#EF4D05;height:100%"></div>' +
+        '<div style="width:'+replyPct+'%;background:#00c87a;height:100%"></div>' +
+      '</div>' +
+      '<div style="width:90px;font-size:.62rem;color:var(--muted);flex-shrink:0;text-align:right">' +
+        d.total + ' · ' + d.replied + ' replied' + (d.deals ? ' · $' + (d.dealVal>=1000?Math.round(d.dealVal/1000)+'K':d.dealVal) : '') +
+      '</div>' +
+    '</div>';
+  });
+  html += '</div>';
+  if (sorted.length) {
+    html += '<div style="display:flex;gap:14px;margin-top:8px;justify-content:flex-end">';
+    html += '<span style="font-size:.6rem;color:#5ba4cf">● New</span>';
+    html += '<span style="font-size:.6rem;color:#EF4D05">● Sending</span>';
+    html += '<span style="font-size:.6rem;color:#00c87a">● Replied</span>';
+    html += '</div>';
+  }
+
+  el.innerHTML = html || '<div style="color:var(--muted);font-size:.78rem;text-align:center;padding:20px">No state data — enrich contacts first</div>';
+}
+
+// ── PLAYBOOK SEQUENCE CARDS ──
+function renderSequenceCards(leads) {
+  var container = document.getElementById('sequenceStatusCards');
+  if (!container) return;
+
+  var pbMap = {};
+  leads.forEach(function(l) {
+    if (!pbMap[l._pbId]) pbMap[l._pbId] = {name:l._pbName,color:l._pbColor,leads:[]};
+    pbMap[l._pbId].leads.push(l);
+  });
+
+  var cards = '';
+  Object.values(pbMap).forEach(function(pb) {
+    var lds = pb.leads;
+    var total = lds.length;
+    if (!total) return;
+    var withEmail = lds.filter(function(l){return l.email}).length;
+    var newC = lds.filter(function(l){return l.status==='new'}).length;
+    var gen = lds.filter(function(l){return l.generatedEmails||l.status==='generated'}).length;
+    var inSeq = lds.filter(function(l){return l.status==='in_sequence'}).length;
+    var replied = lds.filter(function(l){return l.status==='replied'}).length;
+    var deals = lds.filter(function(l){return l.dealStage}).length;
+    var dealVal = lds.filter(function(l){return l.dealStage&&l.dealStage!=='lost'}).reduce(function(s,l){return s+(l.dealValue||0)},0);
+    var replyRate = (inSeq+replied) > 0 ? (replied/(inSeq+replied)*100).toFixed(0) : '—';
+
+    // Mini progress segments
+    var segs = [{l:'New',c:newC,clr:'#6dc49a'},{l:'Ready',c:gen-inSeq>0?gen-inSeq:0,clr:'#64b4ff'},{l:'Sending',c:inSeq,clr:'#EF4D05'},{l:'Replied',c:replied,clr:'#00c87a'}].filter(function(s){return s.c>0});
+    var segBar = '<div style="display:flex;height:5px;border-radius:3px;overflow:hidden;gap:1px;margin:10px 0 6px">';
+    segs.forEach(function(s){segBar+='<div title="'+s.l+': '+s.c+'" style="width:'+(s.c/total*100)+'%;background:'+s.clr+';min-width:2px"></div>'});
+    segBar += '</div>';
+    var segLabels = segs.map(function(s){return '<span style="font-size:.6rem;color:'+s.clr+'">'+s.c+' '+s.l.toLowerCase()+'</span>'}).join(' <span style="color:rgba(255,255,255,.08)">·</span> ');
+
+    cards += '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;border-left:3px solid '+pb.color+'">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2px">' +
+        '<div style="font-family:Outfit,sans-serif;font-weight:700;font-size:.82rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px">'+pb.name+'</div>' +
+        '<div style="font-size:.82rem;font-weight:700;color:'+(replyRate!=='—'&&parseInt(replyRate)>=10?'#00c87a':'var(--muted)')+'">'+replyRate+'%<span style="font-size:.55rem;font-weight:400;margin-left:2px">reply</span></div>' +
+      '</div>' +
+      '<div style="font-size:.65rem;color:var(--muted)">'+total+' leads · '+withEmail+' emails'+(deals?' · '+deals+' deals ($'+(dealVal>=1000?Math.round(dealVal/1000)+'K':dealVal)+')':'')+'</div>' +
+      segBar +
+      '<div style="display:flex;gap:3px;flex-wrap:wrap">'+segLabels+'</div>' +
+    '</div>';
+  });
+
+  container.innerHTML = cards || '<div style="color:var(--muted);font-size:.82rem;text-align:center;padding:20px">No playbooks yet</div>';
+}
+
+// ── DEAL PIPELINE ──
+function renderDealPipeline(leads) {
+  var card = document.getElementById('dealPipelineCard');
+  var content = document.getElementById('dealPipelineContent');
+  if (!card||!content) return;
+
+  var deals = leads.filter(function(l){return l.dealStage});
+  if (!deals.length) { card.style.display='none'; return; }
+  card.style.display='block';
+
+  var opp = deals.filter(function(l){return l.dealStage==='opportunity'});
+  var won = deals.filter(function(l){return l.dealStage==='won'});
+  var lost = deals.filter(function(l){return l.dealStage==='lost'});
+  var oppVal = opp.reduce(function(s,l){return s+(l.dealValue||0)},0);
+  var wonVal = won.reduce(function(s,l){return s+(l.dealValue||0)},0);
+  var lostVal = lost.reduce(function(s,l){return s+(l.dealValue||0)},0);
+  var totalVal = oppVal+wonVal+lostVal;
+  var avgDeal = (opp.length+won.length)>0?Math.round((oppVal+wonVal)/(opp.length+won.length)):0;
+  var winRate = (won.length+lost.length)>0?((won.length/(won.length+lost.length))*100).toFixed(0):'—';
+
+  var html = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">';
+  html += '<div style="text-align:center"><div style="font-size:1.4rem;font-weight:800;color:#f59e0b;font-family:Outfit">$'+(oppVal>=1000?Math.round(oppVal/1000)+'K':oppVal.toLocaleString())+'</div><div style="font-size:.62rem;color:var(--muted)">Pipeline ('+opp.length+')</div></div>';
+  html += '<div style="text-align:center"><div style="font-size:1.4rem;font-weight:800;color:#00c87a;font-family:Outfit">$'+(wonVal>=1000?Math.round(wonVal/1000)+'K':wonVal.toLocaleString())+'</div><div style="font-size:.62rem;color:var(--muted)">Won ('+won.length+')</div></div>';
+  html += '<div style="text-align:center"><div style="font-size:1.4rem;font-weight:800;color:var(--muted);font-family:Outfit">$'+(avgDeal>=1000?Math.round(avgDeal/1000)+'K':avgDeal.toLocaleString())+'</div><div style="font-size:.62rem;color:var(--muted)">Avg Deal</div></div>';
+  html += '<div style="text-align:center"><div style="font-size:1.4rem;font-weight:800;color:'+(parseInt(winRate)>=50?'#00c87a':'#f59e0b')+';font-family:Outfit">'+winRate+'%</div><div style="font-size:.62rem;color:var(--muted)">Win Rate</div></div>';
+  html += '</div>';
+
+  // Pipeline bar
+  if (totalVal > 0) {
+    html += '<div style="display:flex;height:22px;border-radius:6px;overflow:hidden;gap:2px;margin-bottom:14px">';
+    if (oppVal>0) html += '<div style="width:'+(oppVal/totalVal*100)+'%;background:linear-gradient(90deg,#f59e0b,#f0c040);display:flex;align-items:center;justify-content:center;min-width:35px"><span style="font-size:.58rem;font-weight:700;color:#fff">Pipeline</span></div>';
+    if (wonVal>0) html += '<div style="width:'+(wonVal/totalVal*100)+'%;background:linear-gradient(90deg,#00c87a,#10b981);display:flex;align-items:center;justify-content:center;min-width:35px"><span style="font-size:.58rem;font-weight:700;color:#fff">Won</span></div>';
+    if (lostVal>0) html += '<div style="width:'+(lostVal/totalVal*100)+'%;background:#444;display:flex;align-items:center;justify-content:center;min-width:35px"><span style="font-size:.58rem;font-weight:700;color:#888">Lost</span></div>';
+    html += '</div>';
+  }
+
+  // Open opportunities list
+  if (opp.length) {
+    html += '<div style="font-size:.62rem;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Open Opportunities</div>';
+    opp.sort(function(a,b){return (b.dealValue||0)-(a.dealValue||0)}).slice(0,8).forEach(function(l){
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04)">' +
+        '<div><span style="font-size:.78rem;color:var(--text);font-weight:600">'+(l.firstName||'')+' '+(l.lastName||'')+'</span> <span style="font-size:.65rem;color:var(--muted)">'+(l.organisation||'')+'</span></div>' +
+        '<div style="font-size:.85rem;font-weight:700;color:#f59e0b">$'+(l.dealValue||0).toLocaleString()+'</div>' +
+      '</div>';
+    });
+  }
+
+  content.innerHTML = html;
+}
+
+// ── BATCH TIMELINE ──
+function renderBatchTimeline(leads) {
+  var el = document.getElementById('batchTimeline');
+  if (!el) return;
+
+  // Group leads by the date they were pushed to sequence (or added if not pushed)
+  var batches = {};
+  leads.forEach(function(l) {
+    if (l.status !== 'in_sequence' && l.status !== 'replied') return;
+    var dateKey = (l._pushedAt || l.addedAt || '').substring(0, 10);
+    if (!dateKey) return;
+    if (!batches[dateKey]) batches[dateKey] = {date:dateKey,total:0,replied:0,inSeq:0,deals:0};
+    batches[dateKey].total++;
+    if (l.status === 'replied') batches[dateKey].replied++;
+    if (l.status === 'in_sequence') batches[dateKey].inSeq++;
+    if (l.dealStage) batches[dateKey].deals++;
+  });
+
+  var sorted = Object.values(batches).sort(function(a,b){return a.date.localeCompare(b.date)});
+  if (!sorted.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:.78rem;text-align:center;padding:20px">No sequences pushed yet — generate emails and push to Instantly to see the timeline</div>';
+    return;
+  }
+
+  var maxBatch = Math.max.apply(null, sorted.map(function(b){return b.total}));
+
+  var html = '<div style="display:flex;flex-direction:column;gap:6px">';
+  sorted.forEach(function(b) {
+    var dateLabel = new Date(b.date + 'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    var daysAgo = Math.floor((Date.now() - new Date(b.date+'T12:00:00').getTime()) / 86400000);
+    var ageLabel = daysAgo === 0 ? 'today' : daysAgo === 1 ? 'yesterday' : daysAgo + 'd ago';
+    var barW = Math.max((b.total / maxBatch) * 100, 8);
+    var replyPct = b.total > 0 ? (b.replied / b.total * 100).toFixed(0) : 0;
+    var seqPct = b.total > 0 ? (b.inSeq / b.total * 100) : 0;
+    var replyW = b.total > 0 ? (b.replied / b.total * 100) : 0;
+
+    html += '<div style="display:flex;align-items:center;gap:10px">' +
+      '<div style="width:55px;flex-shrink:0;text-align:right"><span style="font-size:.72rem;font-weight:600;color:var(--text)">' + dateLabel + '</span><div style="font-size:.55rem;color:var(--muted)">' + ageLabel + '</div></div>' +
+      '<div style="flex:1;height:24px;background:rgba(255,255,255,.025);border-radius:5px;overflow:hidden;display:flex;position:relative">' +
+        '<div style="width:'+(barW - replyW)+'%;background:#EF4D05;height:100%;transition:width .4s"></div>' +
+        '<div style="width:'+replyW+'%;background:#00c87a;height:100%;transition:width .4s"></div>' +
+      '</div>' +
+      '<div style="width:120px;font-size:.62rem;color:var(--muted);flex-shrink:0;text-align:right">' +
+        b.total + ' pushed · <span style="color:#00c87a;font-weight:600">' + b.replied + ' replied (' + replyPct + '%)</span>' +
+        (b.deals ? ' · 💰' + b.deals : '') +
+      '</div>' +
+    '</div>';
+  });
+  html += '</div>';
+  html += '<div style="display:flex;gap:14px;margin-top:8px;justify-content:flex-end">';
+  html += '<span style="font-size:.6rem;color:#EF4D05">● Sending</span>';
+  html += '<span style="font-size:.6rem;color:#00c87a">● Replied</span>';
+  html += '</div>';
+
+  el.innerHTML = html;
+}
+
+// ── EMAIL HEALTH ──
+function renderEmailHealth(leads) {
+  var el = document.getElementById('emailHealthChart');
+  if (!el) return;
+
+  var verified = {valid:0,'catch-all':0,invalid:0,unknown:0,missing:0};
+  leads.forEach(function(l) {
+    if (!l.email) { verified.missing++; return; }
+    var tag = (l.verifyTag || 'unknown').toLowerCase();
+    if (tag === 'valid') verified.valid++;
+    else if (tag === 'catch-all') verified['catch-all']++;
+    else if (tag === 'invalid' || tag === 'abuse' || tag === 'do_not_mail' || tag === 'spamtrap') verified.invalid++;
+    else verified.unknown++;
+  });
+
+  var total = leads.length || 1;
+  var segments = [
+    {label:'Valid',count:verified.valid,color:'#00c87a'},
+    {label:'Catch-All',count:verified['catch-all'],color:'#f59e0b'},
+    {label:'Unknown',count:verified.unknown,color:'#6eb5ff'},
+    {label:'Invalid',count:verified.invalid,color:'#ff6b6b'},
+    {label:'Missing',count:verified.missing,color:'#555'}
+  ];
+
+  // Horizontal stacked bar
+  var bar = '<div style="flex:1"><div style="display:flex;height:28px;border-radius:6px;overflow:hidden;gap:1px;margin-bottom:8px">';
+  segments.forEach(function(s) {
+    if (s.count === 0) return;
+    var w = (s.count / total * 100);
+    bar += '<div style="width:'+w+'%;background:'+s.color+';display:flex;align-items:center;justify-content:center;min-width:20px">';
+    if (w > 8) bar += '<span style="font-size:.6rem;font-weight:700;color:#fff">'+s.count+'</span>';
+    bar += '</div>';
+  });
+  bar += '</div>';
+
+  // Legend
+  bar += '<div style="display:flex;gap:14px;flex-wrap:wrap">';
+  segments.forEach(function(s) {
+    var pct = (s.count/total*100).toFixed(1);
+    bar += '<div style="display:flex;align-items:center;gap:5px"><div style="width:8px;height:8px;border-radius:2px;background:'+s.color+'"></div><span style="font-size:.68rem;color:var(--muted)">'+s.label+': '+s.count+' ('+pct+'%)</span></div>';
+  });
+  bar += '</div></div>';
+
+  // Deliverability score
+  var deliverability = total > 0 ? Math.round((verified.valid + verified['catch-all']) / (total - verified.missing) * 100) : 0;
+  if (isNaN(deliverability)) deliverability = 0;
+  var scoreColor = deliverability >= 80 ? '#00c87a' : deliverability >= 60 ? '#f59e0b' : '#ff6b6b';
+
+  var scoreHtml = '<div style="text-align:center;flex-shrink:0;width:100px">' +
+    '<div style="font-size:2rem;font-weight:800;color:'+scoreColor+';font-family:Outfit,sans-serif;line-height:1">'+deliverability+'%</div>' +
+    '<div style="font-size:.62rem;color:var(--muted)">Deliverability</div>' +
+  '</div>';
+
+  el.innerHTML = scoreHtml + bar;
+}
+
 
 function renderAnalytics(stats, steps) {
   const s = Array.isArray(stats) ? stats[0] : stats;
