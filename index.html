@@ -631,7 +631,27 @@ html, body { height:100%; overflow:hidden; }
 .rib:hover::after { opacity:1; }
 
 
-
+.drawer-edit-label {
+  font-size:.65rem;font-weight:600;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;
+}
+.drawer-edit-input {
+  width:100%;box-sizing:border-box;
+  background:var(--bg3);
+  border:1px solid var(--border);
+  border-radius:7px;
+  padding:7px 10px;
+  color:var(--text);
+  font-family:inherit;
+  font-size:.8rem;
+  outline:none;
+  transition:border-color .15s;
+}
+.drawer-edit-input:focus {
+  border-color:var(--orange);
+  background:rgba(239,77,5,.04);
+}
+.drawer-edit-input::placeholder { color:rgba(255,255,255,.2); }
 
 
 @keyframes spin { to { transform:rotate(360deg); } }
@@ -658,107 +678,6 @@ footer a { color: var(--orange-light, #ff7a3d); text-decoration: none; }
 tr:hover .row-actions-inline { display:flex; }
 .contact-row { transition: background .1s; }
 .contact-row td { vertical-align: middle; }
-
-.drawer-section { padding:16px 20px 16px 22px;border-bottom:1px solid rgba(255,255,255,.05); }
-.drawer-section:last-child { border-bottom:none; }
-.drawer-label { font-size:.58rem;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px; }
-.drawer-field { display:flex;align-items:flex-start;gap:8px;margin-bottom:5px; }
-.drawer-field-icon { font-size:.8rem;margin-top:1px;flex-shrink:0;width:16px;text-align:center; }
-.drawer-field-val { font-size:.78rem;color:var(--text);line-height:1.5; }
-.drawer-field-val.muted { color:var(--muted); }
-.drawer-edit-label { font-size:.58rem;font-weight:600;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px; }
-#contactDrawer .drawer-edit-input,
-#contactDrawerOverlay .drawer-edit-input {
-  width:100% !important;
-  box-sizing:border-box !important;
-  background:rgba(255,255,255,.05) !important;
-  border:none !important;
-  border-bottom:1.5px solid rgba(255,255,255,.15) !important;
-  border-radius:0 !important;
-  padding:6px 0 !important;
-  color:#fff !important;
-  font-family:inherit !important;
-  font-size:.82rem !important;
-  outline:none !important;
-  transition:border-bottom-color .15s !important;
-  -webkit-appearance:none !important;
-  box-shadow:none !important;
-}
-#contactDrawer .drawer-edit-input:focus,
-#contactDrawerOverlay .drawer-edit-input:focus {
-  border-bottom-color:var(--orange) !important;
-  background:rgba(239,77,5,.03) !important;
-}
-#contactDrawer .drawer-edit-input::placeholder,
-#contactDrawerOverlay .drawer-edit-input::placeholder { color:rgba(255,255,255,.2) !important; }
-.drawer-edit-input { background:rgba(255,255,255,.05); border:none; border-bottom:1.5px solid rgba(255,255,255,.15); border-radius:0; padding:6px 2px; color:#fff; font-family:inherit; font-size:.82rem; outline:none; transition:border-bottom-color .15s; -webkit-appearance:none; box-shadow:none; }
-.drawer-edit-input:focus { border-bottom-color:var(--orange); }
-.drawer-edit-input::placeholder { color:rgba(255,255,255,.2); }
-.drawer-note-input {
-  width:100%;box-sizing:border-box;
-  background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.08);
-  border-radius:8px;
-  padding:9px 12px;color:var(--text);font-size:.78rem;
-  font-family:inherit;resize:vertical;min-height:64px;line-height:1.6;
-}
-.drawer-note-input:focus { outline:none;border-color:rgba(239,77,5,.35); }
-
-/* ── LOCATION BADGES ── */
-.loc-badge {
-  font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:5px;
-  white-space:nowrap;font-family:'Outfit',sans-serif;letter-spacing:.02em;
-}
-.loc-in  { background:rgba(0,200,122,.15);color:#00c87a;border:1px solid rgba(0,200,122,.3); }
-.loc-out { background:rgba(239,77,5,.1); color:var(--orange-light);border:1px solid rgba(239,77,5,.25); }
-.loc-neutral { background:rgba(255,255,255,.07);color:var(--muted);border:1px solid var(--border); }
-.loc-empty { color:var(--muted);font-size:.7rem; }
-
-.loc-verified    { background:rgba(0,119,181,.15);color:#5ba4cf;border:1px solid rgba(0,119,181,.3); }
-.loc-in-verified { background:rgba(0,200,122,.2); color:#00c87a;border:1px solid rgba(0,200,122,.4);font-weight:800; }
-.loc-conflict    { background:rgba(240,192,64,.15);color:#f0c040;border:1px solid rgba(240,192,64,.3); }
-
-
-/* ── CONTACTS PAGE ENHANCEMENTS ── */
-.sort-icon { font-size:.65rem; color:var(--muted); margin-left:2px; }
-.contacts-table th { cursor:default; }
-.contacts-table th[onclick] { cursor:pointer; }
-.contacts-table th[onclick]:hover { color:#fff; }
-
-/* Row hover actions */
-.contacts-table tbody tr { cursor:pointer; position:relative; }
-.contacts-table tbody tr:hover td { background:rgba(255,255,255,.03); }
-
-/* Email status pill */
-.email-pill {
-  font-size:.68rem;padding:2px 7px;border-radius:10px;font-weight:600;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;display:inline-block;
-}
-.email-pill.verified { background:rgba(0,200,122,.12);color:#00c87a;border:1px solid rgba(0,200,122,.25); }
-.email-pill.guessed  { background:rgba(240,192,64,.1); color:#f0c040;border:1px solid rgba(240,192,64,.2); }
-.email-pill.missing  { background:rgba(255,255,255,.05);color:var(--muted);border:1px solid var(--border); }
-
-/* Source badge */
-.source-dot {
-  font-size:.68rem;padding:2px 7px;border-radius:5px;font-weight:600;white-space:nowrap;
-}
-.source-dot.pubmed    { background:rgba(59,130,246,.15);color:#93c5fd; }
-.source-dot.nih       { background:rgba(16,185,129,.12);color:#6ee7b7; }
-.source-dot.linkedin  { background:rgba(0,119,181,.15); color:#5ba4cf; }
-.source-dot.autodiscover { background:rgba(239,77,5,.12);color:var(--orange-light); }
-.source-dot.manual    { background:rgba(255,255,255,.08);color:var(--muted); }
-
-/* Pagination */
-.pg-btn {
-  padding:5px 10px;border-radius:6px;border:1px solid var(--border);
-  background:var(--bg3);color:var(--muted);cursor:pointer;font-size:.75rem;
-  font-family:inherit;transition:.12s;
-}
-.pg-btn:hover:not(:disabled) { border-color:var(--orange);color:#fff; }
-.pg-btn.active { background:rgba(239,77,5,.2);border-color:var(--orange);color:var(--orange-light);font-weight:700; }
-.pg-btn:disabled { opacity:.35;cursor:default; }
-
-/* Contact drawer */
 </style>
 </head>
 <body>
@@ -1758,16 +1677,14 @@ tr:hover .row-actions-inline { display:flex; }
 </div><!-- end #pageContacts -->
 
 <!-- ── CONTACT DETAIL DRAWER ── -->
-<!-- Contact Modal (centered) -->
-<div id="contactDrawerOverlay" onclick="closeContactDrawer()" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,.75);z-index:1000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(5px)">
-  <div id="contactDrawer" onclick="event.stopPropagation()" style="background:#13111f;border:1px solid rgba(255,255,255,.09);border-radius:16px;width:700px;max-width:96vw;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(0,0,0,.7);overflow:hidden">
-    <div style="padding:14px 24px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
-      <div style="font-family:Outfit,sans-serif;font-weight:700;font-size:.7rem;color:rgba(255,255,255,.35);letter-spacing:.12em;text-transform:uppercase">Contact Details</div>
-      <button onclick="closeContactDrawer()" style="background:transparent;border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.35);font-size:.72rem;cursor:pointer;padding:4px 12px;border-radius:6px;font-family:inherit;transition:.15s" onmouseover="this.style.color='#fff';this.style.borderColor='rgba(255,255,255,.3)'" onmouseout="this.style.color='rgba(255,255,255,.35)';this.style.borderColor='rgba(255,255,255,.1)'">✕ Close</button>
-    </div>
-    <div id="contactDrawerBody" style="overflow-y:auto;flex:1;padding:0;scrollbar-gutter:stable"></div>
+<div id="contactDrawer" style="position:fixed;top:0;right:-440px;width:420px;height:100vh;background:var(--bg2);border-left:1px solid var(--border);z-index:1000;display:flex;flex-direction:column;transition:right .25s cubic-bezier(.4,0,.2,1);overflow:hidden">
+  <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+    <div style="font-family:Outfit,sans-serif;font-weight:700;font-size:.9rem;color:#fff">Contact Details</div>
+    <button onclick="closeContactDrawer()" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:4px 8px">✕</button>
   </div>
+  <div id="contactDrawerBody" style="overflow-y:auto;flex:1;padding:0"></div>
 </div>
+<div id="contactDrawerOverlay" onclick="closeContactDrawer()" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,.3);z-index:999;display:none;backdrop-filter:blur(2px)"></div>
 
 </div><!-- close stray div -->
 <!-- ══════════════════════════════════════════════
@@ -2026,11 +1943,13 @@ const SUPABASE_URL = 'https://cqsdsztzyvxtnzrruxeb.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_oWLb_blZHL_rayCldsPfMw_OoQs0HMR';
 
 function getUserId() {
-  // Always use the fixed user ID — never auto-generate a random one
-  // This ensures all tabs/sessions (including Chrome extension) query the same Supabase data
-  const FIXED_USER_ID = 'michael@fida';
-  localStorage.setItem('fidaUserId', FIXED_USER_ID);
-  return FIXED_USER_ID;
+  let uid = localStorage.getItem('fidaUserId');
+  if (!uid) {
+    // Auto-generate a stable unique ID on first load
+    uid = 'fida_' + Math.random().toString(36).slice(2,8) + Math.random().toString(36).slice(2,8);
+    localStorage.setItem('fidaUserId', uid);
+  }
+  return uid;
 }
 let sb = null;
 let currentUser = null;
@@ -2793,32 +2712,6 @@ async function syncPlaybooksToSupabase() {
   const SUPA_URL = 'https://cqsdsztzyvxtnzrruxeb.supabase.co';
   const SUPA_KEY = 'sb_publishable_oWLb_blZHL_rayCldsPfMw_OoQs0HMR';
 
-  // Always upsert playbook rows first — this is what loads on fresh tabs
-  const pbRows = playbooks.map(pb => ({
-    id: pb.id,
-    user_id: userId,
-    name: pb.name || '',
-    color: pb.color || '#EF4D05',
-    brief: pb.brief || '',
-    keywords: pb.keywords || '',
-    angle: pb.angle || '',
-    tone: pb.tone || 'industry',
-    methodology: pb.methodology || '',
-    created_at: pb.createdAt || pb.created_at || new Date().toISOString()
-  }));
-  try {
-    await fetch(SUPA_URL + '/rest/v1/playbooks', {
-      method: 'POST',
-      headers: {
-        'apikey': SUPA_KEY,
-        'Authorization': 'Bearer ' + SUPA_KEY,
-        'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates'
-      },
-      body: JSON.stringify(pbRows)
-    });
-  } catch(e) { console.warn('[Supabase playbooks sync error]', e.message); }
-
   const leads = playbooks.flatMap(pb => (pb.leads || []).map(l => ({
     id: l.id,
     playbook_id: pb.id,
@@ -2854,10 +2747,7 @@ async function syncPlaybooksToSupabase() {
     added_at: l.createdAt || l.added_at || Date.now()
   })));
 
-  if (!leads.length) {
-    if (syncEl) { syncEl.textContent = '✓ Saved to DB'; setTimeout(() => { if(syncEl) syncEl.textContent=''; }, 2000); }
-    return;
-  }
+  if (!leads.length) return;
 
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/leads', {
@@ -4399,12 +4289,6 @@ async function runVerification() {
   document.getElementById('statVerified').textContent = valid + ca;
   document.getElementById('statVerified').className = 'nav-stat-val ok';
   document.getElementById('verifyBtn').disabled = false;
-
-  // Auto-show invalid email modal if any found after verification
-  if (inv > 0) {
-    const invalidLeads = allLeads.filter(l => l.verifyTag === 'invalid');
-    setTimeout(() => showInvalidEmailsModal(invalidLeads), 400);
-  }
 }
 
 // Generate
@@ -4458,150 +4342,9 @@ async function testOneLead() {
   }
 }
 
-function showInvalidEmailsModal(invalidLeads) {
-  return new Promise(resolve => {
-    const existing = document.getElementById('invalidEmailModal');
-    if (existing) existing.remove();
-
-    const modal = document.createElement('div');
-    modal.id = 'invalidEmailModal';
-    modal.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(4px)';
-
-    const rows = invalidLeads.map(l => `
-      <tr style="border-bottom:1px solid var(--border)">
-        <td style="padding:8px 10px;font-size:.8rem;color:var(--text)">${l.firstName||''} ${l.lastName||''}</td>
-        <td style="padding:8px 10px;font-size:.78rem;color:var(--muted)">${l.organisation||'—'}</td>
-        <td style="padding:8px 10px;font-size:.78rem;color:#f87171">${l.email||'—'}</td>
-        <td style="padding:8px 10px" onclick="event.stopPropagation()">
-          <div style="display:flex;gap:6px">
-            <button onclick="invalidEmailAction('remove','${l.id}')" 
-              style="padding:4px 10px;border-radius:5px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.1);color:#f87171;cursor:pointer;font-size:.72rem;font-family:inherit">
-              🗑️ Remove
-            </button>
-            <button onclick="invalidEmailAction('skip','${l.id}')"
-              style="padding:4px 10px;border-radius:5px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);cursor:pointer;font-size:.72rem;font-family:inherit">
-              ⏭️ Skip
-            </button>
-          </div>
-        </td>
-      </tr>`).join('');
-
-    modal.innerHTML = `
-      <div style="background:var(--bg2);border:1px solid rgba(239,68,68,.3);border-radius:14px;width:620px;max-width:95vw;overflow:hidden">
-        <div style="padding:20px 24px;border-bottom:1px solid var(--border)">
-          <div style="font-family:Outfit,sans-serif;font-weight:700;font-size:1rem;color:#f87171">⚠️ ${invalidLeads.length} Invalid Email${invalidLeads.length>1?'s':''} Found</div>
-          <div style="font-size:.75rem;color:var(--muted);margin-top:4px">These contacts have undeliverable emails. Remove them or skip for now before generating.</div>
-        </div>
-        <div style="max-height:320px;overflow-y:auto">
-          <table style="width:100%;border-collapse:collapse">
-            <thead>
-              <tr style="border-bottom:1px solid var(--border);background:var(--bg3)">
-                <th style="padding:8px 10px;font-size:.7rem;color:var(--muted);text-align:left;font-weight:600">NAME</th>
-                <th style="padding:8px 10px;font-size:.7rem;color:var(--muted);text-align:left;font-weight:600">COMPANY</th>
-                <th style="padding:8px 10px;font-size:.7rem;color:var(--muted);text-align:left;font-weight:600">BAD EMAIL</th>
-                <th style="padding:8px 10px;font-size:.7rem;color:var(--muted);text-align:left;font-weight:600">ACTION</th>
-              </tr>
-            </thead>
-            <tbody id="invalidEmailRows">${rows}</tbody>
-          </table>
-        </div>
-        <div style="padding:14px 24px;border-top:1px solid var(--border);display:flex;gap:10px;align-items:center">
-          <button onclick="invalidEmailBulkAction('remove_all')"
-            style="padding:8px 16px;border-radius:8px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.1);color:#f87171;cursor:pointer;font-family:inherit;font-size:.8rem">
-            🗑️ Remove All Invalid
-          </button>
-          <button onclick="invalidEmailBulkAction('skip_all')"
-            style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);cursor:pointer;font-family:inherit;font-size:.8rem">
-            ⏭️ Skip All
-          </button>
-          <div style="flex:1"></div>
-          <button onclick="document.getElementById('invalidEmailModal').remove();window._invalidResolve(false)"
-            style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:.8rem">
-            Cancel
-          </button>
-          <button id="invalidProceedBtn" onclick="document.getElementById('invalidEmailModal').remove();window._invalidResolve(true)"
-            style="padding:8px 20px;border-radius:8px;border:none;background:var(--orange);color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:.88rem">
-            ✅ Proceed with Valid Only
-          </button>
-        </div>
-      </div>`;
-
-    window._invalidResolve = resolve;
-    document.body.appendChild(modal);
-  });
-}
-
-function invalidEmailAction(action, leadId) {
-  const pb = getActivePlaybook();
-  if (!pb) return;
-  const lead = pb.leads?.find(l => l.id === leadId);
-  if (!lead) return;
-
-  if (action === 'remove') {
-    pb.leads = pb.leads.filter(l => l.id !== leadId);
-    // Also remove from results array
-    const idx = results.findIndex(r => r.id === leadId);
-    if (idx >= 0) results.splice(idx, 1);
-    savePlaybooksToStorage();
-    showToast(`🗑️ Removed ${lead.firstName || lead.email}`);
-  } else if (action === 'skip') {
-    lead.verifyTag = 'skipped_invalid';
-    const r = results.find(r => r.id === leadId);
-    if (r) r.verifyTag = 'skipped_invalid';
-    savePlaybooksToStorage();
-  }
-
-  // Remove row from modal table
-  const row = document.querySelector(`#invalidEmailRows button[onclick*="${leadId}"]`)?.closest('tr');
-  if (row) row.remove();
-
-  // If no more rows, auto-proceed
-  const remaining = document.querySelectorAll('#invalidEmailRows tr').length;
-  if (remaining === 0) {
-    document.getElementById('invalidEmailModal')?.remove();
-    window._invalidResolve(true);
-  }
-}
-
-function invalidEmailBulkAction(action) {
-  const pb = getActivePlaybook();
-  if (!pb) return;
-  const invalidIds = results.filter(r => r.verifyTag === 'invalid').map(r => r.id);
-
-  if (action === 'remove_all') {
-    pb.leads = pb.leads.filter(l => !invalidIds.includes(l.id));
-    invalidIds.forEach(id => {
-      const idx = results.findIndex(r => r.id === id);
-      if (idx >= 0) results.splice(idx, 1);
-    });
-    savePlaybooksToStorage();
-    showToast(`🗑️ Removed ${invalidIds.length} invalid contacts`);
-  } else if (action === 'skip_all') {
-    invalidIds.forEach(id => {
-      const r = results.find(r => r.id === id);
-      if (r) r.verifyTag = 'skipped_invalid';
-      const lead = pb.leads?.find(l => l.id === id);
-      if (lead) lead.verifyTag = 'skipped_invalid';
-    });
-    savePlaybooksToStorage();
-    showToast(`⏭️ Skipped ${invalidIds.length} invalid contacts`);
-  }
-
-  document.getElementById('invalidEmailModal')?.remove();
-  window._invalidResolve(true);
-}
-
 async function startGeneration() {
   const apiKey = document.getElementById('apiKey').value.trim();
   if (!apiKey) { alert('Enter your Anthropic API key in Step 1.'); return; }
-
-  // Check for invalid emails before generating — show resolution modal
-  const invalidLeads = results.filter(r => r.verifyTag === 'invalid');
-  if (invalidLeads.length > 0) {
-    const proceed = await showInvalidEmailsModal(invalidLeads);
-    if (!proceed) return; // user cancelled
-  }
-
   stopFlag = false;
   const batchSize = parseInt(document.getElementById('batchSize').value);
   const parallel = parseInt(document.getElementById('parallelCount').value);
@@ -5018,7 +4761,7 @@ async function openLeadDrawer(type) {
     const typeColors = { opened: 'var(--orange-light)', replied: 'var(--green)', bounced: 'var(--red)' };
     const drawer = document.createElement('div');
     drawer.id = 'leadDrawer';
-    // drawer is now a centered modal, no inline style override needed
+    drawer.style.cssText = 'position:fixed;top:0;right:0;width:420px;height:100vh;background:var(--bg2);border-left:1px solid var(--border);z-index:999;overflow-y:auto;display:flex;flex-direction:column;box-shadow:-8px 0 32px rgba(0,0,0,.4)';
     drawer.innerHTML = `
       <div style="padding:20px 20px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
         <div>
@@ -6755,24 +6498,24 @@ function openContactDrawer(leadId, pbId) {
 
   body.innerHTML = `
     <!-- ── HEADER ── -->
-    <div style="padding:20px 24px;background:linear-gradient(160deg,rgba(239,77,5,.06) 0%,transparent 65%);border-bottom:1px solid rgba(255,255,255,.06)">
-      <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
-        <div class="c-avi" style="background:${getAvatarColor(lead.firstName+lead.lastName)};width:54px;height:54px;font-size:1.1rem;flex-shrink:0;overflow:hidden;border-radius:12px">
+    <div class="drawer-section" style="background:linear-gradient(135deg,rgba(239,77,5,.08),transparent);padding:18px 20px">
+      <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:12px">
+        <div class="c-avi" style="background:${getAvatarColor(lead.firstName+lead.lastName)};width:52px;height:52px;font-size:1.1rem;flex-shrink:0;overflow:hidden">
           ${lead._profilePhotoUrl
             ? `<img src="${lead._profilePhotoUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','${getInitials(lead.firstName,lead.lastName)}')">`
             : getInitials(lead.firstName, lead.lastName)}
         </div>
         <div style="flex:1;min-width:0">
-          <div style="font-family:Outfit,sans-serif;font-weight:700;font-size:1.08rem;color:#fff;margin-bottom:3px;letter-spacing:.01em">
+          <div style="font-family:Outfit,sans-serif;font-weight:700;font-size:1.05rem;color:#fff;margin-bottom:2px">
             ${lead.firstName||''} ${lead.lastName||''}
           </div>
-          <div style="font-size:.78rem;color:rgba(255,255,255,.5);margin-bottom:2px">${lead.jobTitle || lead._department || ''}</div>
-          <div style="font-size:.74rem;color:rgba(255,255,255,.3);margin-bottom:9px">${lead.organisation || ''}${locationStr ? ` <span style="color:rgba(239,77,5,.6)">· ${locationStr}</span>` : ''}</div>
-          <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
+          <div style="font-size:.78rem;color:var(--muted);margin-bottom:6px">${lead._department || lead.jobTitle || (src === 'Sales Navigator' ? 'LinkedIn Contact' : '')}</div>
+          <div style="font-size:.77rem;color:var(--muted);margin-bottom:8px">${lead.organisation || '—'}${locationStr ? ` · <span style="color:var(--orange-light)">${locationStr}</span>` : ''}</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap">
             ${getStatusBadge(lead.status)}
-            ${liUrl ? `<a href="${liUrl}" target="_blank" style="font-size:.62rem;background:rgba(0,119,181,.12);color:#5ba4cf;border:1px solid rgba(0,119,181,.2);border-radius:4px;padding:2px 8px;text-decoration:none">LinkedIn ↗</a>` : ''}
-            ${lead._s2ProfileUrl ? `<a href="${lead._s2ProfileUrl}" target="_blank" style="font-size:.62rem;background:rgba(91,164,207,.08);color:#5ba4cf;border:1px solid rgba(91,164,207,.15);border-radius:4px;padding:2px 8px;text-decoration:none">Scholar ↗</a>` : ''}
-            ${lead._stateConflict ? `<span style="font-size:.62rem;background:rgba(240,192,64,.1);color:#f0c040;border:1px solid rgba(240,192,64,.2);border-radius:4px;padding:2px 7px">⚠️ Location conflict</span>` : ''}
+            ${liUrl ? `<a href="${liUrl}" target="_blank" style="font-size:.65rem;background:rgba(0,119,181,.2);color:#5ba4cf;border:1px solid rgba(0,119,181,.3);border-radius:5px;padding:2px 8px;text-decoration:none">🔗 LinkedIn</a>` : ''}
+            ${lead._s2ProfileUrl ? `<a href="${lead._s2ProfileUrl}" target="_blank" style="font-size:.65rem;background:rgba(91,164,207,.1);color:#5ba4cf;border:1px solid rgba(91,164,207,.25);border-radius:5px;padding:2px 8px;text-decoration:none">📚 S2</a>` : ''}
+            ${lead._stateConflict ? `<span style="font-size:.65rem;background:rgba(240,192,64,.15);color:#f0c040;border:1px solid rgba(240,192,64,.3);border-radius:5px;padding:2px 8px">⚠️ Location conflict</span>` : ''}
           </div>
         </div>
       </div>
@@ -6802,10 +6545,9 @@ function openContactDrawer(leadId, pbId) {
     <!-- ── CONTACT INFO — all fields editable ── -->
     <div class="drawer-section">
       <div class="drawer-label">Contact Info</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px 16px">
 
-      <!-- First + Last name span full width -->
-      <div style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:12px 20px">
+      <!-- First + Last name -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
         <div>
           <div class="drawer-edit-label" style="display:flex;justify-content:space-between">
             <span>First Name</span>
@@ -6824,7 +6566,7 @@ function openContactDrawer(leadId, pbId) {
       </div>
 
       <!-- Job Title -->
-      <div>
+      <div style="margin-bottom:8px">
         <div class="drawer-edit-label">Job Title</div>
         <input class="drawer-edit-input" value="${lead.jobTitle||''}"
           oninput="updateLeadField('${lead.id}','${pbId}','jobTitle',this.value)"
@@ -6832,14 +6574,14 @@ function openContactDrawer(leadId, pbId) {
       </div>
       ${(lead._department || lead._labName) ? `<div style="margin-bottom:8px">
         <div class="drawer-edit-label">Department / Lab</div>
-        <div style="font-size:.78rem;color:rgba(255,255,255,.45);background:transparent;border:none;border-bottom:1.5px solid rgba(255,255,255,.1);padding:6px 0;line-height:1.4">
+        <div style="font-size:.75rem;color:var(--muted);background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:7px 10px">
           ${lead._labName ? `<div>🧪 ${lead._labName}</div>` : ''}
           ${lead._department ? `<div style="margin-top:${lead._labName?'4px':'0'}">🏛️ ${lead._department}</div>` : ''}
         </div>
       </div>` : ''}
 
       <!-- Organisation — key field for email finding -->
-      <div style="grid-column:1/-1">
+      <div style="margin-bottom:8px">
         <div class="drawer-edit-label" style="display:flex;justify-content:space-between;align-items:center">
           <span>Organisation / Institution</span>
           ${lead.organisation && isLocationString(lead.organisation)
@@ -6854,7 +6596,7 @@ function openContactDrawer(leadId, pbId) {
       </div>
 
       <!-- Email -->
-      <div style="grid-column:1/-1">
+      <div style="margin-bottom:8px">
         <div class="drawer-edit-label" style="display:flex;justify-content:space-between;align-items:center">
           <span>Email</span>
           ${hasEmail 
@@ -6878,7 +6620,7 @@ function openContactDrawer(leadId, pbId) {
       </div>
 
       <!-- Phone -->
-      <div>
+      <div style="margin-bottom:8px">
         <div class="drawer-edit-label" style="display:flex;justify-content:space-between">
           <span>Phone</span>
           ${(lead.phone||lead._phone) ? '<span style="font-size:.62rem;color:#00c87a">From NIH</span>' : ''}
@@ -6889,8 +6631,8 @@ function openContactDrawer(leadId, pbId) {
           type="tel"/>
       </div>
 
-      <!-- State / Location span full width -->
-      <div style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <!-- State / Location -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div>
           <div class="drawer-edit-label">City</div>
           <input class="drawer-edit-input" value="${lead._city||''}"
@@ -6905,7 +6647,6 @@ function openContactDrawer(leadId, pbId) {
         </div>
       </div>
 
-      </div><!-- close 2-col grid -->
     </div>
 
     <!-- ── NIH FUNDING ── -->
@@ -7023,7 +6764,7 @@ function openContactDrawer(leadId, pbId) {
         <button onclick="closeContactDrawer();openQuickGenerateModal('${lead.id}','${pbId}')"
           class="btn btn-primary btn-sm" style="flex:1">⚡ Quick Generate</button>
         <button onclick="setActivePlaybook('${pbId}');switchTab('sdr');closeContactDrawer()"
-          class="btn btn-ghost btn-sm" style="flex:1" title="Go to Generate page">Generate Page →</button>
+          class="btn btn-ghost btn-sm" style="flex:1" title="Go to full generate page">Full Page →</button>
         <button onclick="enrichSingleLead('${lead.id}','${pbId}')"
           class="btn btn-ghost btn-sm" style="flex:1" ${hasEmail?'disabled':''}>🔍 Find Email</button>
         <button onclick="findLinkedInForLead({id:'${lead.id}',firstName:'${lead.firstName}',lastName:'${lead.lastName}',organisation:'${(lead.organisation||'').replace(/'/g,'')}'},'${pbId}').then(r=>{if(r.found){openContactDrawer('${lead.id}','${pbId}');showToast(r.linkedinUrl?'🔗 LinkedIn found!':'📍 Location updated')}else{showToast('Not found on LinkedIn')}})"
@@ -7038,82 +6779,14 @@ function openContactDrawer(leadId, pbId) {
 
 
 
-  // Inject save bar into drawer shell (outside scroll body) if not already there
-  const drawerShell = document.getElementById('contactDrawer');
-  const _sbLeadId = '${lead.id}';
-  const _sbPbId = '${pbId}';
-  let saveBar = document.getElementById('drawerSaveBar_' + _sbLeadId);
-  if (!saveBar && drawerShell) {
-    saveBar = document.createElement('div');
-    saveBar.id = 'drawerSaveBar_' + _sbLeadId;
-    saveBar.style.cssText = 'flex-shrink:0;padding:10px 22px;background:#13111f;border-top:1px solid rgba(255,255,255,.08)';
-    const saveBtn = document.createElement('button');
-    saveBtn.id = 'drawerSaveBtn_' + _sbLeadId;
-    saveBtn.onclick = function(){ saveContactDrawer(_sbLeadId, _sbPbId); };
-    saveBtn.style.cssText = 'width:100%;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:rgba(255,255,255,.4);font-weight:600;cursor:pointer;font-family:inherit;font-size:.82rem;transition:all .2s';
-    saveBtn.textContent = '💾 Save Changes';
-    saveBar.appendChild(saveBtn);
-    drawerShell.appendChild(saveBar);
-  }
-
-  // Force-style all inputs inside the drawer — beats any global CSS
-  body.querySelectorAll('input.drawer-edit-input, .drawer-edit-input').forEach(el => {
-    el.style.cssText = 'background:rgba(255,255,255,0.04)!important;border:none!important;border-bottom:1.5px solid rgba(255,255,255,0.15)!important;border-radius:0!important;padding:6px 0 6px 0!important;color:#fff!important;width:100%!important;box-sizing:border-box!important;font-size:.81rem!important;font-family:inherit!important;outline:none!important;overflow:hidden!important;text-overflow:ellipsis!important;';
-    el.addEventListener('focus', function(){ this.style.borderBottomColor='#EF4D05'; });
-    el.addEventListener('blur', function(){ this.style.borderBottomColor='rgba(255,255,255,0.15)'; });
-    el.addEventListener('input', function(){ markDrawerDirty('${lead.id}'); });
-  });
-  // Also watch the notes textarea
-  const notesEl = body.querySelector('.drawer-note-input');
-  if (notesEl) notesEl.addEventListener('input', () => markDrawerDirty('${lead.id}'));
-
   // Open drawer
-  const overlay = document.getElementById('contactDrawerOverlay');
-  overlay.style.display = 'flex';
+  document.getElementById('contactDrawer').style.right = '0';
+  document.getElementById('contactDrawerOverlay').style.display = 'block';
 }
 
 function closeContactDrawer() {
+  document.getElementById('contactDrawer').style.right = '-440px';
   document.getElementById('contactDrawerOverlay').style.display = 'none';
-  window._drawerDirty = false;
-  window._drawerLeadId = null;
-}
-
-function markDrawerDirty(leadId) {
-  window._drawerDirty = true;
-  window._drawerLeadId = leadId;
-  const btn = document.getElementById('drawerSaveBtn_' + leadId);
-  if (btn && !btn._dirty) {
-    btn._dirty = true;
-    btn.style.background = '#EF4D05';
-    btn.style.color = '#fff';
-    btn.style.borderColor = '#EF4D05';
-  }
-}
-
-function saveContactDrawer(leadId, pbId) {
-  const btn = document.getElementById('drawerSaveBtn_' + leadId);
-  if (btn) {
-    btn.textContent = '✅ Saved!';
-    btn.style.background = '#00c87a';
-    btn.style.color = '#fff';
-    btn.style.borderColor = '#00c87a';
-    btn.disabled = true;
-    setTimeout(() => {
-      btn.textContent = '💾 Save Changes';
-      btn.style.background = 'rgba(255,255,255,.04)';
-      btn.style.color = 'rgba(255,255,255,.4)';
-      btn.style.borderColor = 'rgba(255,255,255,.1)';
-      btn._dirty = false;
-      btn.disabled = false;
-    }, 2000);
-  }
-  // Immediate save — don't wait for debounce
-  savePlaybooksToStorage();
-  buildContactsData();
-  if (document.getElementById('pageContacts')?.style.display !== 'none') {
-    applyContactsFiltersAndRender();
-  }
-  window._drawerDirty = false;
 }
 
 function saveContactNote(leadId, pbId, note) {
@@ -7843,129 +7516,87 @@ function showPlaybookPicker(callback, title) {
 
 
 // ══════════════════════════════════════════════════════════
-// EMAIL ENRICHMENT — Claude + ZeroBounce waterfall
+// EMAIL ENRICHMENT — 4-step waterfall: NIH → OpenAlex/ORCID → Claude web search → pattern guess
 // ══════════════════════════════════════════════════════════
 
 async function enrichLeadEmail(lead, playbookId) {
-  // Skip if already has email
-  if (lead.email && lead.email.trim()) return { status: 'skip', email: lead.email };
+  // Skip if already has a verified email
+  if (lead.email && lead.email.trim() && lead.verifyTag === 'valid') return { status: 'skip', email: lead.email };
 
-  const apiKey = localStorage.getItem('fidaApiKey');
   const zbKey = localStorage.getItem('fidaZbKey');
 
-  const org = lead.organisation || lead.company || lead.institution || '';
-  const name = `${lead.firstName || ''} ${lead.lastName || ''}`.trim();
-  if (!name) return { status: 'error', msg: 'No name' };
-
-  // GUARD: Reject location strings masquerading as organisations
-  if (org && isLocationString(org)) {
-    return { status: 'error', msg: `"${org}" looks like a location, not a company — cannot find email` };
-  }
-
-  // ── LOCAL FAST CHECK: learned domain pattern (free, instant) ──
-  const localDomain = guessInstitutionDomain(org);
-  if (localDomain) {
+  // Step 0: Check local pattern cache first (instant, free)
+  const domain = guessInstitutionDomain(lead.organisation || lead.company || '');
+  if (domain) {
     const patterns = getAllDomainPatterns();
-    if (patterns[localDomain]) {
-      const guessed = applyEmailPattern(patterns[localDomain], lead.firstName, lead.lastName, localDomain);
-      if (guessed) {
-        if (zbKey) {
-          const zbResult = await verifyEmailZB(guessed, zbKey);
-          if (zbResult) {
-            updateLeadEmail(lead, playbookId, guessed);
-            lead._emailGuessed = false;
-            lead.verifyTag = 'valid';
-            return { status: 'found', email: guessed, method: 'pattern+zb' };
-          }
-        } else {
-          updateLeadEmail(lead, playbookId, guessed);
-          lead._emailGuessed = true;
-          return { status: 'found', email: guessed, method: 'pattern' };
+    if (patterns[domain]) {
+      const guessed = applyEmailPattern(patterns[domain], lead.firstName, lead.lastName, domain);
+      if (guessed && zbKey) {
+        const zbResult = await verifyEmailZB(guessed, zbKey);
+        if (zbResult.valid) {
+          updateLeadEmail(lead, playbookId, guessed, zbResult.tag);
+          return { status: 'found', email: guessed, method: 'pattern+zb' };
         }
       }
     }
   }
 
-  // ── BACKEND WATERFALL: NIH → OpenAlex → Claude+WebSearch → Pattern ──
+  // Steps 1-4: Backend waterfall (NIH → OpenAlex/ORCID → Claude web search → pattern)
+  const org = lead.organisation || lead.company || lead.institution || '';
+  if (!lead.firstName || !lead.lastName) return { status: 'error', msg: 'Insufficient info' };
+  if (isLocationString(org)) return { status: 'error', msg: `"${org}" looks like a location, not a company` };
+
   try {
+    const apiKey = localStorage.getItem('fidaApiKey');
     const resp = await fetch(BACKEND + '/find-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         firstName: lead.firstName,
         lastName: lead.lastName,
-        organisation: lead._affiliation || org,
-        jobTitle: lead.jobTitle || lead.title || '',
-        linkedinUrl: lead._linkedinUrl || '',
-        anthropicKey: apiKey || ''
+        organisation: org,
+        anthropicKey: apiKey || null,
+        s2ProfileUrl: lead._s2ProfileUrl || null,
+        linkedinUrl: lead._linkedinUrl || null
       })
     });
+    const data = await resp.json();
 
-    if (!resp.ok) {
-      const errData = await resp.json().catch(() => ({}));
-      return { status: 'error', msg: errData.error || `Backend error ${resp.status}` };
-    }
+    console.log('[FindEmail] waterfall result:', data.method, data.confidence, data.email);
 
-    const result = await resp.json();
-    console.log('[FindEmail] Waterfall result:', result.method, result.confidence, result.steps?.length, 'steps');
+    if (!data.email) return { status: 'notfound' };
 
-    if (result.email) {
-      const foundEmail = result.email.toLowerCase().trim();
-      const isHighConfidence = result.confidence === 'high';
-      const needsVerification = !isHighConfidence && zbKey;
+    const email = data.email;
+    lead._emailSource = data.method;
 
-      if (needsVerification) {
-        // Verify medium/low confidence emails with ZeroBounce
-        const zbValid = await verifyEmailZB(foundEmail, zbKey);
-        if (zbValid) {
-          updateLeadEmail(lead, playbookId, foundEmail);
-          lead._emailGuessed = false;
-          lead.verifyTag = 'valid';
-          lead._emailSource = result.method;
-          // Learn the pattern for this domain
-          const parts = foundEmail.split('@');
-          if (parts.length === 2) {
-            const pattern = detectEmailPattern(lead.firstName, lead.lastName, parts[0]);
-            if (pattern) learnDomainPattern(parts[1], pattern);
-          }
-          return { status: 'found', email: foundEmail, method: result.method + '+zb' };
-        }
-        // ZB rejected — still use if from NIH (those are always real)
-        if (result.method === 'nih_reporter' || result.method === 'orcid') {
-          updateLeadEmail(lead, playbookId, foundEmail);
-          lead._emailGuessed = false;
-          lead._emailSource = result.method;
-          lead.verifyTag = 'catch-all'; // NIH emails are real but may be catch-all
-          return { status: 'found', email: foundEmail, method: result.method };
-        }
-        // Medium confidence but ZB rejected — mark as guessed
-        updateLeadEmail(lead, playbookId, foundEmail);
-        lead._emailGuessed = true;
-        lead._emailSource = result.method;
-        lead.verifyTag = 'guessed';
-        return { status: 'found', email: foundEmail, method: result.method + '_unverified' };
+    if (data.confidence === 'high') {
+      // NIH/ORCID — verified source, no ZeroBounce needed
+      updateLeadEmail(lead, playbookId, email, 'valid');
+      if (data.domain) learnDomainPattern(data.domain, detectEmailPattern(lead.firstName, lead.lastName, email.split('@')[0]) || 'first.last');
+      return { status: 'found', email, method: data.method, confidence: 'high' };
+
+    } else if (data.confidence === 'medium') {
+      // Claude web search — verify with ZeroBounce if available
+      if (zbKey) {
+        const zbResult = await verifyEmailZB(email, zbKey);
+        updateLeadEmail(lead, playbookId, email, zbResult.tag);
+        return { status: 'found', email, method: data.method, zbStatus: zbResult.tag };
+      } else {
+        updateLeadEmail(lead, playbookId, email, 'unverified');
+        return { status: 'found', email, method: data.method };
       }
 
-      // High confidence (NIH, ORCID) or no ZeroBounce — use directly
-      updateLeadEmail(lead, playbookId, foundEmail);
-      lead._emailGuessed = !isHighConfidence;
-      lead._emailSource = result.method;
-      lead.verifyTag = isHighConfidence ? 'valid' : 'guessed';
-      // Learn pattern from high-confidence finds
-      if (isHighConfidence) {
-        const parts = foundEmail.split('@');
-        if (parts.length === 2) {
-          const pattern = detectEmailPattern(lead.firstName, lead.lastName, parts[0]);
-          if (pattern) learnDomainPattern(parts[1], pattern);
-        }
-      }
-      return { status: 'found', email: foundEmail, method: result.method };
+    } else {
+      // Low confidence pattern guess — mark as guessed
+      lead._emailGuessed = true;
+      lead._emailDomain = data.domain;
+      updateLeadEmail(lead, playbookId, email, 'unverified');
+      return { status: 'found', email, method: data.method };
     }
 
-    return { status: 'notfound' };
-  } catch (e) {
-    console.error('[FindEmail] Backend error:', e);
-    return { status: 'error', msg: `Find email failed: ${e.message}` };
+  } catch(e) {
+    console.warn('[FindEmail] backend error:', e.message);
+    return { status: 'error', msg: `Email search failed: ${e.message}` };
   }
 }
 
@@ -8207,15 +7838,7 @@ async function pushToInstantlyWithSchedule(schedule) {
   const pb = getActivePlaybook();
   if (!pb) { showToast('No active playbook selected'); return; }
 
-  // Never push invalid emails to Instantly — filter them out hard
-  const readyLeads = (pb.leads || []).filter(l => 
-    l.status === LEAD_STATUS.GENERATED && 
-    l.email && 
-    l.verifyTag !== 'invalid' &&
-    l.verifyTag !== 'skipped_invalid'
-  );
-  const invalidBlocked = (pb.leads || []).filter(l => l.status === LEAD_STATUS.GENERATED && l.email && (l.verifyTag === 'invalid' || l.verifyTag === 'skipped_invalid')).length;
-  if (invalidBlocked > 0) showToast(`⚠️ ${invalidBlocked} invalid email${invalidBlocked>1?'s':''} excluded from push`, 4000);
+  const readyLeads = (pb.leads || []).filter(l => l.status === LEAD_STATUS.GENERATED && l.email);
   const alreadyInSequence = (pb.leads || []).filter(l => l.status === LEAD_STATUS.IN_SEQUENCE).length;
   if (alreadyInSequence > 0 && readyLeads.length === 0) {
     showToast(`⚠️ ${alreadyInSequence} contacts already pushed to Instantly — generate new emails first`, 5000);
@@ -12798,4 +12421,73 @@ async function checkDbSync() {
   </div>
 </div>
 </body>
-</html>
+
+/* ── LOCATION BADGES ── */
+.loc-badge {
+  font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:5px;
+  white-space:nowrap;font-family:'Outfit',sans-serif;letter-spacing:.02em;
+}
+.loc-in  { background:rgba(0,200,122,.15);color:#00c87a;border:1px solid rgba(0,200,122,.3); }
+.loc-out { background:rgba(239,77,5,.1); color:var(--orange-light);border:1px solid rgba(239,77,5,.25); }
+.loc-neutral { background:rgba(255,255,255,.07);color:var(--muted);border:1px solid var(--border); }
+.loc-empty { color:var(--muted);font-size:.7rem; }
+
+.loc-verified    { background:rgba(0,119,181,.15);color:#5ba4cf;border:1px solid rgba(0,119,181,.3); }
+.loc-in-verified { background:rgba(0,200,122,.2); color:#00c87a;border:1px solid rgba(0,200,122,.4);font-weight:800; }
+.loc-conflict    { background:rgba(240,192,64,.15);color:#f0c040;border:1px solid rgba(240,192,64,.3); }
+
+
+/* ── CONTACTS PAGE ENHANCEMENTS ── */
+.sort-icon { font-size:.65rem; color:var(--muted); margin-left:2px; }
+.contacts-table th { cursor:default; }
+.contacts-table th[onclick] { cursor:pointer; }
+.contacts-table th[onclick]:hover { color:#fff; }
+
+/* Row hover actions */
+.contacts-table tbody tr { cursor:pointer; position:relative; }
+.contacts-table tbody tr:hover td { background:rgba(255,255,255,.03); }
+
+/* Email status pill */
+.email-pill {
+  font-size:.68rem;padding:2px 7px;border-radius:10px;font-weight:600;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;display:inline-block;
+}
+.email-pill.verified { background:rgba(0,200,122,.12);color:#00c87a;border:1px solid rgba(0,200,122,.25); }
+.email-pill.guessed  { background:rgba(240,192,64,.1); color:#f0c040;border:1px solid rgba(240,192,64,.2); }
+.email-pill.missing  { background:rgba(255,255,255,.05);color:var(--muted);border:1px solid var(--border); }
+
+/* Source badge */
+.source-dot {
+  font-size:.68rem;padding:2px 7px;border-radius:5px;font-weight:600;white-space:nowrap;
+}
+.source-dot.pubmed    { background:rgba(59,130,246,.15);color:#93c5fd; }
+.source-dot.nih       { background:rgba(16,185,129,.12);color:#6ee7b7; }
+.source-dot.linkedin  { background:rgba(0,119,181,.15); color:#5ba4cf; }
+.source-dot.autodiscover { background:rgba(239,77,5,.12);color:var(--orange-light); }
+.source-dot.manual    { background:rgba(255,255,255,.08);color:var(--muted); }
+
+/* Pagination */
+.pg-btn {
+  padding:5px 10px;border-radius:6px;border:1px solid var(--border);
+  background:var(--bg3);color:var(--muted);cursor:pointer;font-size:.75rem;
+  font-family:inherit;transition:.12s;
+}
+.pg-btn:hover:not(:disabled) { border-color:var(--orange);color:#fff; }
+.pg-btn.active { background:rgba(239,77,5,.2);border-color:var(--orange);color:var(--orange-light);font-weight:700; }
+.pg-btn:disabled { opacity:.35;cursor:default; }
+
+/* Contact drawer */
+.drawer-section { padding:16px 20px;border-bottom:1px solid var(--border); }
+.drawer-label { font-size:.65rem;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px; }
+.drawer-field { display:flex;align-items:flex-start;gap:10px;margin-bottom:8px; }
+.drawer-field-icon { font-size:.85rem;margin-top:1px;flex-shrink:0;width:18px;text-align:center; }
+.drawer-field-val { font-size:.8rem;color:var(--text);line-height:1.5; }
+.drawer-field-val.muted { color:var(--muted); }
+.drawer-note-input {
+  width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border);
+  border-radius:7px;padding:8px 10px;color:var(--text);font-size:.78rem;
+  font-family:inherit;resize:vertical;min-height:60px;line-height:1.5;
+}
+.drawer-note-input:focus { outline:none;border-color:rgba(239,77,5,.5); }
+
+</html></div>
