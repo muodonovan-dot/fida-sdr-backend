@@ -1780,6 +1780,9 @@ tr:hover .row-actions-inline { display:flex; }
           <th onclick="sortContactsBy('source')" style="cursor:pointer;user-select:none">
             Source <span class="sort-icon" id="sort_source"></span>
           </th>
+          <th onclick="sortContactsBy('dealValue')" style="cursor:pointer;user-select:none">
+            Deal <span class="sort-icon" id="sort_dealValue"></span>
+          </th>
           <th onclick="sortContactsBy('score')" style="cursor:pointer;user-select:none">
             Score <span class="sort-icon" id="sort_score">↓</span>
           </th>
@@ -1789,7 +1792,7 @@ tr:hover .row-actions-inline { display:flex; }
         </tr>
       </thead>
       <tbody id="contactsTableBody">
-        <tr><td colspan="10">
+        <tr><td colspan="11">
           <div class="contacts-empty">
             <div class="contacts-empty-icon">👥</div>
             <div>Loading contacts...</div>
@@ -6859,6 +6862,7 @@ function applyContactsFiltersAndRender() {
       case 'status': av=a.status||''; bv=b.status||''; break;
       case 'state': av=normalizeState(a.state||'')||inferStateFromOrg(a.organisation||''); bv=normalizeState(b.state||'')||inferStateFromOrg(b.organisation||''); break;
       case 'source': av=(a._source||a.source||'').toLowerCase(); bv=(b._source||b.source||'').toLowerCase(); break;
+      case 'dealValue': av=a.dealValue||0; bv=b.dealValue||0; break;
       case 'createdAt': av=a.createdAt||a.addedAt||0; bv=b.createdAt||b.addedAt||0; break;
       case 'score': av=a._priorityScore||a._score||0; bv=b._priorityScore||b._score||0; break;
       default: av=a._priorityScore||a._score||0; bv=b._priorityScore||b._score||0;
@@ -6884,7 +6888,7 @@ function applyContactsFiltersAndRender() {
   }
 
   // Update sort icons
-  ['name','organisation','email','status','source','score','createdAt'].forEach(f => {
+  ['name','organisation','email','status','source','dealValue','score','createdAt'].forEach(f => {
     const el = document.getElementById('sort_' + f);
     if (el) el.textContent = contactsSortField === f ? (contactsSortDir === -1 ? '↓' : '↑') : '';
   });
@@ -7001,7 +7005,7 @@ function renderContactsTable(data, total) {
       <td>${emailHtml}</td>
 
       <!-- STATUS -->
-      <td>${getStatusBadge(c.status)}${c.dealStage ? ' <span title="$' + (c.dealValue||0).toLocaleString() + ' — ' + c.dealStage + '" style="font-size:.7rem;cursor:help">' + (c.dealStage==='won'?'💰':'💵') + '</span>' : ''}</td>
+      <td>${getStatusBadge(c.status)}</td>
 
       <!-- STATE — always visible, territory colored -->
       <td>
@@ -7023,6 +7027,14 @@ function renderContactsTable(data, total) {
 
       <!-- SOURCE -->
       <td><span class="source-dot ${srcClass}">${srcLabel}</span></td>
+
+      <!-- DEAL -->
+      <td>
+        ${c.dealStage ? `<div style="text-align:center">
+          <div style="font-size:.78rem;font-weight:700;color:${c.dealStage==='won'?'#00c87a':c.dealStage==='lost'?'#ff6b6b':'#f59e0b'}">$${(c.dealValue||0).toLocaleString()}</div>
+          <div style="font-size:.58rem;color:${c.dealStage==='won'?'#00c87a':c.dealStage==='lost'?'rgba(255,107,107,.7)':'rgba(245,158,11,.6)'};text-transform:uppercase;font-weight:600;letter-spacing:.04em">${c.dealStage}</div>
+        </div>` : '<span style="color:var(--muted);font-size:.72rem">—</span>'}
+      </td>
 
       <!-- SCORE — uses AI priority score if available, else engagement score -->
       <td>
