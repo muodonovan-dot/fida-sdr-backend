@@ -6251,9 +6251,11 @@ Return ONLY valid JSON (no markdown, no explanation) in this exact format:
 }
 
 Rules:
-- Generate 4-6 queries total across pubmed and nihgrants sources
+- Generate 6-8 queries total across pubmed, nihgrants, and openalex sources
+- Include at least 1-2 openalex queries (broader global coverage, better author metadata)
 - Vary the queries to cast a wide net (different keyword combinations)
-- For nihgrants use source "nihgrants"
+- For nihgrants use source "nihgrants", for OpenAlex use source "openalex"
+- IMPORTANT: Include at least one query targeting competitor/related instrument users (e.g. "Biacore", "surface plasmon resonance", "SPR binding") — these are high-intent prospects
 - Keep each query string concise (3-6 words)
 - Focus on finding ACTIVE researchers (recent publications/grants)`;
 
@@ -6287,6 +6289,7 @@ Rules:
       try {
         if (q.source === 'pubmed') await searchPubMed(maxPerQuery, msg);
         else if (q.source === 'nihgrants') await searchNIHGrants(maxPerQuery, msg);
+        else if (q.source === 'openalex') await searchOpenAlex(maxPerQuery, msg);
       } catch(e) {
         logAiStep('⚠ Query failed: ' + e.message);
       }
@@ -6318,9 +6321,15 @@ Rules:
       const batch = prospectResults.slice(i, i + BATCH);
       logAiStep(`Scoring prospects ${i+1}-${Math.min(i+BATCH, prospectResults.length)}...`);
 
-      const candidateList = batch.map((r, idx) =>
-        `${idx}: ${r.fullName} | ${r.institution} | ${r.signalTitle} (${r.year}) | ${r.journal}`
-      ).join('\n');
+      const candidateList = batch.map((r, idx) => {
+        var extra = [];
+        if (r._hIndex) extra.push('h-index:' + r._hIndex);
+        if (r._citedByCount) extra.push('citations:' + r._citedByCount);
+        if (r._worksCount) extra.push('papers:' + r._worksCount);
+        if (r.email) extra.push('has-email');
+        var extraStr = extra.length ? ' [' + extra.join(', ') + ']' : '';
+        return `${idx}: ${r.fullName} | ${r.institution} | ${r.signalTitle} (${r.year}) | ${r.journal}${extraStr}`;
+      }).join('\n');
 
       const scoringPrompt = `You are scoring biotech sales prospects for this playbook:
 
@@ -6770,73 +6779,86 @@ async function searchPubMed(maxResults, msg) {
     const pmid = article.querySelector('PMID')?.textContent || '';
     const journal = article.querySelector('Title')?.textContent || '';
 
-    // Get first/last author (PI is usually last author)
+    // Get first AND last author (both valuable — last=PI, first=bench scientist)
     const authors = article.querySelectorAll('Author');
-    const targetAuthor = authors.length > 0 ? authors[authors.length - 1] : authors[0]; // Last = PI
+    if (!authors.length) return;
 
-    if (!targetAuthor) return;
-    const lastName = targetAuthor.querySelector('LastName')?.textContent || '';
-    const foreName = targetAuthor.querySelector('ForeName')?.textContent || '';
-    const affiliation = targetAuthor.querySelector('AffiliationInfo Affiliation')?.textContent ||
-                        article.querySelector('AffiliationInfo Affiliation')?.textContent || '';
-
-    if (!lastName) return;
-
-    // Territory filter
-    if (territory.mode === 'us' && territory.states.length > 0) {
-      const affUpper = affiliation.toUpperCase();
-      const match = territory.states.some(s => 
-        affUpper.includes(`, ${s} `) || affUpper.includes(`, ${s},`) || 
-        affUpper.includes(`, ${s}.`) || affUpper.includes(`${s} `) ||
-        affUpper.includes(` ${s},`) || new RegExp(`\b${s}\b`).test(affUpper)
-      );
-      if (!match) return;
-    } else if (territory.mode === 'intl' && territory.countries.length > 0) {
-      // For international, match country names in affiliation
-      const affLower = affiliation.toLowerCase();
-      const countryNames = territory.countries.map(c => 
-        (INTL_COUNTRIES.find(x=>x.code===c)?.name||'').toLowerCase()
-      ).filter(Boolean);
-      const match = countryNames.some(c => affLower.includes(c));
-      if (!match) return;
+    // Process both first and last authors
+    var authorsToExtract = [];
+    if (authors.length >= 2) {
+      authorsToExtract.push(authors[authors.length - 1]); // Last = PI
+      authorsToExtract.push(authors[0]); // First = bench researcher
+    } else {
+      authorsToExtract.push(authors[0]);
     }
 
-    // Extract email if present in affiliation
-    const emailMatch = affiliation.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/);
-    const email = emailMatch ? emailMatch[0] : '';
+    authorsToExtract.forEach(function(targetAuthor) {
+      if (!targetAuthor) return;
+      var lastName = targetAuthor.querySelector('LastName')?.textContent || '';
+      var foreName = targetAuthor.querySelector('ForeName')?.textContent || '';
+      var affiliation = targetAuthor.querySelector('AffiliationInfo Affiliation')?.textContent ||
+                          article.querySelector('AffiliationInfo Affiliation')?.textContent || '';
+      if (!lastName) return;
 
-    // Extract institution (first part of affiliation)
-    const institution = affiliation.split(',')[0].split(';')[0].trim().substring(0, 80);
+      // Territory filter — improved with full state name matching
+      if (territory.mode === 'us' && territory.states.length > 0) {
+        var affUpper = affiliation.toUpperCase();
+        var stMatch = territory.states.some(function(s) {
+          return affUpper.includes(', ' + s + ' ') || affUpper.includes(', ' + s + ',') ||
+            affUpper.includes(', ' + s + '.') || affUpper.includes(' ' + s + ',') ||
+            new RegExp('\\b' + s + '\\b').test(affUpper);
+        });
+        // Also match full state names (e.g. "Massachusetts" not just "MA")
+        if (!stMatch && typeof getStateFullName === 'function') {
+          var fullNames = territory.states.map(function(s) { return getStateFullName(s).toUpperCase(); });
+          stMatch = fullNames.some(function(fn) { return affUpper.includes(fn); });
+        }
+        if (!stMatch) return;
+      } else if (territory.mode === 'intl' && territory.countries.length > 0) {
+        var affLower = affiliation.toLowerCase();
+        var cNames = territory.countries.map(function(c) {
+          return (INTL_COUNTRIES.find(function(x){return x.code===c})?.name||'').toLowerCase();
+        }).filter(Boolean);
+        if (!cNames.some(function(c) { return affLower.includes(c); })) return;
+      }
 
-    // Institution type filter (multi-select OR logic)
-    if (!matchesFilter('institution', affiliation + ' ' + institution)) return;
+      // Extract email if present in affiliation
+      var emailMatch = affiliation.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/);
+      var email = emailMatch ? emailMatch[0] : '';
 
-    // Seniority filter - match against author title/position keywords
-    const seniorityVals = getFilterValues('seniority');
-    if (seniorityVals.length > 0) {
-      const affLower2 = affiliation.toLowerCase();
-      const seniorityMatch = seniorityVals.some(s =>
-        s.split(' ').some(word => word.length > 2 && affLower2.includes(word.toLowerCase()))
-      );
-      if (!seniorityMatch) return;
-    }
+      // Extract institution (first part of affiliation)
+      var institution = affiliation.split(',')[0].split(';')[0].trim().substring(0, 80);
 
-    prospectResults.push({
-      id: pmid,
-      firstName: foreName,
-      lastName,
-      fullName: `${foreName} ${lastName}`.trim(),
-      institution,
-      affiliation,
-      email,
-      signalType: 'Publication',
-      signalTitle: title.substring(0, 100) + (title.length > 100 ? '...' : ''),
-      journal: journal.substring(0, 60),
-      year,
-      pubmedUrl: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`,
-      source: 'pubmed'
-    });
-  });
+      // Institution type filter
+      if (!matchesFilter('institution', affiliation + ' ' + institution)) return;
+
+      // Seniority filter
+      var seniorityVals = getFilterValues('seniority');
+      if (seniorityVals.length > 0) {
+        var affLower2 = affiliation.toLowerCase();
+        var senMatch = seniorityVals.some(function(s) {
+          return s.split(' ').some(function(word) { return word.length > 2 && affLower2.includes(word.toLowerCase()); });
+        });
+        if (!senMatch) return;
+      }
+
+      prospectResults.push({
+        id: pmid,
+        firstName: foreName,
+        lastName: lastName,
+        fullName: (foreName + ' ' + lastName).trim(),
+        institution: institution,
+        affiliation: affiliation,
+        email: email,
+        signalType: 'Publication',
+        signalTitle: title.substring(0, 100) + (title.length > 100 ? '...' : ''),
+        journal: journal.substring(0, 60),
+        year: year,
+        pubmedUrl: 'https://pubmed.ncbi.nlm.nih.gov/' + pmid + '/',
+        source: 'pubmed'
+      });
+    }); // end authorsToExtract forEach
+  }); // end articles forEach
 
   renderProspectResults(msg);
 }
@@ -6967,6 +6989,115 @@ async function searchNIHGrants(maxResults, msg) {
   });
 
   renderProspectResults(msg);
+}
+
+// ── OpenAlex Search — broader global coverage with author metadata ──
+async function searchOpenAlex(maxResults, msg) {
+  var kw = document.getElementById('prospectKeywords').value.trim();
+  var appTerms = getFilterValues('application').flatMap(function(a){return a.split(' ').slice(0,3)}).slice(0,5).join(' ');
+  var query = [kw, appTerms].filter(Boolean).join(' ') || 'protein characterization';
+  var recencyYrs = parseInt(document.getElementById('prospectRecency').value) || 2;
+  var minYear = new Date().getFullYear() - recencyYrs;
+
+  var territory = getTerritoryFilter();
+
+  // Build filter string
+  var filters = ['from_publication_date:' + minYear + '-01-01'];
+  // OpenAlex can filter by institution country
+  if (territory.mode === 'us') {
+    filters.push('institutions.country_code:us');
+  } else if (territory.mode === 'intl' && territory.countries.length > 0) {
+    filters.push('institutions.country_code:' + territory.countries.map(function(c){return c.toLowerCase()}).join('|'));
+  }
+
+  var url = 'https://api.openalex.org/works?search=' + encodeURIComponent(query) +
+    '&filter=' + filters.join(',') +
+    '&sort=cited_by_count:desc' +
+    '&per-page=' + Math.min(maxResults, 50) +
+    '&mailto=muodonovan@gmail.com';
+
+  try {
+    var res = await fetch(url);
+    var data = await res.json();
+    var works = data.results || [];
+
+    if (!works.length) {
+      msg.innerHTML = '<span style="color:var(--yellow)">⚠ No OpenAlex results — try broader keywords.</span>';
+      return;
+    }
+
+    works.forEach(function(work) {
+      var authorships = work.authorships || [];
+      // Extract first AND last authors (both are valuable)
+      var authorsToProcess = [];
+      if (authorships.length >= 2) {
+        authorsToProcess.push(authorships[authorships.length - 1]); // Last = senior/PI
+        authorsToProcess.push(authorships[0]); // First = doing the work
+      } else if (authorships.length === 1) {
+        authorsToProcess.push(authorships[0]);
+      }
+
+      authorsToProcess.forEach(function(authorship) {
+        var author = authorship.author || {};
+        var displayName = author.display_name || '';
+        if (!displayName) return;
+
+        var nameParts = displayName.split(' ');
+        var firstName = nameParts[0] || '';
+        var lastName = nameParts.slice(1).join(' ') || '';
+
+        var institutions = (authorship.institutions || []);
+        var primaryInst = institutions[0] || {};
+        var instName = primaryInst.display_name || '';
+        var instCountry = primaryInst.country_code || '';
+
+        // Territory filter for US states — check against institution lineage
+        if (territory.mode === 'us' && territory.states.length > 0) {
+          var instStr = (instName + ' ' + (primaryInst.lineage || []).join(' ')).toUpperCase();
+          var stateMatch = territory.states.some(function(s) {
+            return instStr.includes(', ' + s) || instStr.includes(' ' + s + ' ') || instStr.includes(' ' + s + ',');
+          });
+          // Also try full state name matching
+          if (!stateMatch) {
+            var stateFullNames = territory.states.map(function(s) { return (typeof getStateFullName === 'function' ? getStateFullName(s) : s).toUpperCase(); });
+            stateMatch = stateFullNames.some(function(sn) { return instStr.includes(sn); });
+          }
+          if (!stateMatch) return;
+        }
+
+        // Get h-index and citation data if available
+        var hIndex = author.summary_stats?.h_index || 0;
+        var citedByCount = author.cited_by_count || 0;
+        var worksCount = author.works_count || 0;
+        var orcid = author.orcid || '';
+
+        prospectResults.push({
+          id: author.id || work.id || '',
+          firstName: firstName,
+          lastName: lastName,
+          fullName: displayName,
+          institution: instName.substring(0, 80),
+          affiliation: instName + (instCountry ? ', ' + instCountry : ''),
+          email: '', // OpenAlex doesn't expose emails
+          signalType: 'Publication',
+          signalTitle: (work.title || '').substring(0, 100) + ((work.title||'').length > 100 ? '...' : ''),
+          journal: (work.primary_location?.source?.display_name || '').substring(0, 60),
+          year: String(work.publication_year || ''),
+          pubmedUrl: work.ids?.pmid ? 'https://pubmed.ncbi.nlm.nih.gov/' + work.ids.pmid.replace('https://pubmed.ncbi.nlm.nih.gov/','') + '/' : (work.ids?.doi ? 'https://doi.org/' + work.ids.doi.replace('https://doi.org/','') : ''),
+          source: 'openalex',
+          _hIndex: hIndex,
+          _citedByCount: citedByCount,
+          _worksCount: worksCount,
+          _orcid: orcid,
+          _citationCount: work.cited_by_count || 0
+        });
+      });
+    });
+
+    renderProspectResults(msg);
+  } catch(e) {
+    msg.innerHTML = '<span style="color:var(--red)">✗ OpenAlex search failed: ' + e.message + '</span>';
+  }
 }
 
 function renderProspectResults(msg) {
