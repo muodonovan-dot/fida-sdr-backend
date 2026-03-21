@@ -915,9 +915,12 @@ tr:hover .row-actions-inline { display:flex; }
       </div>
 
       <div>
-        <div class="field-label">🔍 Search Keywords <span style="font-weight:400;color:var(--muted)">— pre-fills Prospect Finder</span></div>
+        <div class="field-label" style="display:flex;align-items:center;gap:8px">🔍 Search Keywords <span style="font-weight:400;color:var(--muted)">— used by AI Discover</span>
+          <button type="button" class="btn btn-ghost btn-sm" style="font-size:.68rem;padding:2px 8px;margin-left:auto" onclick="autoGenerateKeywords()">🤖 Auto-Generate from Knowledge Base</button>
+        </div>
         <input type="text" id="pb_keywords" placeholder="e.g. surface plasmon resonance, Biacore, SPR kinetics, binding affinity" style="width:100%;box-sizing:border-box"/>
-        <div style="font-size:.72rem;color:var(--muted);margin-top:4px">Comma-separated. These auto-fill the PubMed/NIH search when you switch to Find Leads with this playbook active.</div>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:4px">Comma-separated. AI Discover uses these to design its search strategy. Click Auto-Generate to let Claude pick the best keywords from your 157 Fida resources.</div>
+        <div id="pb_keywords_status" style="display:none;font-size:.72rem;color:var(--orange-light);margin-top:4px"></div>
       </div>
 
       <div>
@@ -3199,6 +3202,69 @@ function savePlaybookFromModal() {
   closePlaybookModal();
   renderPlaybooks();
   showToast(editId ? '✅ Playbook updated' : '✅ Playbook created');
+}
+
+async function autoGenerateKeywords() {
+  var apiKey = localStorage.getItem('fidaApiKey') || document.getElementById('apiKey')?.value?.trim();
+  if (!apiKey) { showToast('Add your Anthropic API key in Settings first'); return; }
+
+  var brief = document.getElementById('pb_brief')?.value?.trim() || '';
+  var pbName = document.getElementById('pb_name')?.value?.trim() || '';
+  var angle = document.getElementById('pb_angle')?.value || '';
+
+  var statusEl = document.getElementById('pb_keywords_status');
+  if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = '🔄 Fetching knowledge base resources...'; }
+
+  try {
+    // Step 1: Fetch all resource titles from Supabase
+    var resp = await fetch('https://cqsdsztzyvxtnzrruxeb.supabase.co/rest/v1/fida_resources?select=type,title,url&order=created_at.asc', {
+      headers: {
+        'apikey': 'sb_publishable_oWLb_blZHL_rayCldsPfMw_OoQs0HMR',
+        'Authorization': 'Bearer sb_publishable_oWLb_blZHL_rayCldsPfMw_OoQs0HMR'
+      }
+    });
+    var resources = await resp.json();
+
+    if (!resources || !resources.length) {
+      if (statusEl) { statusEl.textContent = '⚠️ No resources found in knowledge base'; }
+      return;
+    }
+
+    if (statusEl) { statusEl.textContent = '🤖 Analyzing ' + resources.length + ' resources with Claude...'; }
+
+    // Step 2: Build a compact resource list for Claude
+    var resourceList = resources.map(function(r, i) { return '[' + r.type + '] ' + r.title; }).join('\n');
+
+    // Step 3: Ask Claude to generate optimal search keywords
+    var prompt = 'You are a biotech sales intelligence expert. Based on the playbook information and the company\'s knowledge base of resources, generate the best PubMed/NIH/OpenAlex search keywords for finding prospects.\n\n' +
+      'PLAYBOOK NAME: ' + (pbName || 'Not set') + '\n' +
+      'PLAYBOOK BRIEF: ' + (brief || 'Not provided') + '\n' +
+      'RESEARCH ANGLE: ' + (angle || 'Not specified') + '\n\n' +
+      'COMPANY KNOWLEDGE BASE (' + resources.length + ' resources):\n' + resourceList + '\n\n' +
+      'Generate 8-15 comma-separated search keywords/phrases that would find researchers who would benefit from the products described in these resources. Focus on:\n' +
+      '1. Scientific techniques and methods mentioned across the resources (e.g. "surface plasmon resonance", "hydrodynamic radius")\n' +
+      '2. Application areas (e.g. "antibody characterization", "protein aggregation")\n' +
+      '3. Competitor instruments that the product replaces or complements (e.g. "Biacore", "DLS")\n' +
+      '4. Specific protein/molecule types the product is used for\n' +
+      '5. Research workflows where the product fits\n\n' +
+      'If the playbook brief specifies a particular focus, weight the keywords toward that focus.\n\n' +
+      'Return ONLY the comma-separated keywords, nothing else. Example:\n' +
+      'surface plasmon resonance, Biacore, SPR binding kinetics, antibody characterization, protein aggregation, hydrodynamic radius, label-free binding';
+
+    var claudeResp = await callClaude(apiKey, prompt, 400);
+    var keywords = claudeResp.trim().replace(/^["']|["']$/g, '');
+
+    // Step 4: Fill in the keywords field
+    var kwEl = document.getElementById('pb_keywords');
+    if (kwEl) kwEl.value = keywords;
+
+    if (statusEl) { statusEl.textContent = '✅ Generated ' + keywords.split(',').length + ' keywords from ' + resources.length + ' resources'; }
+    setTimeout(function() { if (statusEl) statusEl.style.display = 'none'; }, 5000);
+
+  } catch(e) {
+    console.error('[AutoKeywords] Error:', e);
+    if (statusEl) { statusEl.textContent = '❌ Error: ' + e.message; }
+  }
 }
 
 function openDeletePlaybookModal(id) {
@@ -6184,7 +6250,7 @@ PLAYBOOK: "${pb.name}"
 RESEARCH ANGLE: ${pb.angle || 'general'}
 OUTREACH OCCASION: ${pb.occasion || 'general'}
 AUDIENCE BRIEF: ${pb.brief || 'No brief provided'}
-SEARCH KEYWORDS: ${pb.keywords || 'Not specified'}
+SEARCH KEYWORDS: ${pb.keywords || 'Not specified — use the playbook brief and research angle to infer the best PubMed/NIH search terms. Focus on techniques, instruments, protein types, and application areas mentioned in the brief.'}
 TERRITORY: ${territoryDesc}
 LEAD TYPE FILTER: ${leadTypeDesc}
 
@@ -6245,6 +6311,7 @@ Rules:
     for (const q of strategy.queries) {
       if (aiDiscoverStop) break;
       logAiStep(`Searching ${q.source}: "${q.query}"`);
+      var beforeCount = prospectResults.length;
 
       // Temporarily override the keywords input
       const kwEl = document.getElementById('prospectKeywords');
@@ -6259,6 +6326,8 @@ Rules:
         logAiStep('⚠ Query failed: ' + e.message);
       }
       kwEl.value = origKw;
+      var addedThisQuery = prospectResults.length - beforeCount;
+      logAiStep('  → ' + addedThisQuery + ' leads from this query (total so far: ' + prospectResults.length + ')');
     }
 
     // Deduplicate by email or fullName AND skip anyone already in the playbook
