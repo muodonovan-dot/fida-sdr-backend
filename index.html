@@ -7852,118 +7852,120 @@ async function enrichLeadEmail(lead, playbookId) {
 
   const apiKey = localStorage.getItem('fidaApiKey');
   const zbKey = localStorage.getItem('fidaZbKey');
-  if (!apiKey) return { status: 'error', msg: 'No Anthropic key' };
 
-  // Step 1: Check pattern DB first (free, instant)
-  const domain = guessInstitutionDomain(lead.organisation || lead.company || '');
-  if (domain) {
+  const org = lead.organisation || lead.company || lead.institution || '';
+  const name = `${lead.firstName || ''} ${lead.lastName || ''}`.trim();
+  if (!name) return { status: 'error', msg: 'No name' };
+
+  // GUARD: Reject location strings masquerading as organisations
+  if (org && isLocationString(org)) {
+    return { status: 'error', msg: `"${org}" looks like a location, not a company — cannot find email` };
+  }
+
+  // ── LOCAL FAST CHECK: learned domain pattern (free, instant) ──
+  const localDomain = guessInstitutionDomain(org);
+  if (localDomain) {
     const patterns = getAllDomainPatterns();
-    if (patterns[domain]) {
-      const guessed = applyEmailPattern(patterns[domain], lead.firstName, lead.lastName, domain);
+    if (patterns[localDomain]) {
+      const guessed = applyEmailPattern(patterns[localDomain], lead.firstName, lead.lastName, localDomain);
       if (guessed) {
-        // Verify with ZeroBounce if available
         if (zbKey) {
           const zbResult = await verifyEmailZB(guessed, zbKey);
-          if (zbResult.valid) {
-            updateLeadEmail(lead, playbookId, guessed, zbResult.tag);
-            return { status: 'found', email: guessed, method: 'pattern+zb', zbStatus: zbResult.tag };
+          if (zbResult) {
+            updateLeadEmail(lead, playbookId, guessed);
+            lead._emailGuessed = false;
+            lead.verifyTag = 'valid';
+            return { status: 'found', email: guessed, method: 'pattern+zb' };
           }
         } else {
-          // No ZB — use pattern guess unverified
           updateLeadEmail(lead, playbookId, guessed);
+          lead._emailGuessed = true;
           return { status: 'found', email: guessed, method: 'pattern' };
         }
       }
     }
   }
 
-  // Step 2: Ask Claude to guess the email
-  const name = `${lead.firstName || ''} ${lead.lastName || ''}`.trim();
-  const org = lead.organisation || lead.company || lead.institution || '';
-  const title = lead.jobTitle || lead.title || '';
-  if (!name || !org) return { status: 'error', msg: 'Insufficient info' };
-
-  // GUARD: Reject location strings masquerading as organisations
-  // These come from LinkedIn where people list their metro area instead of company
-  if (isLocationString(org)) {
-    return { status: 'error', msg: `"${org}" looks like a location, not a company — cannot guess email` };
-  }
-
-  let claudeGuesses = [];
+  // ── BACKEND WATERFALL: NIH → OpenAlex → Claude+WebSearch → Pattern ──
   try {
-    const prompt = `You are an expert at finding professional email addresses for academic and biotech researchers.
+    const resp = await fetch(BACKEND + '/find-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        firstName: lead.firstName,
+        lastName: lead.lastName,
+        organisation: lead._affiliation || org,
+        jobTitle: lead.jobTitle || lead.title || '',
+        linkedinUrl: lead._linkedinUrl || '',
+        anthropicKey: apiKey || ''
+      })
+    });
 
-Given:
-Name: ${name}
-Institution/Company: ${org}
-Title: ${title}
-${lead.linkedinUrl ? 'LinkedIn: ' + lead.linkedinUrl : ''}
+    if (!resp.ok) {
+      const errData = await resp.json().catch(() => ({}));
+      return { status: 'error', msg: errData.error || `Backend error ${resp.status}` };
+    }
 
-Your task: Generate the 3 most likely email addresses for this person.
+    const result = await resp.json();
+    console.log('[FindEmail] Waterfall result:', result.method, result.confidence, result.steps?.length, 'steps');
 
-Rules:
-- For universities: use known domain (mit.edu, harvard.edu, stanford.edu etc.)
-- For pharma/biotech: use company domain (pfizer.com, novartis.com etc.)
-- Apply common academic patterns: firstname.lastname@, f.lastname@, firstname@, flastname@
-- Apply common corporate patterns: firstname.lastname@, f.lastname@
-- Return ONLY a JSON array of 3 email strings, most likely first
-- Example: ["john.smith@mit.edu", "j.smith@mit.edu", "jsmith@mit.edu"]
-- Return ONLY the JSON array, no other text`;
+    if (result.email) {
+      const foundEmail = result.email.toLowerCase().trim();
+      const isHighConfidence = result.confidence === 'high';
+      const needsVerification = !isHighConfidence && zbKey;
 
-    const apiKeyVal = localStorage.getItem('fidaApiKey');
-    const resp = await callClaude(apiKeyVal, prompt, 300);
-    const cleaned = resp.replace(/```json|```/g, '').trim();
-    claudeGuesses = JSON.parse(cleaned);
-  } catch(e) {
-    return { status: 'error', msg: `Claude error: ${e.message}` };
-  }
+      if (needsVerification) {
+        // Verify medium/low confidence emails with ZeroBounce
+        const zbValid = await verifyEmailZB(foundEmail, zbKey);
+        if (zbValid) {
+          updateLeadEmail(lead, playbookId, foundEmail);
+          lead._emailGuessed = false;
+          lead.verifyTag = 'valid';
+          lead._emailSource = result.method;
+          // Learn the pattern for this domain
+          const parts = foundEmail.split('@');
+          if (parts.length === 2) {
+            const pattern = detectEmailPattern(lead.firstName, lead.lastName, parts[0]);
+            if (pattern) learnDomainPattern(parts[1], pattern);
+          }
+          return { status: 'found', email: foundEmail, method: result.method + '+zb' };
+        }
+        // ZB rejected — still use if from NIH (those are always real)
+        if (result.method === 'nih_reporter' || result.method === 'orcid') {
+          updateLeadEmail(lead, playbookId, foundEmail);
+          lead._emailGuessed = false;
+          lead._emailSource = result.method;
+          lead.verifyTag = 'catch-all'; // NIH emails are real but may be catch-all
+          return { status: 'found', email: foundEmail, method: result.method };
+        }
+        // Medium confidence but ZB rejected — mark as guessed
+        updateLeadEmail(lead, playbookId, foundEmail);
+        lead._emailGuessed = true;
+        lead._emailSource = result.method;
+        lead.verifyTag = 'guessed';
+        return { status: 'found', email: foundEmail, method: result.method + '_unverified' };
+      }
 
-  if (!claudeGuesses.length) return { status: 'notfound' };
-
-  // Filter out any guesses with obviously fake domains
-  claudeGuesses = claudeGuesses.filter(email => {
-    if (!email || !email.includes('@')) return false;
-    const domain = email.split('@')[1] || '';
-    // Reject if domain looks like a location string
-    if (isLocationString(domain.replace('.com','').replace('.edu','').replace(/\./g,' '))) return false;
-    // Reject domains that are too long or have spaces
-    if (domain.includes(' ') || domain.length > 60) return false;
-    // Must have a valid TLD
-    if (!/\.[a-z]{2,6}$/.test(domain)) return false;
-    return true;
-  });
-  if (!claudeGuesses.length) return { status: 'notfound' };
-
-  // Step 3: Verify Claude's guesses with ZeroBounce
-  if (zbKey) {
-    let bestGuess = null;
-    for (const email of claudeGuesses) {
-      if (!email || !email.includes('@')) continue;
-      const valid = await verifyEmailZB(email, zbKey);
-      if (valid) {
-        // Verified — learn pattern and use it
-        const parts = email.split('@');
+      // High confidence (NIH, ORCID) or no ZeroBounce — use directly
+      updateLeadEmail(lead, playbookId, foundEmail);
+      lead._emailGuessed = !isHighConfidence;
+      lead._emailSource = result.method;
+      lead.verifyTag = isHighConfidence ? 'valid' : 'guessed';
+      // Learn pattern from high-confidence finds
+      if (isHighConfidence) {
+        const parts = foundEmail.split('@');
         if (parts.length === 2) {
           const pattern = detectEmailPattern(lead.firstName, lead.lastName, parts[0]);
           if (pattern) learnDomainPattern(parts[1], pattern);
         }
-        updateLeadEmail(lead, playbookId, email);
-        return { status: 'found', email, method: 'claude+zb_verified' };
       }
-      // Keep first guess as fallback (unknown/unverifiable domains)
-      if (!bestGuess) bestGuess = email;
+      return { status: 'found', email: foundEmail, method: result.method };
     }
-    // All came back unverifiable — use top Claude guess anyway
-    if (bestGuess) {
-      updateLeadEmail(lead, playbookId, bestGuess);
-      return { status: 'found', email: bestGuess, method: 'claude+zb_unverified' };
-    }
+
     return { status: 'notfound' };
-  } else {
-    // No ZeroBounce — use top Claude guess
-    const topGuess = claudeGuesses[0];
-    updateLeadEmail(lead, playbookId, topGuess);
-    return { status: 'found', email: topGuess, method: 'claude_unverified' };
+  } catch (e) {
+    console.error('[FindEmail] Backend error:', e);
+    return { status: 'error', msg: `Find email failed: ${e.message}` };
   }
 }
 

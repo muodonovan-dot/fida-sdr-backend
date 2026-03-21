@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
+
 const app = express();
 
 const SUPABASE_URL = 'https://cqsdsztzyvxtnzrruxeb.supabase.co';
@@ -41,6 +42,7 @@ async function getRelevantResources(applicationFocus, researchContext) {
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
+
 const PORT = process.env.PORT || 3000;
 
 app.get('/health', (req, res) => res.json({ ok: true }));
@@ -141,7 +143,6 @@ app.post('/instantly-push', async (req, res) => {
   const { instantlyKey, campaignName, leads, emailAccount, dailyLimit, campaign_schedule, campaign } = req.body;
   if (!instantlyKey) return res.status(400).json({ error: 'Missing key' });
   try {
-    // Build schedule — Instantly API requires days as an OBJECT {monday: true/false, ...}
     const normalizeSchedule = (sched) => {
       if (!sched) return {
         schedules: [{
@@ -153,8 +154,7 @@ app.post('/instantly-push', async (req, res) => {
       };
       if (sched.schedules) {
         sched.schedules.forEach(s => {
-          if (!s.timezone) s.timezone = 'America/Chicago'; // only default if not set
-          // Convert array format to object if needed
+          if (!s.timezone) s.timezone = 'America/Chicago';
           if (Array.isArray(s.days)) {
             const all = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
             const obj = {};
@@ -186,12 +186,10 @@ app.post('/instantly-push', async (req, res) => {
       campaign_schedule: normalizeSchedule(campaign_schedule)
     };
 
-    // If schedule was passed separately, normalize it on the body too
     if (campaignBody.campaign_schedule) {
       campaignBody.campaign_schedule = normalizeSchedule(campaignBody.campaign_schedule);
     }
 
-    // Auto-fetch sending account if not set
     if (!campaignBody.email_list || campaignBody.email_list.length === 0) {
       try {
         const acctResp = await fetch('https://api.instantly.ai/api/v2/accounts?limit=5&status=1', {
@@ -207,6 +205,7 @@ app.post('/instantly-push', async (req, res) => {
     }
 
     console.log('Campaign schedule being sent:', JSON.stringify(campaignBody.campaign_schedule));
+
     const campResp = await fetch('https://api.instantly.ai/api/v2/campaigns', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + instantlyKey },
@@ -220,7 +219,6 @@ app.post('/instantly-push', async (req, res) => {
 
     const campaignId = campData.id;
 
-    // Instantly ignores campaign_schedule on POST — must PATCH it separately
     const scheduleToApply = normalizeSchedule(campaign_schedule);
     const patchResp = await fetch(`https://api.instantly.ai/api/v2/campaigns/${campaignId}`, {
       method: 'PATCH',
@@ -232,9 +230,6 @@ app.post('/instantly-push', async (req, res) => {
 
     let pushed = 0, failed = 0;
 
-    // Instantly V2 correct flow per support:
-    // Step 1: POST /leads to create in CRM (no campaign field needed)
-    // Step 2: POST /leads/move-to-campaign to attach to campaign
     for (const lead of leads) {
       const emails = lead.generatedEmails || lead.emails || {};
       const createPayload = {
@@ -246,25 +241,25 @@ app.post('/instantly-push', async (req, res) => {
         phone: lead.phone || '',
         custom_variables: {
           email1_subject: (emails.email1?.subject || '').substring(0, 200),
-          email1_body:    (emails.email1?.body    || '').substring(0, 2000),
+          email1_body: (emails.email1?.body || '').substring(0, 2000),
           email2_subject: (emails.email2?.subject || '').substring(0, 200),
-          email2_body:    (emails.email2?.body    || '').substring(0, 2000),
+          email2_body: (emails.email2?.body || '').substring(0, 2000),
           email3_subject: (emails.email3?.subject || '').substring(0, 200),
-          email3_body:    (emails.email3?.body    || '').substring(0, 2000),
+          email3_body: (emails.email3?.body || '').substring(0, 2000),
           email4_subject: (emails.email4?.subject || '').substring(0, 200),
-          email4_body:    (emails.email4?.body    || '').substring(0, 2000),
+          email4_body: (emails.email4?.body || '').substring(0, 2000),
           email5_subject: (emails.email5?.subject || '').substring(0, 200),
-          email5_body:    (emails.email5?.body    || '').substring(0, 2000),
+          email5_body: (emails.email5?.body || '').substring(0, 2000),
           email6_subject: (emails.email6?.subject || '').substring(0, 200),
-          email6_body:    (emails.email6?.body    || '').substring(0, 2000),
+          email6_body: (emails.email6?.body || '').substring(0, 2000),
           email7_subject: (emails.email7?.subject || '').substring(0, 200),
-          email7_body:    (emails.email7?.body    || '').substring(0, 2000),
+          email7_body: (emails.email7?.body || '').substring(0, 2000),
         }
       };
 
-      // Include campaign directly in create payload — simplest possible approach
       createPayload.campaign = campaignId;
       console.log('Step 1: Creating lead with campaign directly:', lead.email, '->', campaignId);
+
       const createRes = await fetch('https://api.instantly.ai/api/v2/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + instantlyKey },
@@ -279,7 +274,6 @@ app.post('/instantly-push', async (req, res) => {
       } else {
         const errText = await createRes.text();
         console.error('Lead create failed:', lead.email, createRes.status, errText.substring(0, 200));
-        // Try to find existing lead by email
         const listRes = await fetch('https://api.instantly.ai/api/v2/leads/list', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + instantlyKey },
@@ -290,15 +284,15 @@ app.post('/instantly-push', async (req, res) => {
           leadId = listData.items?.[0]?.id;
           if (leadId) console.log('Found existing lead:', lead.email, '| id:', leadId);
         }
-      } // end else (create failed)
-      // campaign is included in the create payload, so no separate move step needed
+      }
+
       if (leadId) {
         pushed++;
         console.log('Lead created and linked to campaign:', lead.email, '| id:', leadId);
       } else {
         failed++;
       }
-    } // end for loop
+    }
 
     await fetch(`https://api.instantly.ai/api/v2/campaigns/${campaignId}/activate`, {
       method: 'POST',
@@ -327,17 +321,20 @@ app.post('/claude-proxy', async (req, res) => {
 app.post('/generate', async (req, res) => {
   const { lead, anthropicKey, knowledgeBase = [], tone = 'industry', campaignContext = 'scileads',
     applicationFocus = 'general', sequenceLength = 3, senderName = "Mike O'Donovan" } = req.body;
-
   let researchContext = '';
   let lowConfidence = false;
+
   try {
     const researchPrompt = `You are a biotech sales researcher. Find recent research context for this scientist to personalize a cold email.
+
 Scientist: ${lead.firstName} ${lead.lastName}
 Institution: ${lead.organisation}
 Title: ${lead.jobTitle}
 Research Focus: ${lead.focusedAreas || 'protein research'}
 Location: ${lead.state}, ${lead.country}
+
 Return a JSON object with: { "recent_work": "1-2 sentence summary", "key_proteins": ["protein1"], "application_match": "spr_biacore|antibody_dev|drug_discovery|structural_biology|de_novo_proteins|general", "personalization_hook": "1 specific hook", "confidence": "high|low" }
+
 If no info found, set confidence to "low". Return ONLY valid JSON.`;
 
     const researchResp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -384,16 +381,25 @@ If no info found, set confidence to "low". Return ONLY valid JSON.`;
     : '';
 
   const emailPrompt = `You are an expert biotech sales email writer for Fida Bio, selling the Fida Neo instrument.
+
 IMPORTANT: If you include a resource link, embed it as a hyperlink in the body text — do NOT add bare URLs at the end.
+
 ${resourcesText}
+
 LEAD: ${lead.firstName} ${lead.lastName}, ${lead.jobTitle} at ${lead.organisation}, ${lead.state} ${lead.country}
 Research: ${lead.focusedAreas || 'protein research'}
 Tone: ${tone}
+
 RESEARCH CONTEXT: ${researchContext ? JSON.stringify(researchContext) : 'No specific research — use general biotech context'}
+
 FIDA NEO: 40nL sample, label-free, measures Rh/polydispersity/aggregation in native conditions. ${appDesc}. Cytiva/Biacore partner.
+
 CAMPAIGN: ${contextDescriptions[campaignContext] || contextDescriptions.generic}
+
 ${kbText ? `KNOWLEDGE BASE:\n${kbText}` : ''}
+
 Address the recipient by their first name ${lead.firstName} - NEVER write [name] or [First Name] or any placeholder. Write a ${emailCount}-email sequence. Each email: concise (150-200 words), reference their research, non-spammy subject, soft CTA, sign off as: Best,\n${senderName}\nFida Bio. Each follow-up uses a different angle.
+
 Return ONLY valid JSON: { "personalization_note": "...", "matched_app": "...", ${Array.from({length: emailCount}, (_, i) => `"email${i+1}": { "subject": "...", "body": "..." }`).join(', ')} }`;
 
   try {
@@ -513,6 +519,7 @@ app.post('/enrich-lead', async (req, res) => {
   if (!firstName || !lastName) return res.status(400).json({ error: 'Missing name' });
   const results = { nih: null, semanticScholar: null, pubmed: null };
   const errors = {};
+
   await Promise.allSettled([
     (async () => {
       try {
@@ -602,7 +609,246 @@ app.post('/enrich-lead', async (req, res) => {
       } catch(e) { errors.pubmed = e.message; }
     })()
   ]);
+
   res.json({ results, errors });
+});
+
+// ═══════════════════════════════════════════════════════════
+// FIND EMAIL — Waterfall: NIH → OpenAlex → Claude+WebSearch
+// Zero additional cost — uses only free APIs + existing Claude key
+// ═══════════════════════════════════════════════════════════
+
+app.post('/find-email', async (req, res) => {
+  const { firstName, lastName, organisation, jobTitle, linkedinUrl, anthropicKey } = req.body;
+  if (!firstName || !lastName) return res.status(400).json({ error: 'Missing name' });
+
+  const steps = [];
+  let email = null;
+  let method = null;
+  let confidence = 'low';
+  let domain = null;
+
+  // ── STEP 1: NIH Reporter PI email (FREE, most reliable for grant-funded researchers) ──
+  try {
+    const nihResp = await fetch('https://api.reporter.nih.gov/v2/projects/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        criteria: { pi_names: [{ first_name: firstName, last_name: lastName }] },
+        offset: 0, limit: 10,
+        fields: ['principal_investigators', 'organization', 'fiscal_year']
+      })
+    });
+    const nihData = await nihResp.json();
+    const grants = nihData.results || [];
+
+    if (grants.length > 0) {
+      const orgLower = (organisation || '').toLowerCase();
+      const orgWords = orgLower.split(/\s+/).filter(w => w.length > 3);
+
+      const scored = grants.map(g => {
+        const gOrg = (g.organization?.org_name || '').toLowerCase();
+        let score = 0;
+        orgWords.forEach(w => { if (gOrg.includes(w)) score += 3; });
+        score += (g.fiscal_year || 2000) - 2000;
+        return { ...g, _score: score };
+      }).sort((a, b) => b._score - a._score);
+
+      const best = scored[0];
+      const pi = best?.principal_investigators?.find(p => {
+        const pFirst = (p.first_name || '').toLowerCase();
+        const pLast = (p.last_name || '').toLowerCase();
+        return pFirst.startsWith(firstName.toLowerCase().substring(0, 3)) &&
+               pLast === lastName.toLowerCase();
+      }) || best?.principal_investigators?.[0];
+
+      if (pi?.contact_email) {
+        email = pi.contact_email.toLowerCase();
+        method = 'nih_reporter';
+        confidence = 'high';
+        domain = email.split('@')[1];
+        steps.push({ step: 'nih', status: 'found', email, grants: grants.length });
+      } else {
+        steps.push({ step: 'nih', status: 'no_email', grants: grants.length });
+      }
+    } else {
+      steps.push({ step: 'nih', status: 'no_grants' });
+    }
+  } catch (e) {
+    steps.push({ step: 'nih', status: 'error', msg: e.message });
+  }
+
+  if (email) return res.json({ email, method, confidence, domain, steps });
+
+  // ── STEP 2: OpenAlex — resolve institution domain (FREE, 100K req/day) ──
+  let openAlexDomain = null;
+  let openAlexOrgName = null;
+
+  try {
+    const query = encodeURIComponent(`${firstName} ${lastName}`);
+    const oaResp = await fetch(
+      `https://api.openalex.org/authors?search=${query}&per_page=10&mailto=muodonovan@gmail.com`
+    );
+    const oaData = await oaResp.json();
+    const authors = oaData.results || [];
+
+    if (authors.length > 0) {
+      const orgLower = (organisation || '').toLowerCase();
+      const orgWords = orgLower.split(/\s+/).filter(w => w.length > 3);
+
+      const scored = authors.map(a => {
+        const affiliations = a.affiliations || [];
+        const lastKnown = a.last_known_institutions || (a.last_known_institution ? [a.last_known_institution] : []);
+        const allInst = [...lastKnown, ...affiliations.map(af => af.institution)].filter(Boolean);
+        let score = 0;
+        const name = (a.display_name || '').toLowerCase();
+        if (name.includes(firstName.toLowerCase())) score += 2;
+        if (name.includes(lastName.toLowerCase())) score += 2;
+        allInst.forEach(inst => {
+          const instName = (inst?.display_name || '').toLowerCase();
+          orgWords.forEach(w => { if (instName.includes(w)) score += 3; });
+        });
+        return { ...a, _score: score, _institutions: allInst };
+      }).sort((a, b) => b._score - a._score);
+
+      const best = scored[0];
+      if (best && best._score >= 4 && best._institutions.length > 0) {
+        const instId = best._institutions[0]?.id;
+        if (instId) {
+          try {
+            const instResp = await fetch(`${instId}?mailto=muodonovan@gmail.com`);
+            const instData = await instResp.json();
+            const homepage = instData.homepage_url || '';
+            if (homepage) {
+              try {
+                const urlObj = new URL(homepage);
+                openAlexDomain = urlObj.hostname.replace(/^www\./, '');
+                openAlexOrgName = instData.display_name || '';
+                steps.push({ step: 'openalex', status: 'found_domain', domain: openAlexDomain, org: openAlexOrgName });
+              } catch(urlErr) {
+                steps.push({ step: 'openalex', status: 'bad_url', homepage });
+              }
+            }
+          } catch (e) {
+            steps.push({ step: 'openalex_inst', status: 'error', msg: e.message });
+          }
+        }
+
+        // Check ORCID for public email
+        if (best.orcid) {
+          try {
+            const orcidId = best.orcid.replace('https://orcid.org/', '');
+            const orcidResp = await fetch(`https://pub.orcid.org/v3.0/${orcidId}/email`, {
+              headers: { 'Accept': 'application/json' }
+            });
+            if (orcidResp.ok) {
+              const orcidData = await orcidResp.json();
+              const emails = orcidData.email || [];
+              if (emails.length > 0 && emails[0].email) {
+                email = emails[0].email.toLowerCase();
+                method = 'orcid';
+                confidence = 'high';
+                domain = email.split('@')[1];
+                steps.push({ step: 'orcid', status: 'found', email });
+              }
+            }
+          } catch (e) {
+            steps.push({ step: 'orcid', status: 'error', msg: e.message });
+          }
+        }
+      } else {
+        steps.push({ step: 'openalex', status: 'no_match', candidates: authors.length });
+      }
+    } else {
+      steps.push({ step: 'openalex', status: 'no_results' });
+    }
+  } catch (e) {
+    steps.push({ step: 'openalex', status: 'error', msg: e.message });
+  }
+
+  if (email) return res.json({ email, method, confidence, domain, steps });
+
+  // ── STEP 3: Claude Haiku with Web Search (already paying for Claude) ──
+  if (anthropicKey) {
+    try {
+      const org = organisation || openAlexOrgName || '';
+      const domainHint = openAlexDomain ? `Their institution's web domain is ${openAlexDomain}.` : '';
+
+      const prompt = `Find the professional email address for this researcher. Search their institution's faculty directory, lab website, Google Scholar profile, ResearchGate, or any public source.
+
+Name: ${firstName} ${lastName}
+Institution: ${org}
+Title: ${jobTitle || ''}
+${linkedinUrl ? 'LinkedIn: ' + linkedinUrl : ''}
+${domainHint}
+
+Search the web for their email. Look specifically at:
+1. Their institution's faculty directory page
+2. Their lab/research group website  
+3. Their Google Scholar or ResearchGate profile
+4. Any publication where their contact email is listed
+
+Return ONLY a JSON object: {"email": "found@email.com", "source": "where you found it"} 
+If you cannot find a verified email, return: {"email": null, "source": "not_found"}
+Return ONLY the JSON, no other text.`;
+
+      const claudeResp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': anthropicKey,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 400,
+          tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      const claudeData = await claudeResp.json();
+      const textBlocks = (claudeData.content || []).filter(b => b.type === 'text');
+      const lastText = textBlocks[textBlocks.length - 1]?.text || '';
+      const jsonMatch = lastText.match(/\{[\s\S]*\}/);
+
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (parsed.email && parsed.email.includes('@') && parsed.email !== 'null') {
+          email = parsed.email.toLowerCase().trim();
+          method = 'claude_websearch';
+          confidence = 'medium';
+          domain = email.split('@')[1];
+          steps.push({ step: 'claude_websearch', status: 'found', email, source: parsed.source });
+        } else {
+          steps.push({ step: 'claude_websearch', status: 'not_found' });
+        }
+      } else {
+        steps.push({ step: 'claude_websearch', status: 'no_json_response' });
+      }
+    } catch (e) {
+      steps.push({ step: 'claude_websearch', status: 'error', msg: e.message });
+    }
+  }
+
+  if (email) return res.json({ email, method, confidence, domain, steps });
+
+  // ── STEP 4: Smart pattern guess using OpenAlex domain (FREE fallback) ──
+  if (openAlexDomain) {
+    const f = firstName.toLowerCase().replace(/[^a-z]/g, '');
+    const l = lastName.toLowerCase().replace(/[^a-z]/g, '');
+
+    email = `${f}.${l}@${openAlexDomain}`;
+    method = 'openalex_pattern';
+    confidence = 'low';
+    domain = openAlexDomain;
+    steps.push({ step: 'pattern_guess', status: 'generated', email, domain: openAlexDomain });
+  }
+
+  if (email) return res.json({ email, method, confidence, domain, steps });
+
+  // Nothing worked
+  res.json({ email: null, method: null, confidence: null, domain: null, steps });
 });
 
 app.post('/api/bug-report', async (req, res) => {
