@@ -1697,6 +1697,7 @@ tr:hover .row-actions-inline { display:flex; }
       <button class="cf-btn"        id="cfGenerated" onclick="setContactFilter('generated')">⚡ Generated</button>
       <button class="cf-btn"        id="cfSequence" onclick="setContactFilter('in_sequence')">📧 Sequence</button>
       <button class="cf-btn"        id="cfReplied"  onclick="setContactFilter('replied')">✅ Replied</button>
+      <button class="cf-btn"        id="cfDeals"    onclick="setContactFilter('deals')">💰 Deals</button>
     </div>
     <!-- Dropdown filters -->
     <select id="cfPlaybook" onchange="filterContacts()"
@@ -2785,6 +2786,9 @@ async function loadPlaybooksFromSupabase() {
         generatedEmails: l.generated_emails ? (typeof l.generated_emails === 'string' ? JSON.parse(l.generated_emails) : l.generated_emails) : null,
         conferenceNotes: l.conference_notes || '',
         conferenceName: l.conference_name || '',
+        dealValue: l.deal_value || null,
+        dealStage: l.deal_stage || null,
+        dealCreatedAt: l.deal_created_at || null,
       }))
     }));
 
@@ -2950,6 +2954,9 @@ async function syncPlaybooksToSupabase() {
         generated_emails: l.generatedEmails ? (typeof l.generatedEmails === 'object' ? JSON.stringify(l.generatedEmails) : l.generatedEmails) : (l.generated_emails || null),
         conference_notes: l.conferenceNotes || l.conference_notes || null,
         conference_name: l.conferenceName || l.conference_name || null,
+        deal_value: l.dealValue || l.deal_value || null,
+        deal_stage: l.dealStage || l.deal_stage || null,
+        deal_created_at: l.dealCreatedAt || l.deal_created_at || null,
         added_at: (function() { var v = l.addedAt || l.createdAt || l.added_at; if (!v) return Date.now(); if (typeof v === 'number') return v; var d = new Date(v).getTime(); return isNaN(d) ? Date.now() : d; })()
       };
     });
@@ -6813,6 +6820,7 @@ function applyContactsFiltersAndRender() {
     if (contactsFilter === 'new' && c.status !== 'new') return false;
     if (contactsFilter === 'generated' && c.status !== 'generated') return false;
     if (contactsFilter === 'replied' && c.status !== 'replied') return false;
+    if (contactsFilter === 'deals' && !c.dealStage) return false;
     if (contactsFilter === 'in_sequence' && c.status !== 'in_sequence') return false;
     // Playbook filter
     if (pbFilter && c._pbId !== pbFilter) return false;
@@ -6860,9 +6868,20 @@ function applyContactsFiltersAndRender() {
     return 0;
   });
 
-  // Update count
+  // Update count + pipeline summary
   const countEl = document.getElementById('contactsCount');
-  if (countEl) countEl.textContent = `${filtered.length} contacts${filtered.length !== contactsData.length ? ` of ${contactsData.length}` : ''}`;
+  if (countEl) {
+    const deals = contactsData.filter(function(c) { return c.dealStage; });
+    const pipeline = deals.filter(function(c) { return c.dealStage === 'opportunity'; }).reduce(function(s,c) { return s + (c.dealValue||0); }, 0);
+    const won = deals.filter(function(c) { return c.dealStage === 'won'; }).reduce(function(s,c) { return s + (c.dealValue||0); }, 0);
+    var dealText = '';
+    if (deals.length > 0) {
+      dealText = ' · 💰 ' + deals.length + ' deal' + (deals.length!==1?'s':'');
+      if (pipeline > 0) dealText += ' · $' + (pipeline >= 1000 ? Math.round(pipeline/1000) + 'K' : pipeline.toLocaleString()) + ' pipeline';
+      if (won > 0) dealText += ' · $' + (won >= 1000 ? Math.round(won/1000) + 'K' : won.toLocaleString()) + ' won';
+    }
+    countEl.innerHTML = filtered.length + ' contacts' + (filtered.length !== contactsData.length ? ' of ' + contactsData.length : '') + '<span style="color:#00c87a">' + dealText + '</span>';
+  }
 
   // Update sort icons
   ['name','organisation','email','status','source','score','createdAt'].forEach(f => {
@@ -6982,7 +7001,7 @@ function renderContactsTable(data, total) {
       <td>${emailHtml}</td>
 
       <!-- STATUS -->
-      <td>${getStatusBadge(c.status)}</td>
+      <td>${getStatusBadge(c.status)}${c.dealStage ? ' <span title="$' + (c.dealValue||0).toLocaleString() + ' — ' + c.dealStage + '" style="font-size:.7rem;cursor:help">' + (c.dealStage==='won'?'💰':'💵') + '</span>' : ''}</td>
 
       <!-- STATE — always visible, territory colored -->
       <td>
@@ -7441,6 +7460,40 @@ function openContactDrawer(leadId, pbId) {
         🔬 Enrich Profile (NIH + Research Impact)
       </button>` : `<div style="font-size:.65rem;color:var(--muted);margin-top:8px;text-align:center">Last enriched ${new Date(lead._enrichedAt).toLocaleDateString()}</div>`}
       ${liUrl ? `<a href="${liUrl}" target="_blank" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px;text-decoration:none">🔗 View LinkedIn Profile</a>` : ''}
+
+      <!-- ── OPPORTUNITY FLAG ── -->
+      <div class="drawer-section" style="margin-top:16px;background:${lead.dealStage ? 'rgba(0,200,122,.04)' : 'rgba(255,255,255,.02)'};border:1px solid ${lead.dealStage === 'won' ? 'rgba(0,200,122,.3)' : lead.dealStage === 'lost' ? 'rgba(239,68,68,.2)' : lead.dealStage === 'opportunity' ? 'rgba(245,158,11,.3)' : 'rgba(255,255,255,.06)'};border-radius:10px;padding:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${lead.dealStage ? '10px' : '0'}">
+          <div style="font-size:.72rem;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.08em">💰 Opportunity</div>
+          ${!lead.dealStage ? `<button onclick="flagAsOpportunity('${lead.id}','${pbId}')" style="padding:5px 12px;border-radius:6px;border:1px solid rgba(245,158,11,.3);background:rgba(245,158,11,.08);color:#f59e0b;cursor:pointer;font-family:inherit;font-size:.72rem;font-weight:600">Flag as Opportunity</button>` : ''}
+        </div>
+        ${lead.dealStage ? `
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+            <div>
+              <div style="font-size:.62rem;color:var(--muted);margin-bottom:3px">Deal Value</div>
+              <div style="display:flex;align-items:center;gap:4px">
+                <span style="color:var(--muted);font-size:.82rem">$</span>
+                <input type="number" id="drawerDealValue_${lead.id}" value="${lead.dealValue || ''}" placeholder="0"
+                  oninput="markDrawerDirty('${lead.id}')"
+                  style="background:rgba(255,255,255,.04);border:none;border-bottom:1.5px solid rgba(255,255,255,.15);padding:4px 0;color:#00c87a;font-size:1rem;font-weight:700;font-family:inherit;width:100%;outline:none" />
+              </div>
+            </div>
+            <div>
+              <div style="font-size:.62rem;color:var(--muted);margin-bottom:3px">Stage</div>
+              <select id="drawerDealStage_${lead.id}" onchange="markDrawerDirty('${lead.id}')"
+                style="width:100%;padding:6px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.78rem">
+                <option value="opportunity" ${lead.dealStage==='opportunity'?'selected':''}>🟡 Opportunity</option>
+                <option value="won" ${lead.dealStage==='won'?'selected':''}>🟢 Won</option>
+                <option value="lost" ${lead.dealStage==='lost'?'selected':''}>🔴 Lost</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="font-size:.65rem;color:var(--muted)">Flagged ${lead.dealCreatedAt ? new Date(lead.dealCreatedAt).toLocaleDateString() : 'today'}</div>
+            <button onclick="removeOpportunity('${lead.id}','${pbId}')" style="font-size:.65rem;color:rgba(239,68,68,.6);background:none;border:none;cursor:pointer;font-family:inherit">Remove flag</button>
+          </div>
+        ` : ''}
+      </div>
     </div>`;
 
 
@@ -7497,6 +7550,18 @@ function markDrawerDirty(leadId) {
 }
 
 function saveContactDrawer(leadId, pbId) {
+  // Save deal fields if they exist
+  var dealValEl = document.getElementById('drawerDealValue_' + leadId);
+  var dealStageEl = document.getElementById('drawerDealStage_' + leadId);
+  if (dealValEl || dealStageEl) {
+    var pb = playbooks.find(function(p) { return p.id === pbId; });
+    var lead = pb ? (pb.leads || []).find(function(l) { return l.id === leadId; }) : null;
+    if (lead) {
+      if (dealValEl) lead.dealValue = parseFloat(dealValEl.value) || 0;
+      if (dealStageEl) lead.dealStage = dealStageEl.value;
+    }
+  }
+
   const btn = document.getElementById('drawerSaveBtn_' + leadId);
   if (btn) {
     btn.textContent = '✅ Saved!';
@@ -7519,6 +7584,35 @@ function saveContactDrawer(leadId, pbId) {
     applyContactsFiltersAndRender();
   }
   window._drawerDirty = false;
+}
+
+function flagAsOpportunity(leadId, pbId) {
+  var pb = playbooks.find(function(p) { return p.id === pbId; });
+  var lead = pb ? (pb.leads || []).find(function(l) { return l.id === leadId; }) : null;
+  if (!lead) return;
+  lead.dealStage = 'opportunity';
+  lead.dealValue = 0;
+  lead.dealCreatedAt = new Date().toISOString();
+  savePlaybooksToStorage();
+  buildContactsData();
+  applyContactsFiltersAndRender();
+  openContactDrawer(leadId, pbId);
+  showToast('💰 Flagged as opportunity — enter the deal value');
+}
+
+function removeOpportunity(leadId, pbId) {
+  if (!confirm('Remove opportunity flag from this contact?')) return;
+  var pb = playbooks.find(function(p) { return p.id === pbId; });
+  var lead = pb ? (pb.leads || []).find(function(l) { return l.id === leadId; }) : null;
+  if (!lead) return;
+  delete lead.dealStage;
+  delete lead.dealValue;
+  delete lead.dealCreatedAt;
+  savePlaybooksToStorage();
+  buildContactsData();
+  applyContactsFiltersAndRender();
+  openContactDrawer(leadId, pbId);
+  showToast('Opportunity flag removed');
 }
 
 function saveContactNote(leadId, pbId, note) {
