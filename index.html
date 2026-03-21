@@ -1712,6 +1712,7 @@ tr:hover .row-actions-inline { display:flex; }
       <option value="NIH Grant">NIH Grant</option>
       <option value="linkedin">LinkedIn</option>
       <option value="ai_autodiscover">Auto-Discover</option>
+      <option value="conference">Conference</option>
       <option value="hubspot">HubSpot</option>
       <option value="zoominfo">ZoomInfo</option>
       <option value="salesforce">Salesforce</option>
@@ -2782,6 +2783,8 @@ async function loadPlaybooksFromSupabase() {
         _enrichedAt: l.enriched_at || null,
         _aiEnrichedAt: l.ai_enriched_at || null,
         generatedEmails: l.generated_emails ? (typeof l.generated_emails === 'string' ? JSON.parse(l.generated_emails) : l.generated_emails) : null,
+        conferenceNotes: l.conference_notes || '',
+        conferenceName: l.conference_name || '',
       }))
     }));
 
@@ -2945,6 +2948,8 @@ async function syncPlaybooksToSupabase() {
         ai_enriched_at: l._aiEnrichedAt || l.ai_enriched_at || null,
         phone: l.phone || null,
         generated_emails: l.generatedEmails ? (typeof l.generatedEmails === 'object' ? JSON.stringify(l.generatedEmails) : l.generatedEmails) : (l.generated_emails || null),
+        conference_notes: l.conferenceNotes || l.conference_notes || null,
+        conference_name: l.conferenceName || l.conference_name || null,
         added_at: (function() { var v = l.addedAt || l.createdAt || l.added_at; if (!v) return Date.now(); if (typeof v === 'number') return v; var d = new Date(v).getTime(); return isNaN(d) ? Date.now() : d; })()
       };
     });
@@ -3047,6 +3052,8 @@ function openGenerateForPlaybook(id) {
       _linkedinUrl: l._linkedinUrl || '',
       _emailGuessed: l._emailGuessed || false,
       _emailDomain: l._emailDomain || '',
+      conferenceNotes: l.conferenceNotes || '',
+      conferenceName: l.conferenceName || '',
       _pbLeadId: l.id  // track back to the playbook lead
     };
     allLeads.push(lead);
@@ -4591,7 +4598,7 @@ async function startGeneration() {
       try {
         const r = await fetch(`${BACKEND}/generate`,{
           method:'POST',headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({lead,anthropicKey:apiKey,knowledgeBase:knowledgeDocs,tone:lead.tone,campaignContext,applicationFocus:document.getElementById('applicationFocus').value,sequenceLength:parseInt(document.getElementById('sequenceLength').value),playbookBrief:getActivePlaybookBrief()})
+          body:JSON.stringify({lead,anthropicKey:apiKey,knowledgeBase:knowledgeDocs,tone:lead.tone,campaignContext,applicationFocus:document.getElementById('applicationFocus').value,sequenceLength:parseInt(document.getElementById('sequenceLength').value),playbookBrief:getActivePlaybookBrief(),conferenceNotes:lead.conferenceNotes||'',conferenceName:lead.conferenceName||''})
         });
         const d = await r.json();
         if (d.error) { lead.status='error'; lead.error=d.error; }
@@ -4835,7 +4842,7 @@ async function processImportFile(file) {
         const prompt = "You are mapping CSV column headers to a contact schema for a biotech sales tool.\n\nHeaders from the uploaded file:\n" +
           headers.map(function(h, i) { return i + ': "' + h + '"'; }).join('\\n') +
           "\n\nSample row 1: " + JSON.stringify(sampleRows[0] || []) +
-          "\n\nMap these headers to our schema fields. Return ONLY a JSON object where keys are our schema fields and values are the column index (0-based integer) or null if not present:\n{\n  \"firstName\": <index or null>,\n  \"lastName\": <index or null>,\n  \"email\": <index or null>,\n  \"jobTitle\": <index or null>,\n  \"organisation\": <index or null>,\n  \"state\": <index or null>,\n  \"country\": <index or null>,\n  \"linkedinUrl\": <index or null>,\n  \"phone\": <index or null>,\n  \"department\": <index or null>,\n  \"focusedAreas\": <index or null>,\n  \"city\": <index or null>\n}\n\nRules:\n- First Name, firstname, fname, first -> firstName\n- Last Name, lastname, lname, last, surname -> lastName\n- Email, email address, work email -> email\n- Title, job title, position, role -> jobTitle\n- Company, organization, organisation, institution, employer -> organisation\n- LinkedIn, linkedin url, profile url -> linkedinUrl\n- Department, dept, lab, division -> department\nReturn ONLY valid JSON, no markdown.";
+          "\n\nMap these headers to our schema fields. Return ONLY a JSON object where keys are our schema fields and values are the column index (0-based integer) or null if not present:\n{\n  \"firstName\": <index or null>,\n  \"lastName\": <index or null>,\n  \"email\": <index or null>,\n  \"jobTitle\": <index or null>,\n  \"organisation\": <index or null>,\n  \"state\": <index or null>,\n  \"country\": <index or null>,\n  \"linkedinUrl\": <index or null>,\n  \"phone\": <index or null>,\n  \"department\": <index or null>,\n  \"focusedAreas\": <index or null>,\n  \"city\": <index or null>,\n  \"conferenceNotes\": <index or null>\n}\n\nRules:\n- First Name, firstname, fname, first -> firstName\n- Last Name, lastname, lname, last, surname -> lastName\n- Email, email address, work email -> email\n- Title, job title, position, role -> jobTitle\n- Company, organization, organisation, institution, employer -> organisation\n- LinkedIn, linkedin url, profile url -> linkedinUrl\n- Department, dept, lab, division -> department\n- Notes, interest, comments, visited, booth, session, topic -> conferenceNotes\nReturn ONLY valid JSON, no markdown.";
 
         const resp = await callClaude(apiKey, prompt, 400);
         const cleaned = resp.replace(/```json|```/g, '').trim();
@@ -4868,6 +4875,7 @@ async function processImportFile(file) {
       mapping.department = find('department','dept','lab','division');
       mapping.focusedAreas = find('focus','research','specialty','keywords');
       mapping.city = find('city','location');
+      mapping.conferenceNotes = find('notes','interest','comment','visited','booth','session','topic');
     }
 
     // Helper to extract URL from HYPERLINK formula: =HYPERLINK("url","display")
@@ -4909,6 +4917,7 @@ async function processImportFile(file) {
         focusedAreas: cleanTaggedField(getField(r, mapping.focusedAreas)),
         _city: getField(r, mapping.city),
         city: getField(r, mapping.city),
+        conferenceNotes: getField(r, mapping.conferenceNotes),
         _source: window._importSource,
         source: window._importSource,
       };
@@ -4918,6 +4927,14 @@ async function processImportFile(file) {
 
   } catch(e) {
     preview.innerHTML = '<div style="color:var(--orange)">Error reading file: ' + e.message + '</div>';
+  }
+}
+
+function toggleConferenceFields() {
+  var sel = document.getElementById('importSourceSelect');
+  var fields = document.getElementById('importConferenceFields');
+  if (sel && fields) {
+    fields.style.display = sel.value === 'conference' ? 'block' : 'none';
   }
 }
 
@@ -4933,7 +4950,8 @@ function showImportPreview(leads, mapping, headers, sampleRows, filename) {
     firstName:'First Name', lastName:'Last Name', email:'Email',
     jobTitle:'Job Title', organisation:'Organisation', state:'State',
     country:'Country', linkedinUrl:'LinkedIn URL', phone:'Phone',
-    department:'Department', focusedAreas:'Research Focus', city:'City'
+    department:'Department', focusedAreas:'Research Focus', city:'City',
+    conferenceNotes:'Conference Notes'
   };
 
   // Build mapping rows - only show fields that were found
@@ -4959,7 +4977,7 @@ function showImportPreview(leads, mapping, headers, sampleRows, filename) {
     return '<option value="' + pb.id + '">' + pb.name + '</option>';
   }).join('');
 
-  const sourceLabels = { scileads:'SciLeads', leadgeeks:'LeadGeeks', linkedin_export:'LinkedIn Export',
+  const sourceLabels = { scileads:'SciLeads', leadgeeks:'LeadGeeks', conference:'Conference', linkedin_export:'LinkedIn Export',
     hubspot:'HubSpot', zoominfo:'ZoomInfo', salesforce:'Salesforce', manual:'Manual / Other' };
   const sourceOptions = Object.entries(sourceLabels).map(function(entry) {
     return '<option value="' + entry[0] + '"' + (entry[0] === source ? ' selected' : '') + '>' + entry[1] + '</option>';
@@ -4989,9 +5007,16 @@ function showImportPreview(leads, mapping, headers, sampleRows, filename) {
         // Source selector
         '<div style="margin-bottom:20px">' +
           '<div style="font-size:.65rem;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Source</div>' +
-          '<select id="importSourceSelect" style="width:100%;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.84rem">' +
+          '<select id="importSourceSelect" onchange="toggleConferenceFields()" style="width:100%;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.84rem">' +
             sourceOptions +
           '</select>' +
+        '</div>' +
+
+        // Conference name field (hidden by default, shown when source=conference)
+        '<div id="importConferenceFields" style="display:none;margin-bottom:20px">' +
+          '<div style="font-size:.65rem;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Conference Name</div>' +
+          '<input id="importConferenceName" type="text" placeholder="e.g. AACR 2026, PEGS Boston, ACS Spring" style="width:100%;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.84rem;box-sizing:border-box" />' +
+          '<div style="font-size:.62rem;color:rgba(255,255,255,.25);margin-top:4px">This will be used in the playbook name and email generation context</div>' +
         '</div>' +
 
         // Column mapping
@@ -5037,6 +5062,9 @@ async function executeImportLeads() {
   // Read source from the modal select (user may have changed it)
   const sourceSelect = document.getElementById('importSourceSelect');
   const source = sourceSelect ? sourceSelect.value : (window._importSource || 'manual');
+  // Read conference name if applicable
+  const conferenceNameEl = document.getElementById('importConferenceName');
+  const conferenceName = (conferenceNameEl ? conferenceNameEl.value.trim() : '') || '';
 
   let targetPb;
   if (selectedPbId) {
@@ -5044,9 +5072,18 @@ async function executeImportLeads() {
   } else {
     const sourceNames = { scileads:'SciLeads Import', leadgeeks:'LeadGeeks Import', linkedin_export:'LinkedIn Export',
       hubspot:'HubSpot Import', zoominfo:'ZoomInfo Import', salesforce:'Salesforce Import', manual:'Manual Import' };
-    const pbName = (sourceNames[source] || 'Imported Leads') + ' \u2014 ' + new Date().toLocaleDateString();
-    targetPb = { id: 'pb_' + Date.now(), name: pbName, color: '#5ba4cf',
-      brief: '', keywords: '', angle: '', tone: 'academic', methodology: '', leads: [], created_at: new Date().toISOString() };
+    let pbName, pbBrief, pbColor;
+    if (source === 'conference' && conferenceName) {
+      pbName = conferenceName + ' Follow-Up';
+      pbBrief = 'Follow up with researchers who attended ' + conferenceName + '. Reference the conference and their specific interest noted at the event. Position Fida Neo as relevant to their stated needs. You were not necessarily at this conference personally, but Fida Bio may have had a presence.';
+      pbColor = '#a855f7';
+    } else {
+      pbName = (sourceNames[source] || 'Imported Leads') + ' \u2014 ' + new Date().toLocaleDateString();
+      pbBrief = '';
+      pbColor = '#5ba4cf';
+    }
+    targetPb = { id: 'pb_' + Date.now(), name: pbName, color: pbColor,
+      brief: pbBrief, keywords: '', angle: source === 'conference' ? 'conference_followup' : '', tone: 'academic', methodology: '', leads: [], created_at: new Date().toISOString() };
     playbooks.push(targetPb);
   }
 
@@ -5075,6 +5112,8 @@ async function executeImportLeads() {
       addedAt: new Date().toISOString(),
       _source: source,
       source: source,
+      conferenceName: source === 'conference' ? conferenceName : '',
+      conferenceNotes: l.conferenceNotes || '',
     }));
     if (emailLower) globalEmailIndex.add(emailLower); // prevent within-file dupes too
     added++;
@@ -6834,7 +6873,7 @@ function renderContactsTable(data, total) {
 
     // Source badge
     const src = c._source || c.source || 'manual';
-    const srcLabelMap = { ai_autodiscover:'Auto', PubMed:'PubMed', 'NIH Grant':'NIH', linkedin:'LinkedIn', linkedin_extension:'LinkedIn', 'Sales Navigator':'Sales Nav', 'LinkedIn Profile':'LinkedIn', prospect_finder:'Finder', scileads:'SciLeads', leadgeeks:'LeadGeeks', linkedin_export:'LI Export', hubspot:'HubSpot', zoominfo:'ZoomInfo', salesforce:'Salesforce', csv_upload:'CSV', manual:'Manual' };
+    const srcLabelMap = { ai_autodiscover:'Auto', PubMed:'PubMed', 'NIH Grant':'NIH', linkedin:'LinkedIn', linkedin_extension:'LinkedIn', 'Sales Navigator':'Sales Nav', 'LinkedIn Profile':'LinkedIn', prospect_finder:'Finder', scileads:'SciLeads', leadgeeks:'LeadGeeks', linkedin_export:'LI Export', hubspot:'HubSpot', zoominfo:'ZoomInfo', salesforce:'Salesforce', csv_upload:'CSV', conference:'Conference', manual:'Manual' };
     const srcLabel = srcLabelMap[src] || (src.length > 12 ? src.substring(0,10) + '..' : src);
     const srcClassMap = { ai_autodiscover:'autodiscover', PubMed:'pubmed', 'NIH Grant':'nih', linkedin:'linkedin', linkedin_extension:'linkedin', scileads:'scileads', leadgeeks:'leadgeeks', prospect_finder:'finder' };
     const srcClass = srcClassMap[src] || 'manual';
@@ -7054,7 +7093,7 @@ function openContactDrawer(leadId, pbId) {
   const liUrl = lead._linkedinUrl || lead.linkedinUrl || '';
   const hasEmail = lead.email && lead.email.trim();
   const src = lead._source || lead.source || 'manual';
-  const drawerSrcMap = { ai_autodiscover:'AI Auto-Discover', PubMed:'PubMed Publication', 'NIH Grant':'NIH Grant', linkedin:'LinkedIn', linkedin_extension:'LinkedIn', 'Sales Navigator':'Sales Navigator', 'LinkedIn Profile':'LinkedIn Profile', prospect_finder:'AI Prospect Finder', scileads:'SciLeads', leadgeeks:'LeadGeeks', linkedin_export:'LinkedIn Export', hubspot:'HubSpot', zoominfo:'ZoomInfo', salesforce:'Salesforce', csv_upload:'CSV Upload', manual:'Manual' };
+  const drawerSrcMap = { ai_autodiscover:'AI Auto-Discover', PubMed:'PubMed Publication', 'NIH Grant':'NIH Grant', linkedin:'LinkedIn', linkedin_extension:'LinkedIn', 'Sales Navigator':'Sales Navigator', 'LinkedIn Profile':'LinkedIn Profile', prospect_finder:'AI Prospect Finder', scileads:'SciLeads', leadgeeks:'LeadGeeks', linkedin_export:'LinkedIn Export', hubspot:'HubSpot', zoominfo:'ZoomInfo', salesforce:'Salesforce', csv_upload:'CSV Upload', conference:'Conference Lead', manual:'Manual' };
   const srcLabel = drawerSrcMap[src] || src;
   const addedDate = (lead.createdAt || lead.addedAt) ? new Date(lead.createdAt || lead.addedAt).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : '—';
   const generatedEmails = lead.generatedEmails || lead.emailSequence || [];
@@ -7231,6 +7270,12 @@ function openContactDrawer(leadId, pbId) {
         <div style="font-size:.73rem;color:var(--muted);line-height:1.4">${lead._nihRecentGrant?.substring(0,100) || ''}${(lead._nihRecentGrant||'').length > 100 ? '…' : ''}</div>
         <div style="font-size:.68rem;color:var(--muted);margin-top:4px">Most recent: ${lead._nihRecentGrantYear} · $${(lead._nihRecentGrantAmount||0).toLocaleString()}</div>
       </div>
+    </div>` : ''}
+
+    <!-- ── CONFERENCE NOTES ── -->
+    ${lead.conferenceNotes ? `<div class="drawer-section">
+      <div class="drawer-label">🎪 Conference Notes${lead.conferenceName ? ' — ' + lead.conferenceName : ''}</div>
+      <div style="font-size:.8rem;color:var(--text);line-height:1.5;background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.15);border-radius:8px;padding:10px 12px">${lead.conferenceNotes}</div>
     </div>` : ''}
 
     <!-- ── RESEARCH IMPACT ── -->
