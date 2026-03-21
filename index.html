@@ -1617,41 +1617,28 @@ tr:hover .row-actions-inline { display:flex; }
 <!-- ══════════════════════════════════════════════════════════
      PAGE: IMPORT LEADS
 ════════════════════════════════════════════════════════════ -->
-<div id="pageImport" style="display:none;overflow-y:auto;padding:28px 32px;max-width:780px">
-  <div style="margin-bottom:24px">
-    <div style="font-size:.72rem;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Import Leads</div>
-    <div style="font-size:.82rem;color:var(--muted)">Upload a CSV or Excel file from SciLeads, LeadGeeks, HubSpot, LinkedIn, ZoomInfo, or any other source. Claude will map the columns automatically.</div>
-  </div>
+<div id="pageImport" style="display:none;height:calc(100vh - 52px);display:none;align-items:center;justify-content:center">
+  <div style="text-align:center;max-width:520px;width:100%;padding:32px">
 
-  <!-- Source selector -->
-  <div style="margin-bottom:20px">
-    <div style="font-size:.72rem;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Source</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap" id="importSourceBtns">
-      <button class="import-source-btn active" data-source="scileads" onclick="setImportSource('scileads',this)">SciLeads</button>
-      <button class="import-source-btn" data-source="leadgeeks" onclick="setImportSource('leadgeeks',this)">LeadGeeks</button>
-      <button class="import-source-btn" data-source="linkedin_export" onclick="setImportSource('linkedin_export',this)">LinkedIn Export</button>
-      <button class="import-source-btn" data-source="hubspot" onclick="setImportSource('hubspot',this)">HubSpot</button>
-      <button class="import-source-btn" data-source="zoominfo" onclick="setImportSource('zoominfo',this)">ZoomInfo</button>
-      <button class="import-source-btn" data-source="salesforce" onclick="setImportSource('salesforce',this)">Salesforce</button>
-      <button class="import-source-btn" data-source="manual" onclick="setImportSource('manual',this)">Manual / Other</button>
+    <div style="font-size:2.5rem;margin-bottom:16px">📂</div>
+    <div style="font-family:Outfit,sans-serif;font-size:1.4rem;font-weight:700;color:#fff;margin-bottom:8px">Import Leads</div>
+    <div style="font-size:.84rem;color:var(--muted);margin-bottom:32px;line-height:1.6">Drop a CSV or Excel export from SciLeads, LeadGeeks,<br>HubSpot, LinkedIn, ZoomInfo, or any other source.</div>
+
+    <!-- Big drop zone -->
+    <div id="importDropzone"
+      style="border:2px dashed rgba(255,255,255,.15);border-radius:16px;padding:52px 32px;cursor:pointer;transition:all .2s;position:relative;background:rgba(255,255,255,.02)"
+      ondragover="importDragOver(event)" ondragleave="importDragLeave(event)" ondrop="importDrop(event)"
+      onclick="document.getElementById('importFileInput').click()">
+      <div style="font-size:2.8rem;margin-bottom:12px;opacity:.4">⬆️</div>
+      <div style="font-size:1rem;color:var(--text);font-weight:600;margin-bottom:6px">Drop file here</div>
+      <div style="font-size:.76rem;color:rgba(255,255,255,.3)">or <span style="color:var(--orange-light);text-decoration:underline">browse your computer</span></div>
+      <div style="font-size:.7rem;color:rgba(255,255,255,.2);margin-top:10px">CSV · XLSX · XLS</div>
+      <input type="file" id="importFileInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleImportFile(this)"/>
     </div>
-  </div>
 
-  <!-- Drop zone -->
-  <div id="importDropzone"
-    style="border:2px dashed rgba(255,255,255,.12);border-radius:12px;padding:40px 24px;text-align:center;cursor:pointer;transition:.2s;margin-bottom:20px;position:relative"
-    ondragover="importDragOver(event)" ondragleave="importDragLeave(event)" ondrop="importDrop(event)"
-    onclick="document.getElementById('importFileInput').click()">
-    <div style="font-size:2rem;margin-bottom:8px;opacity:.5">📂</div>
-    <div style="font-size:.9rem;color:var(--text);margin-bottom:4px">Drop your file here or <span style="color:var(--orange-light);text-decoration:underline">browse</span></div>
-    <div style="font-size:.72rem;color:var(--muted)">CSV, XLSX, XLS — exports from SciLeads, HubSpot, LinkedIn, ZoomInfo, etc.</div>
-    <input type="file" id="importFileInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleImportFile(this)"/>
   </div>
-
-  <!-- Status / preview area -->
-  <div id="importPreview" style="display:none">
-    <!-- Filled dynamically -->
-  </div>
+  <!-- Modal injected here after file drop -->
+  <div id="importPreview"></div>
 </div>
 
 
@@ -3228,7 +3215,7 @@ function switchTab(tab) {
   // Show/hide pages
   Object.entries(pageMap).forEach(([t, pid]) => {
     const el = document.getElementById(pid);
-    if (el) el.style.display = t === tab ? 'block' : 'none';
+    if (el) el.style.display = t === tab ? (pid === 'pageImport' ? 'flex' : 'block') : 'none';
   });
   // Search leads uses flex layout for two-panel
   const slPage = document.getElementById('pageSearchLeads');
@@ -4777,8 +4764,7 @@ async function processImportFile(file) {
 }
 
 function showImportPreview(leads, mapping, headers, sampleRows, filename) {
-  const preview = document.getElementById('importPreview');
-  const source = window._importSource;
+  const source = window._importSource || 'scileads';
 
   const fieldLabels = {
     firstName:'First Name', lastName:'Last Name', email:'Email',
@@ -4787,54 +4773,107 @@ function showImportPreview(leads, mapping, headers, sampleRows, filename) {
     department:'Department', focusedAreas:'Research Focus', city:'City'
   };
 
-  let mappingRows = '';
-  Object.entries(fieldLabels).forEach(function([field, label]) {
+  // Build mapping rows - only show fields that were found
+  let mappedRows = '';
+  let unmappedRows = '';
+  Object.entries(fieldLabels).forEach(function(entry) {
+    const field = entry[0], label = entry[1];
     const colIdx = mapping[field];
     const colName = (colIdx !== null && colIdx !== undefined) ? headers[colIdx] : null;
     const sampleVal = (colIdx !== null && colIdx !== undefined && sampleRows[0]) ? String(sampleRows[0][colIdx] || '') : '';
-    mappingRows += '<div class="import-field-row">' +
-      '<div class="import-field-label">' + label + '</div>' +
-      (colName
-        ? '<div class="import-field-mapped">\u2190 \"' + colName + '\" <span style="color:var(--muted);font-size:.72rem">(e.g. ' + sampleVal.substring(0,30) + ')</span></div>'
-        : '<div class="import-field-none">not found</div>') +
+    if (colName) {
+      mappedRows += '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04)">' +
+        '<div style="width:110px;font-size:.72rem;color:rgba(255,255,255,.35);flex-shrink:0">' + label + '</div>' +
+        '<div style="font-size:.75rem;color:rgba(255,255,255,.5)">← ' + colName + '</div>' +
+        (sampleVal ? '<div style="font-size:.7rem;color:rgba(255,255,255,.25);margin-left:auto;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + sampleVal.substring(0,30) + '</div>' : '') +
       '</div>';
+    } else {
+      unmappedRows += '<span style="font-size:.7rem;background:rgba(255,255,255,.05);border-radius:4px;padding:2px 7px;color:rgba(255,255,255,.25)">' + label + '</span>';
+    }
   });
 
-  const pbOptions = playbooks.map(pb => '<option value="' + pb.id + '">' + pb.name + '</option>').join('');
-  const sourceNames = { scileads:'SciLeads', leadgeeks:'LeadGeeks', linkedin_export:'LinkedIn Export',
-    hubspot:'HubSpot', zoominfo:'ZoomInfo', salesforce:'Salesforce', manual:'Manual' };
+  const pbOptions = playbooks.map(function(pb) {
+    return '<option value="' + pb.id + '">' + pb.name + '</option>';
+  }).join('');
 
-  preview._leads = leads;
-  preview.innerHTML =
-    '<div style="background:rgba(0,200,122,.06);border:1px solid rgba(0,200,122,.2);border-radius:10px;padding:14px 18px;margin-bottom:20px">' +
-      '<div style="font-size:.8rem;color:#00c87a;font-weight:700;margin-bottom:2px">\u2705 ' + leads.length + ' leads ready from <em>' + filename + '</em></div>' +
-      '<div style="font-size:.73rem;color:var(--muted)">Source: <strong style="color:#fff">' + (sourceNames[source] || source) + '</strong></div>' +
-    '</div>' +
-    '<div style="margin-bottom:18px">' +
-      '<div style="font-size:.72rem;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">Column Mapping</div>' +
-      mappingRows +
-    '</div>' +
-    '<div style="margin-bottom:20px">' +
-      '<div style="font-size:.72rem;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Assign to Playbook</div>' +
-      '<select id="importPlaybookSelect" style="width:100%;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.82rem">' +
-        '<option value="">— Create new playbook from filename —</option>' +
-        pbOptions +
-      '</select>' +
-    '</div>' +
-    '<div style="display:flex;gap:10px">' +
-      '<button onclick="executeImportLeads()" style="flex:1;padding:11px;border-radius:8px;border:none;background:var(--orange);color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:.88rem">\ud83d\udce5 Import ' + leads.length + ' Leads</button>' +
-      '<button onclick="var p=document.getElementById(\"importPreview\");if(p)p.style.display=\'none\'" style="padding:11px 18px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:.82rem">Cancel</button>' +
+  const sourceLabels = { scileads:'SciLeads', leadgeeks:'LeadGeeks', linkedin_export:'LinkedIn Export',
+    hubspot:'HubSpot', zoominfo:'ZoomInfo', salesforce:'Salesforce', manual:'Manual / Other' };
+  const sourceOptions = Object.entries(sourceLabels).map(function(entry) {
+    return '<option value="' + entry[0] + '"' + (entry[0] === source ? ' selected' : '') + '>' + entry[1] + '</option>';
+  }).join('');
+
+  // Build modal HTML
+  const modal = document.createElement('div');
+  modal.id = 'importModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)';
+  modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
+
+  modal.innerHTML =
+    '<div onclick="event.stopPropagation()" style="background:#13111f;border:1px solid rgba(255,255,255,.1);border-radius:16px;width:580px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.7);overflow:hidden">' +
+
+      // Header
+      '<div style="padding:18px 24px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">' +
+        '<div>' +
+          '<div style="font-family:Outfit,sans-serif;font-weight:700;font-size:1rem;color:#fff">' + leads.length + ' leads ready to import</div>' +
+          '<div style="font-size:.72rem;color:rgba(255,255,255,.3);margin-top:2px">' + filename + '</div>' +
+        '</div>' +
+        '<button onclick="var m=document.getElementById(\"importModal\");if(m)m.remove()" style="background:transparent;border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.4);padding:4px 12px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:.72rem">✕ Cancel</button>' +
+      '</div>' +
+
+      // Scrollable body
+      '<div style="overflow-y:auto;flex:1;padding:20px 24px">' +
+
+        // Source selector
+        '<div style="margin-bottom:20px">' +
+          '<div style="font-size:.65rem;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Source</div>' +
+          '<select id="importSourceSelect" style="width:100%;padding:9px 12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#fff;font-family:inherit;font-size:.84rem">' +
+            sourceOptions +
+          '</select>' +
+        '</div>' +
+
+        // Column mapping
+        '<div style="margin-bottom:20px">' +
+          '<div style="font-size:.65rem;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">Column Mapping</div>' +
+          '<div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:12px 14px">' +
+            mappedRows +
+          '</div>' +
+          (unmappedRows ? '<div style="margin-top:8px;font-size:.68rem;color:rgba(255,255,255,.25)">Not found: ' + unmappedRows + '</div>' : '') +
+        '</div>' +
+
+        // Playbook selector
+        '<div style="margin-bottom:4px">' +
+          '<div style="font-size:.65rem;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Assign to Playbook</div>' +
+          '<select id="importPlaybookSelect" style="width:100%;padding:9px 12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#fff;font-family:inherit;font-size:.84rem">' +
+            '<option value="">— Create new playbook from source name —</option>' +
+            pbOptions +
+          '</select>' +
+        '</div>' +
+
+      '</div>' +
+
+      // Footer
+      '<div style="padding:14px 24px;border-top:1px solid rgba(255,255,255,.06);flex-shrink:0">' +
+        '<button onclick="executeImportLeads()" style="width:100%;padding:11px;border-radius:8px;border:none;background:var(--orange);color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:.88rem;transition:.2s">📥 Import ' + leads.length + ' Leads</button>' +
+      '</div>' +
+
     '</div>';
+
+  // Store leads on modal for executeImportLeads
+  modal._leads = leads;
+  document.body.appendChild(modal);
 }
 
+
 async function executeImportLeads() {
-  const preview = document.getElementById('importPreview');
-  const leads = preview._leads;
+  const modal = document.getElementById('importModal');
+  const leads = modal ? modal._leads : null;
   if (!leads || !leads.length) return;
 
   const pbSelect = document.getElementById('importPlaybookSelect');
   const selectedPbId = pbSelect ? pbSelect.value : '';
-  const source = window._importSource;
+  // Read source from the modal select (user may have changed it)
+  const sourceSelect = document.getElementById('importSourceSelect');
+  const source = sourceSelect ? sourceSelect.value : (window._importSource || 'manual');
 
   let targetPb;
   if (selectedPbId) {
@@ -4887,7 +4926,7 @@ async function executeImportLeads() {
     toastMsg += ')';
   }
   showToast(toastMsg, 5000);
-  preview.style.display = 'none';
+  if (modal) modal.remove();
 
   setTimeout(function() {
     setActivePlaybook(targetPb.id);
