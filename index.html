@@ -1664,7 +1664,7 @@ tr:hover .row-actions-inline { display:flex; }
       <div style="font-family:Outfit,sans-serif;font-weight:700;font-size:.7rem;color:rgba(255,255,255,.35);letter-spacing:.12em;text-transform:uppercase">Contact Details</div>
       <button onclick="closeContactDrawer()" style="background:transparent;border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.35);font-size:.72rem;cursor:pointer;padding:4px 12px;border-radius:6px;font-family:inherit;transition:.15s" onmouseover="this.style.color='#fff';this.style.borderColor='rgba(255,255,255,.3)'" onmouseout="this.style.color='rgba(255,255,255,.35)';this.style.borderColor='rgba(255,255,255,.1)'">✕ Close</button>
     </div>
-    <div id="contactDrawerBody" style="overflow-y:auto;flex:1;padding:0"></div>
+    <div id="contactDrawerBody" style="overflow-y:auto;flex:1;padding:0;scrollbar-gutter:stable"></div>
   </div>
 </div>
 
@@ -6701,7 +6701,7 @@ function openContactDrawer(leadId, pbId) {
     <!-- ── CONTACT INFO — all fields editable ── -->
     <div class="drawer-section">
       <div class="drawer-label">Contact Info</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px 24px;padding-right:4px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px 16px">
 
       <!-- First + Last name span full width -->
       <div style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:12px 20px">
@@ -6916,21 +6916,13 @@ function openContactDrawer(leadId, pbId) {
         oninput="saveContactNote('${lead.id}','${pbId}',this.value)">${lead.notes||''}</textarea>
     </div>
 
-    <!-- ── SAVE BAR ── -->
-    <div id="drawerSaveBar_${lead.id}" style="display:none;position:sticky;bottom:0;padding:10px 24px;background:#13111f;border-top:1px solid rgba(239,77,5,.25);z-index:10;flex-shrink:0">
-      <button id="drawerSaveBtn_${lead.id}" onclick="saveContactDrawer('${lead.id}','${pbId}')"
-        style="width:100%;padding:10px;border-radius:8px;border:none;background:var(--orange);color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:.88rem;transition:all .2s">
-        💾 Save Changes
-      </button>
-    </div>
-
     <!-- ── ACTIONS ── -->
     <div class="drawer-section" style="border-bottom:none">
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button onclick="closeContactDrawer();openQuickGenerateModal('${lead.id}','${pbId}')"
           class="btn btn-primary btn-sm" style="flex:1">⚡ Quick Generate</button>
         <button onclick="setActivePlaybook('${pbId}');switchTab('sdr');closeContactDrawer()"
-          class="btn btn-ghost btn-sm" style="flex:1" title="Go to full generate page">Full Page →</button>
+          class="btn btn-ghost btn-sm" style="flex:1" title="Go to Generate page">Generate Page →</button>
         <button onclick="enrichSingleLead('${lead.id}','${pbId}')"
           class="btn btn-ghost btn-sm" style="flex:1" ${hasEmail?'disabled':''}>🔍 Find Email</button>
         <button onclick="findLinkedInForLead({id:'${lead.id}',firstName:'${lead.firstName}',lastName:'${lead.lastName}',organisation:'${(lead.organisation||'').replace(/'/g,'')}'},'${pbId}').then(r=>{if(r.found){openContactDrawer('${lead.id}','${pbId}');showToast(r.linkedinUrl?'🔗 LinkedIn found!':'📍 Location updated')}else{showToast('Not found on LinkedIn')}})"
@@ -6944,6 +6936,17 @@ function openContactDrawer(leadId, pbId) {
     </div>`;
 
 
+
+  // Inject save bar into drawer shell (outside scroll body) if not already there
+  const drawerShell = document.getElementById('contactDrawer');
+  let saveBar = document.getElementById('drawerSaveBar_' + '${lead.id}');
+  if (!saveBar && drawerShell) {
+    saveBar = document.createElement('div');
+    saveBar.id = 'drawerSaveBar_' + '${lead.id}';
+    saveBar.style.cssText = 'flex-shrink:0;padding:10px 22px;background:#13111f;border-top:1px solid rgba(255,255,255,.08)';
+    saveBar.innerHTML = '<button id="drawerSaveBtn_${lead.id}" onclick="saveContactDrawer('${lead.id}','${pbId}')" style="width:100%;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:rgba(255,255,255,.4);font-weight:600;cursor:pointer;font-family:inherit;font-size:.82rem;transition:all .2s">💾 Save Changes</button>';
+    drawerShell.appendChild(saveBar);
+  }
 
   // Force-style all inputs inside the drawer — beats any global CSS
   body.querySelectorAll('input.drawer-edit-input, .drawer-edit-input').forEach(el => {
@@ -6970,8 +6973,13 @@ function closeContactDrawer() {
 function markDrawerDirty(leadId) {
   window._drawerDirty = true;
   window._drawerLeadId = leadId;
-  const bar = document.getElementById('drawerSaveBar_' + leadId);
-  if (bar) bar.style.display = 'block';
+  const btn = document.getElementById('drawerSaveBtn_' + leadId);
+  if (btn && !btn._dirty) {
+    btn._dirty = true;
+    btn.style.background = '#EF4D05';
+    btn.style.color = '#fff';
+    btn.style.borderColor = '#EF4D05';
+  }
 }
 
 function saveContactDrawer(leadId, pbId) {
@@ -6979,13 +6987,16 @@ function saveContactDrawer(leadId, pbId) {
   if (btn) {
     btn.textContent = '✅ Saved!';
     btn.style.background = '#00c87a';
+    btn.style.color = '#fff';
+    btn.style.borderColor = '#00c87a';
     btn.disabled = true;
     setTimeout(() => {
       btn.textContent = '💾 Save Changes';
-      btn.style.background = 'var(--orange)';
+      btn.style.background = 'rgba(255,255,255,.04)';
+      btn.style.color = 'rgba(255,255,255,.4)';
+      btn.style.borderColor = 'rgba(255,255,255,.1)';
+      btn._dirty = false;
       btn.disabled = false;
-      const bar = document.getElementById('drawerSaveBar_' + leadId);
-      if (bar) bar.style.display = 'none';
     }, 2000);
   }
   // Immediate save — don't wait for debounce
@@ -12733,7 +12744,7 @@ async function checkDbSync() {
 .pg-btn:disabled { opacity:.35;cursor:default; }
 
 /* Contact drawer */
-.drawer-section { padding:16px 24px;border-bottom:1px solid rgba(255,255,255,.05); }
+.drawer-section { padding:16px 20px 16px 22px;border-bottom:1px solid rgba(255,255,255,.05); }
 .drawer-section:last-child { border-bottom:none; }
 .drawer-label { font-size:.58rem;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px; }
 .drawer-field { display:flex;align-items:flex-start;gap:8px;margin-bottom:5px; }
