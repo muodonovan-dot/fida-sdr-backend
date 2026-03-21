@@ -1305,7 +1305,23 @@ tr:hover .row-actions-inline { display:flex; }
         <button class="btn btn-primary" id="aiDiscoverBtn" onclick="runAIDiscover()">
           🤖 Auto-Discover Leads
         </button>
-        <div style="font-size:.74rem;color:var(--muted)">Uses ~3–5 Anthropic API calls · Takes 20–40 seconds</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <label style="font-size:.72rem;color:var(--muted);white-space:nowrap">Target:</label>
+          <select id="aiDiscoverTarget" style="padding:5px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.78rem">
+            <option value="25">~25 leads</option>
+            <option value="50" selected>~50 leads</option>
+            <option value="100">~100 leads</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <label style="font-size:.72rem;color:var(--muted);white-space:nowrap">Type:</label>
+          <select id="aiDiscoverLeadType" style="padding:5px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.78rem">
+            <option value="all" selected>All Leads</option>
+            <option value="academic">🏛 Academic</option>
+            <option value="industry">🏢 Industry</option>
+          </select>
+        </div>
+        <div style="font-size:.72rem;color:var(--muted)">Skips duplicates · Only adds leads with verified emails</div>
       </div>
     </div>
     <div id="aiDiscoverRunning" style="display:none">
@@ -1328,15 +1344,29 @@ tr:hover .row-actions-inline { display:flex; }
     </div>
   </div>
 
-  <!-- PROSPECT RESULTS TABLE -->
+  <!-- PROSPECT RESULTS TABLE (Pipeline View) -->
   <div id="prospectResultsCard" class="card" style="display:none;margin-top:18px">
-    <div class="card-header">
+    <div class="card-header" style="flex-wrap:wrap;gap:8px">
       <div class="step-badge">🎯</div>
       <div class="card-title">Discovered Prospects</div>
       <div class="card-tag" style="background:rgba(0,200,122,.15);color:#00c87a"><span id="prospectResultCount">0</span> found</div>
-      <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="addAllProspectsToPlaybook()">
-        ➕ Add All to Playbook
-      </button>
+      <div id="prospectPipelineStatus" style="font-size:.72rem;color:var(--muted);margin-left:8px"></div>
+    </div>
+    <!-- Pipeline progress bar -->
+    <div id="prospectPipelineBar" style="display:none;padding:0 14px 10px">
+      <div style="display:flex;gap:4px;align-items:center;font-size:.7rem;color:var(--muted);margin-bottom:4px">
+        <span id="pipeSearched" style="color:var(--orange-light)">0 scored</span> →
+        <span id="pipeEnriching" style="color:#f0c040">0 enriching</span> →
+        <span id="pipeFound" style="color:#4dabf7">0 emails found</span> →
+        <span id="pipeVerified" style="color:#00c87a">0 verified</span>
+        <span id="pipeFailed" style="color:var(--muted)">· 0 no email</span>
+      </div>
+      <div style="height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;display:flex">
+        <div id="pipeBarVerified" style="background:#00c87a;height:100%;transition:width .3s" ></div>
+        <div id="pipeBarFound" style="background:#4dabf7;height:100%;transition:width .3s"></div>
+        <div id="pipeBarEnriching" style="background:#f0c040;height:100%;transition:width .3s"></div>
+        <div id="pipeBarFailed" style="background:rgba(255,255,255,.08);height:100%;transition:width .3s"></div>
+      </div>
     </div>
     <div class="tbl-wrap">
       <table>
@@ -1344,18 +1374,35 @@ tr:hover .row-actions-inline { display:flex; }
           <th style="width:28px"><input type="checkbox" id="selectAllProspects" onclick="toggleAllProspects(this)" title="Select all"></th>
           <th>Name</th>
           <th>Institution</th>
+          <th>State</th>
+          <th>Type</th>
           <th>Signal</th>
-          <th>Year</th>
+          <th>Score</th>
+          <th>Email</th>
           <th>Source</th>
-          <th></th>
         </tr></thead>
         <tbody id="prospectTableBody"></tbody>
       </table>
     </div>
-    <div style="padding:10px 14px;display:flex;gap:10px;flex-wrap:wrap">
-      <button class="btn btn-ghost btn-sm" onclick="addSelectedProspects()">➕ Add Selected</button>
-      <button class="btn btn-ghost btn-sm" onclick="addTopProspects(20)">➕ Add Top 20</button>
-      <button class="btn btn-ghost btn-sm" onclick="addAllProspectsToPlaybook()">➕ Add All</button>
+    <div style="padding:10px 14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-primary btn-sm" id="prospectEnrichBtn" onclick="runProspectEmailPipeline()" style="display:none">
+        📧 Find & Verify Emails
+      </button>
+      <button class="btn btn-primary btn-sm" id="prospectAddVerifiedBtn" onclick="addVerifiedProspectsToPlaybook()" style="display:none">
+        ➕ Add All Verified
+      </button>
+      <div id="prospectScoreFilter" style="display:none;align-items:center;gap:5px">
+        <label style="font-size:.72rem;color:var(--muted);white-space:nowrap">Min Score:</label>
+        <select id="prospectMinScore" style="padding:3px 6px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:inherit;font-size:.76rem">
+          <option value="1">1+</option>
+          <option value="3">3+</option>
+          <option value="5">5+</option>
+          <option value="7" selected>7+</option>
+          <option value="8">8+</option>
+          <option value="9">9+</option>
+        </select>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="addSelectedVerifiedToPlaybook()" style="display:none" id="prospectAddSelectedBtn">➕ Add Selected Verified</button>
     </div>
   </div>
 
@@ -6120,10 +6167,16 @@ async function runAIDiscover() {
 
   try {
     // ── STEP 1: Ask Claude to design a search strategy ──────────
-    setAiStatus('Step 1/3 -- Designing search strategy...');
+    setAiStatus('Step 1/5 — Designing search strategy...');
+    var targetCount = parseInt(document.getElementById('aiDiscoverTarget')?.value) || 50;
+    var leadTypeFilter = document.getElementById('aiDiscoverLeadType')?.value || 'all';
+    var leadTypeDesc = leadTypeFilter === 'academic' ? 'Academic/Government only' : leadTypeFilter === 'industry' ? 'Industry/Pharma/Biotech only' : 'All types';
     logAiStep('Reading playbook: ' + pb.name);
     logAiStep('Territory: ' + territoryDesc);
+    logAiStep('Target: ~' + targetCount + ' leads · Type: ' + leadTypeDesc);
     logAiStep('Asking Claude to plan the best search queries...');
+
+    var queryCountGuide = targetCount <= 25 ? '3-5' : targetCount <= 50 ? '5-7' : '7-10';
 
     const strategyPrompt = `You are a biotech sales intelligence expert helping a sales rep find prospects.
 
@@ -6133,8 +6186,10 @@ OUTREACH OCCASION: ${pb.occasion || 'general'}
 AUDIENCE BRIEF: ${pb.brief || 'No brief provided'}
 SEARCH KEYWORDS: ${pb.keywords || 'Not specified'}
 TERRITORY: ${territoryDesc}
+LEAD TYPE FILTER: ${leadTypeDesc}
 
-Your job: design an optimal multi-query search strategy to find the best prospects on PubMed and NIH Grants.
+Your job: design an optimal multi-query search strategy to find the best prospects on PubMed, NIH Grants, and OpenAlex.
+${leadTypeFilter === 'industry' ? '\nFOCUS: Search for scientists at pharmaceutical, biotech, and life science COMPANIES — not universities. Target corporate R&D, process development, formulation scientists. For NIH grants, filter by org type "For-Profit" or "BioPharma". Avoid academic/university results.' : leadTypeFilter === 'academic' ? '\nFOCUS: Search for academic researchers at universities, medical schools, and government labs (NIH, USDA, CDC, national labs). Filter out industry/corporate leads.' : ''}
 
 Return ONLY valid JSON (no markdown, no explanation) in this exact format:
 {
@@ -6150,7 +6205,7 @@ Return ONLY valid JSON (no markdown, no explanation) in this exact format:
 }
 
 Rules:
-- Generate 6-8 queries total across pubmed, nihgrants, and openalex sources
+- Generate ${queryCountGuide} queries total across pubmed, nihgrants, and openalex sources
 - Include at least 1-2 openalex queries (broader global coverage, better author metadata)
 - Vary the queries to cast a wide net (different keyword combinations)
 - For nihgrants use source "nihgrants", for OpenAlex use source "openalex"
@@ -6172,9 +6227,20 @@ Rules:
     logAiStep(`Running ${strategy.queries.length} queries...`);
 
     // ── STEP 2: Execute all queries ──────────────────────────────
-    setAiStatus('Step 2/3 -- Running searches...');
-    const maxPerQuery = Math.ceil(100 / strategy.queries.length);
+    setAiStatus('Step 2/5 — Running searches...');
+    var targetCount = parseInt(document.getElementById('aiDiscoverTarget')?.value) || 50;
+    const maxPerQuery = Math.ceil((targetCount * 1.5) / strategy.queries.length); // overshoot since filtering will reduce
     const msg = { innerHTML: '' }; // fake msg element for search functions
+
+    // Build dedup set from existing playbook leads so we don't re-find people
+    var existingNames = new Set();
+    var existingEmails = new Set();
+    (pb.leads || []).forEach(function(l) {
+      if (l.email) existingEmails.add(l.email.toLowerCase().trim());
+      var name = ((l.firstName||'') + ' ' + (l.lastName||'')).trim().toLowerCase();
+      if (name.length > 3) existingNames.add(name);
+    });
+    logAiStep('Skipping ' + existingNames.size + ' existing contacts in this playbook');
 
     for (const q of strategy.queries) {
       if (aiDiscoverStop) break;
@@ -6195,21 +6261,42 @@ Rules:
       kwEl.value = origKw;
     }
 
-    // Deduplicate by email or fullName
+    // Deduplicate by email or fullName AND skip anyone already in the playbook
     const seen = new Set();
     prospectResults = prospectResults.filter(r => {
       const key = r.email || r.fullName + r.institution;
       if (seen.has(key)) return false;
       seen.add(key);
+      // Skip if already in the playbook
+      if (r.email && existingEmails.has(r.email.toLowerCase().trim())) return false;
+      var rName = r.fullName.toLowerCase().trim();
+      if (rName.length > 3 && existingNames.has(rName)) return false;
       return true;
     });
 
-    logAiStep(`Found ${prospectResults.length} unique candidates -- scoring with Claude...`);
-    if (!prospectResults.length) throw new Error('No results found. Try broadening your playbook keywords.');
+    var skippedCount = seen.size - prospectResults.length;
+    if (skippedCount > 0) logAiStep(`Filtered out ${skippedCount} duplicates/existing contacts`);
+
+    // Lead type filtering
+    if (leadTypeFilter !== 'all') {
+      var beforeTypeFilter = prospectResults.length;
+      prospectResults = prospectResults.filter(function(r) {
+        var t = classifyInstitutionType(r.institution);
+        r._instType = t;
+        if (leadTypeFilter === 'academic') return t.type === 'academic' || t.type === 'government' || t.type === 'hospital';
+        if (leadTypeFilter === 'industry') return t.type === 'industry';
+        return true;
+      });
+      var typeFiltered = beforeTypeFilter - prospectResults.length;
+      if (typeFiltered > 0) logAiStep('Filtered out ' + typeFiltered + ' non-' + leadTypeFilter + ' leads');
+    }
+
+    logAiStep(`Found ${prospectResults.length} unique NEW candidates — scoring with Claude...`);
+    if (!prospectResults.length) throw new Error('No NEW results found. All candidates are already in this playbook, or try broadening your keywords.');
     if (aiDiscoverStop) throw new Error('Stopped by user');
 
     // ── STEP 3: Score and rank with Claude ───────────────────────
-    setAiStatus('Step 3/3 -- Scoring & ranking prospects...');
+    setAiStatus('Step 3/5 — Scoring & ranking prospects...');
 
     // Send candidates in batches to Claude for scoring
     const BATCH = 25;
@@ -6286,15 +6373,34 @@ Rate ALL ${batch.length} candidates. Score 1-4 = poor fit, 5-7 = moderate, 8-10 
     `;
     document.getElementById('aiDiscoverReportBody').innerHTML = reportHtml;
 
-    // ── Done ─────────────────────────────────────────────────────
-    logAiStep(`✓ Done! ${topScore} strong matches found.`);
-    setAiStatus(`✓ Found ${scored.length} prospects -- ${topScore} strong matches`);
+    // ── Done scoring ───────────────────────────────────────────
+    logAiStep(`✓ Scoring complete! ${topScore} strong matches found.`);
+    setAiStatus(`Step 3/5 complete — ${scored.length} prospects scored`);
 
-    // Render results table
+    // Render results table (shows scores, state, type)
     renderProspectResults({ innerHTML: '' });
 
     // Show report
     document.getElementById('aiDiscoverReport').style.display = 'block';
+
+    // ── STEP 4 & 5: Auto-run email pipeline on scored leads ──
+    var minScore = parseInt(document.getElementById('prospectMinScore')?.value) || 7;
+    var enrichCandidates = scored.filter(function(r) { return (r._aiScore || 0) >= minScore; });
+
+    if (enrichCandidates.length > 0 && !aiDiscoverStop) {
+      setAiStatus('Step 4/5 — Finding emails for ' + enrichCandidates.length + ' top prospects...');
+      logAiStep('📧 Auto-enriching ' + enrichCandidates.length + ' prospects with score ≥' + minScore);
+
+      // Run the email pipeline automatically
+      await runProspectEmailPipeline();
+
+      // After pipeline, update status
+      var finalVerified = prospectResults.filter(function(r) { return r._emailStatus === 'verified' || r._emailStatus === 'catch-all'; }).length;
+      setAiStatus('✅ Done! ' + finalVerified + ' verified leads ready to add');
+      logAiStep('✅ Pipeline complete — ' + finalVerified + ' leads with verified emails');
+    } else {
+      setAiStatus('✓ Found ' + scored.length + ' prospects — click "Find & Verify Emails" to enrich');
+    }
 
     // Switch back to ready state after a moment
     setTimeout(() => {
@@ -6999,80 +7105,151 @@ async function searchOpenAlex(maxResults, msg) {
   }
 }
 
+function classifyInstitutionType(inst) {
+  if (!inst) return { type: 'unknown', icon: '❓', label: 'Unknown' };
+  var s = inst.toLowerCase();
+  if (/\b(universit|college|school of|institute of technology|polytechnic|école|universidad|universität|facult)\b/.test(s)) return { type: 'academic', icon: '🏛', label: 'Academic' };
+  if (/\b(nih|niaid|nimh|nci|nhlbi|usda|cdc|fda|national lab|doe |va |dept of|department of energy|national institute)\b/.test(s)) return { type: 'government', icon: '🏛', label: 'Gov' };
+  if (/\b(hospital|medical center|health system|clinic|mayo|cedars|mount sinai)\b/.test(s)) return { type: 'hospital', icon: '🏥', label: 'Hospital' };
+  if (/\b(inc\b|corp|llc|ltd|pharma|therapeutics|biosciences|biotech|genomics|diagnostics|sciences inc|sciences llc|laboratories inc)\b/.test(s)) return { type: 'industry', icon: '🏢', label: 'Industry' };
+  return { type: 'academic', icon: '🏛', label: 'Academic' }; // default academic since most researchers are
+}
+
+function extractStateFromAffiliation(r) {
+  // Try explicit state fields first
+  if (r._state) return r._state;
+  if (r.org_state) return r.org_state;
+  // Try to extract US state from affiliation/institution string
+  var text = (r.affiliation || '') + ' ' + (r.institution || '');
+  var US_STATES = {'Alabama':'AL','Alaska':'AK','Arizona':'AZ','Arkansas':'AR','California':'CA','Colorado':'CO','Connecticut':'CT','Delaware':'DE','Florida':'FL','Georgia':'GA','Hawaii':'HI','Idaho':'ID','Illinois':'IL','Indiana':'IN','Iowa':'IA','Kansas':'KS','Kentucky':'KY','Louisiana':'LA','Maine':'ME','Maryland':'MD','Massachusetts':'MA','Michigan':'MI','Minnesota':'MN','Mississippi':'MS','Missouri':'MO','Montana':'MT','Nebraska':'NE','Nevada':'NV','New Hampshire':'NH','New Jersey':'NJ','New Mexico':'NM','New York':'NY','North Carolina':'NC','North Dakota':'ND','Ohio':'OH','Oklahoma':'OK','Oregon':'OR','Pennsylvania':'PA','Rhode Island':'RI','South Carolina':'SC','South Dakota':'SD','Tennessee':'TN','Texas':'TX','Utah':'UT','Vermont':'VT','Virginia':'VA','Washington':'WA','West Virginia':'WV','Wisconsin':'WI','Wyoming':'WY'};
+  // Check for full state names
+  for (var name in US_STATES) {
+    if (text.includes(name)) return US_STATES[name];
+  }
+  // Check for state abbreviations (2-letter, usually after a comma or at end)
+  var abbrMatch = text.match(/,\s*([A-Z]{2})\b/);
+  if (abbrMatch && Object.values(US_STATES).includes(abbrMatch[1])) return abbrMatch[1];
+  return '';
+}
+
 function renderProspectResults(msg) {
   if (!prospectResults.length) {
-    msg.innerHTML = '<span style="color:var(--yellow)">⚠ No contacts found after filtering -- try adjusting filters.</span>';
+    msg.innerHTML = '<span style="color:var(--yellow)">⚠ No contacts found after filtering — try adjusting filters.</span>';
     return;
   }
 
-  const signalIcons = { 'Publication': '📄', 'Clinical Trial': '🏥', 'NIH Grant': '💰' };
-  const hasAiScores = prospectResults.some(r => r._aiScore !== undefined);
   const tbody = document.getElementById('prospectTableBody');
 
-  // Update table header to add AI Score column if we have scores
-  const thead = document.querySelector('#prospectResultsCard thead tr');
-  if (thead) {
-    const aiHeader = thead.querySelector('.ai-score-header');
-    if (hasAiScores && !aiHeader) {
-      const th = document.createElement('th');
-      th.className = 'ai-score-header';
-      th.innerHTML = '🤖 AI Score';
-      th.style.cssText = 'font-size:.72rem;white-space:nowrap';
-      thead.insertBefore(th, thead.children[3]);
-    } else if (!hasAiScores && aiHeader) {
-      aiHeader.remove();
+  // Enrich each prospect with state and type if not already done
+  prospectResults.forEach(function(r) {
+    if (!r._instType) r._instType = classifyInstitutionType(r.institution);
+    if (!r._extractedState) r._extractedState = extractStateFromAffiliation(r);
+  });
+
+  tbody.innerHTML = prospectResults.map(function(r, i) {
+    var scoreColor = !r._aiScore ? 'var(--muted)' : r._aiScore >= 8 ? '#6dc49a' : r._aiScore >= 5 ? '#f0c040' : '#ff6b6b';
+    var scoreBg = !r._aiScore ? 'transparent' : r._aiScore >= 8 ? 'rgba(109,196,154,.12)' : r._aiScore >= 5 ? 'rgba(240,192,64,.1)' : 'rgba(255,107,107,.1)';
+    var typeBg = r._instType.type === 'industry' ? 'rgba(77,171,247,.1)' : r._instType.type === 'government' ? 'rgba(240,192,64,.1)' : r._instType.type === 'hospital' ? 'rgba(255,107,107,.1)' : 'rgba(255,255,255,.05)';
+    var typeColor = r._instType.type === 'industry' ? '#4dabf7' : r._instType.type === 'government' ? '#f0c040' : r._instType.type === 'hospital' ? '#ff6b6b' : 'var(--muted)';
+
+    // Email status display
+    var emailHtml = '';
+    if (r._emailStatus === 'verified') {
+      emailHtml = '<span style="color:#00c87a;font-size:.72rem;font-weight:600">✅ ' + (r.email||'verified') + '</span>';
+    } else if (r._emailStatus === 'catch-all') {
+      emailHtml = '<span style="color:#f0c040;font-size:.72rem;font-weight:600">⚠️ ' + (r.email||'catch-all') + '</span>';
+    } else if (r._emailStatus === 'invalid') {
+      emailHtml = '<span style="color:#ff6b6b;font-size:.72rem">❌ Invalid</span>';
+    } else if (r._emailStatus === 'not_found') {
+      emailHtml = '<span style="color:var(--muted);font-size:.72rem">— No email found</span>';
+    } else if (r._emailStatus === 'verifying') {
+      emailHtml = '<span style="color:#4dabf7;font-size:.72rem">🔄 Verifying...</span>';
+    } else if (r._emailStatus === 'enriching') {
+      emailHtml = '<span style="color:#f0c040;font-size:.72rem">🔍 Searching...</span>';
+    } else if (r.email) {
+      emailHtml = '<span style="color:var(--muted);font-size:.72rem">📧 ' + r.email + '</span>';
+    } else {
+      emailHtml = '<span style="color:var(--muted);font-size:.72rem;opacity:.5">—</span>';
     }
-  }
 
-  tbody.innerHTML = prospectResults.map((r, i) => {
-    const scoreColor = !r._aiScore ? 'var(--muted)' : r._aiScore >= 8 ? '#6dc49a' : r._aiScore >= 5 ? '#f0c040' : '#ff6b6b';
-    const scoreBg = !r._aiScore ? 'transparent' : r._aiScore >= 8 ? 'rgba(109,196,154,.12)' : r._aiScore >= 5 ? 'rgba(240,192,64,.1)' : 'rgba(255,107,107,.1)';
-    const aiScoreCell = hasAiScores ? `
-      <td style="vertical-align:top">
-        ${r._aiScore !== undefined ? `
-          <div style="font-size:.82rem;font-weight:700;color:${scoreColor};background:${scoreBg};padding:2px 7px;border-radius:10px;display:inline-block;margin-bottom:3px">${r._aiScore}/10</div>
-          ${r._aiRationale ? `<div class="ai-rationale" style="max-width:180px">${r._aiRationale}</div>` : ''}
-        ` : '<span style="color:var(--muted)">--</span>'}
-      </td>` : '';
+    var canAdd = (r._emailStatus === 'verified' || r._emailStatus === 'catch-all') && r.email;
+    var rowBg = canAdd ? 'background:rgba(0,200,122,.03)' : r._emailStatus === 'invalid' || r._emailStatus === 'not_found' ? 'background:rgba(255,107,107,.02);opacity:.6' : '';
 
-    return `
-    <tr style="${r._aiScore >= 8 ? 'background:rgba(109,196,154,.04)' : ''}">
-      <td><input type="checkbox" class="prospect-check" data-idx="${i}" onchange="updateProspectSelection()"></td>
-      <td>
-        <div style="font-weight:600;font-size:.85rem;color:var(--text)">${r.fullName || '--'}</div>
-        ${r.email ? `<div style="font-size:.72rem;color:var(--muted)">${r.email}</div>` : `<div style="font-size:.72rem;color:var(--muted);opacity:.5">email not listed</div>`}
-      </td>
-      <td style="font-size:.78rem;max-width:180px;color:var(--muted)">${r.institution || '--'}</td>
-      ${aiScoreCell}
-      <td>
-        <span style="font-size:.7rem;font-weight:700;color:var(--orange-light);background:rgba(239,77,5,.1);padding:2px 7px;border-radius:4px">${signalIcons[r.signalType]||''} ${r.signalType}</span>
-        <div style="font-size:.72rem;color:var(--muted);margin-top:4px;max-width:200px;line-height:1.3">${r.signalTitle}</div>
-      </td>
-      <td style="font-size:.82rem;color:var(--muted)">${r.year}</td>
-      <td style="font-size:.75rem;color:var(--muted);max-width:150px">${r.journal}</td>
-      <td>
-        <div style="display:flex;gap:5px">
-          <a href="${r.pubmedUrl}" target="_blank" title="View source" style="font-size:.7rem;padding:3px 8px;border-radius:5px;background:rgba(255,255,255,.06);color:var(--muted);text-decoration:none;border:1px solid var(--border)">🔗 View</a>
-          <button onclick="addOneToQueue(${i})" title="Add to active playbook" style="font-size:.7rem;padding:3px 8px;border-radius:5px;background:rgba(239,77,5,.12);color:var(--orange-light);border:1px solid rgba(239,77,5,.25);cursor:pointer">➕ Playbook</button>
-        </div>
-      </td>
-    </tr>`;
+    return '<tr style="' + rowBg + '">' +
+      '<td><input type="checkbox" class="prospect-check" data-idx="' + i + '" ' + (canAdd ? '' : 'disabled title="Needs verified email"') + ' onchange="updateProspectSelection()"></td>' +
+      '<td>' +
+        '<div style="font-weight:600;font-size:.85rem;color:var(--text)">' + (r.fullName || '--') + '</div>' +
+        '<div style="font-size:.72rem;color:var(--muted)">' + (r.signalType === 'NIH Grant' ? 'PI' : (r.affiliation?.split(',')[1]?.trim() || '')) + '</div>' +
+      '</td>' +
+      '<td style="font-size:.78rem;max-width:160px;color:var(--muted)">' + (r.institution || '--') + '</td>' +
+      '<td style="font-size:.78rem;color:var(--text);white-space:nowrap">' + (r._extractedState || '<span style="color:var(--muted);opacity:.4">—</span>') + '</td>' +
+      '<td><span style="font-size:.68rem;font-weight:600;padding:2px 6px;border-radius:4px;background:' + typeBg + ';color:' + typeColor + ';white-space:nowrap">' + r._instType.icon + ' ' + r._instType.label + '</span></td>' +
+      '<td style="max-width:180px"><span style="font-size:.7rem;color:var(--orange-light);font-weight:600">' + r.signalType + '</span><div style="font-size:.7rem;color:var(--muted);margin-top:2px;line-height:1.3;max-width:180px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">' + r.signalTitle + '</div></td>' +
+      '<td>' + (r._aiScore !== undefined ? '<div style="font-size:.82rem;font-weight:700;color:' + scoreColor + ';background:' + scoreBg + ';padding:2px 7px;border-radius:10px;display:inline-block">' + r._aiScore + '/10</div>' + (r._aiRationale ? '<div style="font-size:.65rem;color:var(--muted);max-width:140px;margin-top:2px;line-height:1.2">' + r._aiRationale + '</div>' : '') : '<span style="color:var(--muted)">--</span>') + '</td>' +
+      '<td>' + emailHtml + '</td>' +
+      '<td style="font-size:.72rem;color:var(--muted)">' + (r.journal || r.signalType || '') + '</td>' +
+    '</tr>';
   }).join('');
 
+  // Count stats
+  var verified = prospectResults.filter(function(r) { return r._emailStatus === 'verified' || r._emailStatus === 'catch-all'; }).length;
+  var enriched = prospectResults.filter(function(r) { return r.email && r._emailStatus; }).length;
+  var strong = prospectResults.filter(function(r) { return (r._aiScore||0) >= 8; }).length;
+
   document.getElementById('prospectResultCount').textContent =
-    hasAiScores
-      ? `${prospectResults.length} results . ${prospectResults.filter(r=>(r._aiScore||0)>=8).length} strong matches`
-      : `${prospectResults.length} results`;
-  var _prc=document.getElementById('prospectResultsCard'); if(_prc) _prc.style.display='block';
-  document.getElementById('prospectActionBar').style.display = 'none';
-  msg.innerHTML = `<span style="color:var(--green)">✓ ${prospectResults.length} prospects found</span>`;
+    verified > 0
+      ? prospectResults.length + ' found · ' + verified + ' verified · ' + strong + ' high-score'
+      : prospectResults.length + ' found · ' + strong + ' high-score';
+
+  var _prc = document.getElementById('prospectResultsCard'); if (_prc) _prc.style.display = 'block';
+
+  // Show/hide pipeline buttons
+  var enrichBtn = document.getElementById('prospectEnrichBtn');
+  var addVerifiedBtn = document.getElementById('prospectAddVerifiedBtn');
+  var scoreFilter = document.getElementById('prospectScoreFilter');
+  var addSelectedBtn = document.getElementById('prospectAddSelectedBtn');
+  if (enrichBtn) enrichBtn.style.display = 'inline-flex';
+  if (scoreFilter) scoreFilter.style.display = 'flex';
+  if (addVerifiedBtn) addVerifiedBtn.style.display = verified > 0 ? 'inline-flex' : 'none';
+  if (addSelectedBtn) addSelectedBtn.style.display = verified > 0 ? 'inline-flex' : 'none';
+
+  msg.innerHTML = '<span style="color:var(--green)">✓ ' + prospectResults.length + ' prospects found</span>';
+  updatePipelineBar();
+}
+
+function updatePipelineBar() {
+  var bar = document.getElementById('prospectPipelineBar');
+  if (!bar || !prospectResults.length) return;
+  bar.style.display = 'block';
+  var total = prospectResults.length;
+  var enriching = 0, found = 0, verified = 0, failed = 0, scored = 0;
+  prospectResults.forEach(function(r) {
+    if (r._aiScore !== undefined) scored++;
+    if (r._emailStatus === 'enriching') enriching++;
+    else if (r._emailStatus === 'verifying') enriching++;
+    else if (r._emailStatus === 'verified' || r._emailStatus === 'catch-all') verified++;
+    else if (r._emailStatus === 'invalid' || r._emailStatus === 'not_found') failed++;
+    else if (r.email && !r._emailStatus) found++;
+  });
+  document.getElementById('pipeSearched').textContent = scored + ' scored';
+  document.getElementById('pipeEnriching').textContent = enriching + ' enriching';
+  document.getElementById('pipeFound').textContent = found + ' emails found';
+  document.getElementById('pipeVerified').textContent = verified + ' verified';
+  document.getElementById('pipeFailed').textContent = '· ' + failed + ' dropped';
+  // Update bar widths
+  var pct = function(n) { return ((n / total) * 100).toFixed(1) + '%'; };
+  document.getElementById('pipeBarVerified').style.width = pct(verified);
+  document.getElementById('pipeBarFound').style.width = pct(found);
+  document.getElementById('pipeBarEnriching').style.width = pct(enriching);
+  document.getElementById('pipeBarFailed').style.width = pct(failed);
 }
 
 function updateProspectSelection() {
-  const checked = document.querySelectorAll('.prospect-check:checked').length;
-  const bar = document.getElementById('prospectActionBar');
-  document.getElementById('selectedProspectCount').textContent = `${checked} selected`;
-  bar.style.display = checked > 0 ? 'flex' : 'none';
+  var checked = document.querySelectorAll('.prospect-check:checked').length;
+  var bar = document.getElementById('prospectActionBar');
+  var countEl = document.getElementById('selectedProspectCount');
+  if (countEl) countEl.textContent = checked + ' selected';
+  if (bar) bar.style.display = checked > 0 ? 'flex' : 'none';
 }
 
 function toggleAllProspects(cb) {
@@ -7205,7 +7382,7 @@ function addSelectedToQueue(all = false) {
       }
       cb.checked = false;
     });
-    document.getElementById('prospectActionBar').style.display = 'none';
+    var _pab = document.getElementById('prospectActionBar'); if (_pab) _pab.style.display = 'none';
     showToast(`${added} lead${added>1?'s':''} added to "${pb.name}"${skipped ? ` (${skipped} already in playbook)` : ''}`);
   } else {
     alert(`All selected leads are already in "${pb.name}".`);
@@ -7215,14 +7392,257 @@ function addSelectedToQueue(all = false) {
 
 function exportProspectCSV() {
   if (!prospectResults.length) return;
-  const rows = [['Full Name','First Name','Last Name','Email','Institution','Affiliation','Signal Type','Research/Signal','Journal/Source','Year','URL']];
-  prospectResults.forEach(r => rows.push([r.fullName, r.firstName, r.lastName, r.email, r.institution, r.affiliation, r.signalType, r.signalTitle, r.journal, r.year, r.pubmedUrl]));
+  const rows = [['Full Name','First Name','Last Name','Email','Institution','State','Type','Signal Type','Research/Signal','AI Score','Email Status','Journal/Source','Year','URL']];
+  prospectResults.forEach(r => rows.push([r.fullName, r.firstName, r.lastName, r.email, r.institution, r._extractedState||'', r._instType?.label||'', r.signalType, r.signalTitle, r._aiScore||'', r._emailStatus||'', r.journal, r.year, r.pubmedUrl]));
   const csv = rows.map(r => r.map(c => `"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob([csv], {type:'text/csv'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `fida-prospects-${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
+}
+
+// ══════════════════════════════════════════════════════════
+// EMAIL PIPELINE — Find & Verify emails for discovered prospects
+// ══════════════════════════════════════════════════════════
+
+var _pipelineRunning = false;
+
+async function runProspectEmailPipeline() {
+  if (_pipelineRunning) { showToast('Pipeline already running'); return; }
+
+  var minScore = parseInt(document.getElementById('prospectMinScore')?.value) || 7;
+  var candidates = prospectResults.filter(function(r) {
+    return (r._aiScore || 0) >= minScore && r._emailStatus !== 'verified' && r._emailStatus !== 'catch-all' && r._emailStatus !== 'invalid' && r._emailStatus !== 'not_found';
+  });
+
+  if (!candidates.length) {
+    showToast('No prospects above score ' + minScore + ' need email enrichment');
+    return;
+  }
+
+  _pipelineRunning = true;
+  var enrichBtn = document.getElementById('prospectEnrichBtn');
+  if (enrichBtn) { enrichBtn.disabled = true; enrichBtn.textContent = '⏳ Running pipeline...'; }
+
+  var zbKey = localStorage.getItem('fidaZbKey');
+  var apiKey = localStorage.getItem('fidaApiKey') || document.getElementById('apiKey')?.value?.trim();
+  var found = 0, verified = 0, failed = 0;
+  var fakeMsg = { innerHTML: '' };
+
+  logAiStep('📧 Starting email pipeline for ' + candidates.length + ' prospects (score ≥' + minScore + ')');
+
+  for (var ci = 0; ci < candidates.length; ci++) {
+    var r = candidates[ci];
+    if (aiDiscoverStop) break;
+
+    // Mark as enriching
+    r._emailStatus = 'enriching';
+    renderProspectResults(fakeMsg);
+
+    try {
+      // Step 1: Try to find email via backend waterfall
+      var org = r.institution || '';
+      var firstName = r.firstName || (r.fullName || '').split(' ')[0] || '';
+      var lastName = r.lastName || (r.fullName || '').split(' ').slice(1).join(' ') || '';
+
+      if (!firstName || !lastName) {
+        r._emailStatus = 'not_found';
+        failed++;
+        continue;
+      }
+
+      logAiStep('🔍 [' + (ci+1) + '/' + candidates.length + '] ' + firstName + ' ' + lastName + ' @ ' + org);
+
+      var resp = await fetch(BACKEND + '/find-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: firstName,
+          lastName: lastName,
+          organisation: org,
+          anthropicKey: apiKey || null
+        })
+      });
+      var data = await resp.json();
+
+      if (!data.email) {
+        r._emailStatus = 'not_found';
+        failed++;
+        logAiStep('  ❌ No email found');
+        renderProspectResults(fakeMsg);
+        continue;
+      }
+
+      r.email = data.email;
+      r._emailSource = data.method;
+      found++;
+      logAiStep('  📧 Found: ' + data.email + ' via ' + data.method);
+
+      // Step 2: Verify with ZeroBounce if key available
+      if (zbKey) {
+        r._emailStatus = 'verifying';
+        renderProspectResults(fakeMsg);
+
+        var zbResult = await verifyEmailZB(data.email, zbKey);
+        if (zbResult.valid) {
+          r._emailStatus = zbResult.tag === 'valid' ? 'verified' : 'catch-all';
+          verified++;
+          logAiStep('  ✅ Verified: ' + zbResult.tag);
+        } else {
+          r._emailStatus = 'invalid';
+          failed++;
+          found--; // don't count invalid as found
+          logAiStep('  ❌ Invalid: ' + zbResult.raw);
+        }
+      } else if (data.confidence === 'high') {
+        // NIH/ORCID source — trusted, no ZB needed
+        r._emailStatus = 'verified';
+        verified++;
+        logAiStep('  ✅ Trusted source (' + data.method + ')');
+      } else {
+        // No ZB key, medium/low confidence — mark as found but unverified
+        r._emailStatus = 'catch-all';
+        verified++;
+        logAiStep('  ⚠️ Unverified (no ZeroBounce key) — treating as catch-all');
+      }
+
+    } catch(e) {
+      console.warn('[Pipeline] Error for', r.fullName, e);
+      r._emailStatus = 'not_found';
+      failed++;
+      logAiStep('  ❌ Error: ' + e.message);
+    }
+
+    renderProspectResults(fakeMsg);
+
+    // Small delay to avoid rate limiting
+    if (ci < candidates.length - 1) await new Promise(function(res) { setTimeout(res, 300); });
+  }
+
+  _pipelineRunning = false;
+  if (enrichBtn) {
+    enrichBtn.disabled = false;
+    enrichBtn.textContent = '📧 Find & Verify Emails';
+  }
+
+  // Show the add verified button if we have results
+  var addBtn = document.getElementById('prospectAddVerifiedBtn');
+  if (addBtn && verified > 0) addBtn.style.display = 'inline-flex';
+  var addSelBtn = document.getElementById('prospectAddSelectedBtn');
+  if (addSelBtn && verified > 0) addSelBtn.style.display = 'inline-flex';
+
+  logAiStep('✅ Pipeline complete — ' + found + ' emails found, ' + verified + ' verified, ' + failed + ' dropped');
+  showToast('Email pipeline done: ' + verified + ' verified leads ready to add');
+  renderProspectResults(fakeMsg);
+}
+
+function addVerifiedProspectsToPlaybook() {
+  var pb = getActivePlaybook();
+  if (!pb) { alert('No active playbook.'); return; }
+
+  var minScore = parseInt(document.getElementById('prospectMinScore')?.value) || 7;
+  var eligible = prospectResults.filter(function(r) {
+    return (r._emailStatus === 'verified' || r._emailStatus === 'catch-all') &&
+           r.email &&
+           (r._aiScore || 0) >= minScore;
+  });
+
+  if (!eligible.length) {
+    alert('No verified leads above score ' + minScore + ' to add.');
+    return;
+  }
+
+  var added = 0, skipped = 0;
+  eligible.forEach(function(r) {
+    // Check if already in playbook
+    var alreadyIn = pb.leads.some(function(l) { return l.email && l.email.toLowerCase() === r.email.toLowerCase(); });
+    if (alreadyIn) { skipped++; return; }
+
+    var nameParts = (r.fullName || '').trim().split(' ');
+    var lead = {
+      id: 'lead_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+      status: 'new',
+      addedAt: Date.now(),
+      firstName: r.firstName || nameParts[0] || '',
+      lastName: r.lastName || nameParts.slice(1).join(' ') || '',
+      email: r.email,
+      jobTitle: r.signalType === 'NIH Grant' ? 'Principal Investigator' : (r.affiliation?.split(',')[1]?.trim() || ''),
+      organisation: r.institution || '',
+      state: r._extractedState || '',
+      country: '',
+      focusedAreas: r.signalTitle || '',
+      tone: detectTone(r.email || ''),
+      _source: 'ai_autodiscover',
+      _emailSource: r._emailSource || '',
+      _linkedinUrl: '',
+      _emailGuessed: false,
+      _playbookId: pb.id,
+      _playbookName: pb.name,
+      verifyTag: r._emailStatus === 'verified' ? 'valid' : 'catch-all',
+      _aiScore: r._aiScore,
+      _aiRationale: r._aiRationale,
+      _instType: r._instType?.type || '',
+      source: 'ai_autodiscover'
+    };
+    pb.leads.push(lead);
+    added++;
+  });
+
+  if (added > 0) {
+    savePlaybooksToStorage();
+    renderPlaybooks();
+    updateQueueBadge();
+    showToast(added + ' verified lead' + (added > 1 ? 's' : '') + ' added to "' + pb.name + '"' + (skipped ? ' (' + skipped + ' already in playbook)' : ''));
+  } else {
+    alert('All verified leads are already in "' + pb.name + '".');
+  }
+}
+
+function addSelectedVerifiedToPlaybook() {
+  var pb = getActivePlaybook();
+  if (!pb) { alert('No active playbook.'); return; }
+
+  var indices = Array.from(document.querySelectorAll('.prospect-check:checked')).map(function(c) { return parseInt(c.dataset.idx); });
+  if (!indices.length) { alert('No prospects selected.'); return; }
+
+  var added = 0, skipped = 0, noEmail = 0;
+  indices.forEach(function(i) {
+    var r = prospectResults[i];
+    if (!r) return;
+    if (!r.email || (r._emailStatus !== 'verified' && r._emailStatus !== 'catch-all')) { noEmail++; return; }
+    var alreadyIn = pb.leads.some(function(l) { return l.email && l.email.toLowerCase() === r.email.toLowerCase(); });
+    if (alreadyIn) { skipped++; return; }
+    var nameParts = (r.fullName || '').trim().split(' ');
+    var lead = {
+      id: 'lead_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+      status: 'new', addedAt: Date.now(),
+      firstName: r.firstName || nameParts[0] || '',
+      lastName: r.lastName || nameParts.slice(1).join(' ') || '',
+      email: r.email,
+      jobTitle: r.signalType === 'NIH Grant' ? 'Principal Investigator' : (r.affiliation?.split(',')[1]?.trim() || ''),
+      organisation: r.institution || '',
+      state: r._extractedState || '', country: '',
+      focusedAreas: r.signalTitle || '',
+      tone: detectTone(r.email || ''),
+      _source: 'ai_autodiscover', _emailSource: r._emailSource || '',
+      _playbookId: pb.id, _playbookName: pb.name,
+      verifyTag: r._emailStatus === 'verified' ? 'valid' : 'catch-all',
+      _aiScore: r._aiScore, _instType: r._instType?.type || '',
+      source: 'ai_autodiscover'
+    };
+    pb.leads.push(lead);
+    added++;
+  });
+
+  if (added > 0) {
+    savePlaybooksToStorage();
+    renderPlaybooks();
+    updateQueueBadge();
+    showToast(added + ' verified lead' + (added > 1 ? 's' : '') + ' added to "' + pb.name + '"' + (skipped ? ' (' + skipped + ' dupes)' : '') + (noEmail ? ' (' + noEmail + ' skipped — no verified email)' : ''));
+  } else {
+    alert('No eligible leads selected. Only leads with verified emails can be added.');
+  }
 }
 
 
@@ -9052,16 +9472,16 @@ async function verifyEmailZB(email, zbKey) {
     const r = await fetch(`${BACKEND}/verify-emails-bulk`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ emails: [email], zbKey })
+      body: JSON.stringify({ emails: [email], zeroBounceKey: zbKey })
     });
     const data = await r.json();
-    // Backend returns { verified: [...] } with status/tag fields
     const result = (data.results || data.verified)?.[0];
-    if (!result) return false;
-    // Accept: valid, catch-all, unknown (can't verify either way — use best guess)
-    return ['valid','catch-all','unknown','accept-all'].includes(result.status) ||
-           result.tag === 'unknown' || result.tag === 'catch_all';
-  } catch(e) { return false; }
+    if (!result) return { valid: false, tag: 'error' };
+    var status = (result.status || '').toLowerCase();
+    var tag = (result.tag || result.sub_status || status);
+    var valid = ['valid','catch-all','catch_all','unknown','accept-all'].includes(status);
+    return { valid: valid, tag: valid ? (status === 'valid' ? 'valid' : 'catch-all') : 'invalid', raw: status };
+  } catch(e) { return { valid: false, tag: 'error' }; }
 }
 
 function guessInstitutionDomain(org) {
