@@ -1246,137 +1246,6 @@ tr:hover .row-actions-inline { display:flex; }
      PAGE: AI DISCOVER
 ════════════════════════════════════════════ -->
 <div id="pageAiDiscover" style="display:none">
-<div class="main main-wide">
-<!-- ACTIVE PLAYBOOK SELECTOR -->
-  <div class="card" style="background:linear-gradient(135deg,rgba(239,77,5,.08),rgba(239,77,5,.03));border-color:rgba(239,77,5,.25)">
-    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-      <div style="flex:1;min-width:180px">
-        <div class="field-label" style="margin-bottom:6px">Active Playbook <span style="font-weight:400;color:var(--muted)">— leads you find will be added here</span></div>
-        <select id="activePlaybookSelect" style="width:100%;font-weight:600" onchange="onActivePlaybookChange()">
-          <option value="">— No playbook selected (general queue) —</option>
-        </select>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center;padding-top:18px">
-        <button class="btn btn-ghost btn-sm" onclick="switchTab('playbooks')">⚙️ Manage</button>
-        <button class="btn btn-primary btn-sm" onclick="openNewPlaybookModal()">+ New</button>
-      </div>
-    </div>
-    <div id="activePbBrief" style="display:none;margin-top:10px;font-size:.78rem;color:var(--muted);line-height:1.5;background:rgba(0,0,0,.2);padding:8px 12px;border-radius:6px;border-left:3px solid var(--orange)"></div>
-  </div>
-
-  <!-- LEAD QUEUE SUMMARY -->
-  <div id="queueSummaryCard" style="display:none" class="card">
-    <div class="card-header">
-      <div class="step-badge">📋</div>
-      <div class="card-title">Lead Queue</div>
-      <div class="card-tag" style="background:rgba(239,77,5,.15);color:var(--orange-light)"><span id="queueSummaryCount">0</span> leads ready</div>
-    </div>
-    <div style="font-size:.82rem;color:var(--muted);padding:4px 0 8px">
-      These leads have been added to the Generate queue. Switch to the ⚡ Generate tab to build their email sequences.
-    </div>
-    <button class="btn btn-primary btn-sm" onclick="switchTab('sdr')">⚡ Go to Generate →</button>
-  </div>
-
-
-
-  
-<!-- AI AUTO-DISCOVER -->
-  <div class="card" id="aiDiscoverCard" style="background:linear-gradient(135deg,rgba(239,77,5,.06),rgba(100,80,200,.06));border-color:rgba(239,77,5,.3)">
-    <div class="card-header">
-      <div class="step-badge">🤖</div>
-      <div class="card-title">AI Auto-Discover</div>
-      <div class="card-tag" style="background:rgba(239,77,5,.15);color:var(--orange-light)">Powered by Claude</div>
-    </div>
-    <div id="aiDiscoverReady" style="display:block">
-      <p id="aiDiscoverDesc" style="font-size:.83rem;color:var(--muted);margin:0 0 14px;line-height:1.6">
-        Activate a playbook to get started. Claude will read your playbook brief, research angle, and territory, then design a targeted search strategy, run it across PubMed + NIH Grants, score every result, and populate your prospect list with a rationale for each person.
-      </p>
-      <!-- Playbook selector inline -->
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
-        <div class="field-label" style="margin:0;white-space:nowrap;font-size:.75rem">Active Playbook:</div>
-        <select id="aiDiscoverPbSelect" onchange="onAiDiscoverPbChange()" style="flex:1;min-width:180px;font-weight:600;font-size:.82rem">
-          <option value="">-- Select a playbook --</option>
-        </select>
-        <button class="btn btn-ghost btn-sm" onclick="switchTab('playbooks')" style="white-space:nowrap;font-size:.72rem">+ New Playbook</button>
-      </div>
-      <div id="aiDiscoverNoPb" style="display:none;padding:10px 14px;background:rgba(255,200,0,.08);border:1px solid rgba(255,200,0,.2);border-radius:8px;font-size:.78rem;color:#f0c040;margin-bottom:12px">
-        ⚠️ No playbook selected — activate a playbook first so Claude knows who to search for. <button class="btn btn-ghost btn-sm" style="font-size:.7rem;margin-left:8px" onclick="switchTab('playbooks')">Go to Playbooks →</button>
-      </div>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <button class="btn btn-primary" id="aiDiscoverBtn" onclick="runAIDiscover()">
-          🤖 Auto-Discover Leads
-        </button>
-        <div style="font-size:.74rem;color:var(--muted)">Uses ~3–5 Anthropic API calls · Takes 20–40 seconds</div>
-      </div>
-    </div>
-    <div id="aiDiscoverRunning" style="display:none">
-      <div style="display:flex;flex-direction:column;gap:12px">
-        <div style="display:flex;align-items:center;gap:12px">
-          <div class="ai-spinner"></div>
-          <div id="aiDiscoverStatus" style="font-size:.83rem;color:var(--orange-light);font-weight:600">Backend warming up — ready in ~30 seconds...</div>
-        </div>
-        <div id="aiDiscoverLog" style="font-size:.74rem;color:var(--muted);line-height:1.8;max-height:120px;overflow-y:auto;padding:8px 10px;background:rgba(0,0,0,.2);border-radius:6px;border:1px solid var(--border)"></div>
-        <button class="btn btn-ghost btn-sm" style="width:fit-content" onclick="stopAIDiscover()">⏹ Stop</button>
-      </div>
-    </div>
-    <!-- Discovery Report (shown after run) -->
-    <div id="aiDiscoverReport" style="display:none;margin-top:14px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-        <span style="font-size:.8rem;font-weight:700;color:var(--text)">📋 Discovery Report</span>
-        <button class="btn btn-ghost btn-sm" style="font-size:.68rem;padding:2px 7px" onclick="toggleAiReport()">▼ show</button>
-      </div>
-      <div id="aiDiscoverReportBody" style="display:none;font-size:.78rem;color:var(--muted);line-height:1.7;background:rgba(0,0,0,.2);padding:10px 14px;border-radius:6px;border-left:3px solid var(--orange)"></div>
-    </div>
-  </div>
-
-  
-
-
-  <!-- Results table -->
-  <div id="prospectResultsCard" class="card" style="display:none">
-    <div class="card-header" style="justify-content:space-between">
-      <div style="display:flex;align-items:center;gap:10px">
-        <div class="card-title">🔬 Prospect Results</div>
-        <div id="prospectResultCount" class="card-tag opt"></div>
-      </div>
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-ghost btn-sm" onclick="addAllToQueue()">➕ Add All Results to Playbook</button>
-        <button class="btn btn-ghost btn-sm" onclick="exportProspectCSV()">📥 Export CSV</button>
-      </div>
-    </div>
-
-    <div class="tbl-wrap">
-      <table id="prospectTable">
-        <thead><tr>
-          <th style="width:28px"><input type="checkbox" id="selectAllProspects" onclick="toggleAllProspects(this)" title="Select all"></th>
-          <th>Researcher</th>
-          <th>Affiliation</th>
-          <th>Signal</th>
-          <th>Year</th>
-          <th>Research Focus</th>
-          <th>Actions</th>
-        </tr></thead>
-        <tbody id="prospectTableBody"></tbody>
-      </table>
-    </div>
-
-    <!-- Add selected to SDR bar -->
-    <div id="prospectActionBar" style="display:none;margin-top:14px;padding:12px 16px;background:rgba(239,77,5,.08);border:1px solid rgba(239,77,5,.2);border-radius:10px;display:flex;align-items:center;gap:14px">
-      <span id="selectedProspectCount" style="font-size:.82rem;color:var(--orange-light);font-weight:600">0 selected</span>
-      <button class="btn btn-primary btn-sm" onclick="addSelectedToQueue()">➕ Add Selected to Playbook</button>
-      <span style="font-size:.75rem;color:var(--muted)" id="addToPlaybookHint">Leads will be added to your active playbook</span>
-    </div>
-  </div>
-
-</div>
-</div><!-- end #pageProspects -->
-<!-- end #pageAiDiscover -->
-
-
-<!-- ════════════════════════════════════════════
-     PAGE: AI DISCOVER
-════════════════════════════════════════════ -->
-<div id="pageAiDiscover" style="display:none">
 <!-- ACTIVE PLAYBOOK SELECTOR -->
   <div class="card" style="background:linear-gradient(135deg,rgba(239,77,5,.08),rgba(239,77,5,.03));border-color:rgba(239,77,5,.25)">
     <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
@@ -3410,6 +3279,7 @@ window.addEventListener('load', () => {
         buildContactsData();
         applyContactsFiltersAndRender();
         updateQueueBadge();
+        updateAiDiscoverUI();
         console.log('[Startup] Loaded from Supabase successfully');
       } else {
         console.log('[Startup] No data in Supabase — using localStorage');
