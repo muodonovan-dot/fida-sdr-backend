@@ -6939,12 +6939,19 @@ function openContactDrawer(leadId, pbId) {
 
   // Inject save bar into drawer shell (outside scroll body) if not already there
   const drawerShell = document.getElementById('contactDrawer');
-  let saveBar = document.getElementById('drawerSaveBar_' + '${lead.id}');
+  const _sbLeadId = '${lead.id}';
+  const _sbPbId = '${pbId}';
+  let saveBar = document.getElementById('drawerSaveBar_' + _sbLeadId);
   if (!saveBar && drawerShell) {
     saveBar = document.createElement('div');
-    saveBar.id = 'drawerSaveBar_' + '${lead.id}';
+    saveBar.id = 'drawerSaveBar_' + _sbLeadId;
     saveBar.style.cssText = 'flex-shrink:0;padding:10px 22px;background:#13111f;border-top:1px solid rgba(255,255,255,.08)';
-    saveBar.innerHTML = '<button id="drawerSaveBtn_${lead.id}" onclick="saveContactDrawer('${lead.id}','${pbId}')" style="width:100%;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:rgba(255,255,255,.4);font-weight:600;cursor:pointer;font-family:inherit;font-size:.82rem;transition:all .2s">💾 Save Changes</button>';
+    const saveBtn = document.createElement('button');
+    saveBtn.id = 'drawerSaveBtn_' + _sbLeadId;
+    saveBtn.onclick = function(){ saveContactDrawer(_sbLeadId, _sbPbId); };
+    saveBtn.style.cssText = 'width:100%;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:rgba(255,255,255,.4);font-weight:600;cursor:pointer;font-family:inherit;font-size:.82rem;transition:all .2s';
+    saveBtn.textContent = '💾 Save Changes';
+    saveBar.appendChild(saveBtn);
     drawerShell.appendChild(saveBar);
   }
 
