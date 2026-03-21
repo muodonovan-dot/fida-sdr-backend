@@ -1706,10 +1706,15 @@ tr:hover .row-actions-inline { display:flex; }
     <select id="cfSource" onchange="filterContacts()"
       style="background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:5px 8px;color:var(--text);font-size:.75rem;font-family:inherit;cursor:pointer">
       <option value="">All Sources</option>
+      <option value="scileads">SciLeads</option>
+      <option value="leadgeeks">LeadGeeks</option>
       <option value="PubMed">PubMed</option>
       <option value="NIH Grant">NIH Grant</option>
       <option value="linkedin">LinkedIn</option>
       <option value="ai_autodiscover">Auto-Discover</option>
+      <option value="hubspot">HubSpot</option>
+      <option value="zoominfo">ZoomInfo</option>
+      <option value="salesforce">Salesforce</option>
       <option value="manual">Manual</option>
     </select>
     <select id="cfEmail" onchange="filterContacts()"
@@ -5065,7 +5070,7 @@ async function executeImportLeads() {
     }
     targetPb.leads.push(Object.assign({}, l, {
       id: 'lead_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
-      status: 'pending',
+      status: 'new',
       verifyTag: l.email ? 'unknown' : null,
       addedAt: new Date().toISOString(),
       _source: source,
@@ -6829,8 +6834,10 @@ function renderContactsTable(data, total) {
 
     // Source badge
     const src = c._source || c.source || 'manual';
-    const srcLabel = src === 'ai_autodiscover' ? 'Auto' : src === 'PubMed' ? 'PubMed' : src === 'NIH Grant' ? 'NIH' : src === 'linkedin' || src === 'linkedin_extension' ? 'LinkedIn' : 'Manual';
-    const srcClass = src === 'ai_autodiscover' ? 'autodiscover' : src === 'PubMed' ? 'pubmed' : src === 'NIH Grant' ? 'nih' : src === 'linkedin' || src === 'linkedin_extension' ? 'linkedin' : 'manual';
+    const srcLabelMap = { ai_autodiscover:'Auto', PubMed:'PubMed', 'NIH Grant':'NIH', linkedin:'LinkedIn', linkedin_extension:'LinkedIn', 'Sales Navigator':'Sales Nav', 'LinkedIn Profile':'LinkedIn', prospect_finder:'Finder', scileads:'SciLeads', leadgeeks:'LeadGeeks', linkedin_export:'LI Export', hubspot:'HubSpot', zoominfo:'ZoomInfo', salesforce:'Salesforce', csv_upload:'CSV', manual:'Manual' };
+    const srcLabel = srcLabelMap[src] || (src.length > 12 ? src.substring(0,10) + '..' : src);
+    const srcClassMap = { ai_autodiscover:'autodiscover', PubMed:'pubmed', 'NIH Grant':'nih', linkedin:'linkedin', linkedin_extension:'linkedin', scileads:'scileads', leadgeeks:'leadgeeks', prospect_finder:'finder' };
+    const srcClass = srcClassMap[src] || 'manual';
 
     // LinkedIn available?
     const liUrl = c._linkedinUrl || c.linkedinUrl || '';
@@ -7047,7 +7054,8 @@ function openContactDrawer(leadId, pbId) {
   const liUrl = lead._linkedinUrl || lead.linkedinUrl || '';
   const hasEmail = lead.email && lead.email.trim();
   const src = lead._source || lead.source || 'manual';
-  const srcLabel = src === 'ai_autodiscover' ? 'AI Auto-Discover' : src === 'PubMed' ? 'PubMed Publication' : src === 'NIH Grant' ? 'NIH Grant' : src === 'linkedin' || src === 'linkedin_extension' ? 'LinkedIn' : 'Manual';
+  const drawerSrcMap = { ai_autodiscover:'AI Auto-Discover', PubMed:'PubMed Publication', 'NIH Grant':'NIH Grant', linkedin:'LinkedIn', linkedin_extension:'LinkedIn', 'Sales Navigator':'Sales Navigator', 'LinkedIn Profile':'LinkedIn Profile', prospect_finder:'AI Prospect Finder', scileads:'SciLeads', leadgeeks:'LeadGeeks', linkedin_export:'LinkedIn Export', hubspot:'HubSpot', zoominfo:'ZoomInfo', salesforce:'Salesforce', csv_upload:'CSV Upload', manual:'Manual' };
+  const srcLabel = drawerSrcMap[src] || src;
   const addedDate = (lead.createdAt || lead.addedAt) ? new Date(lead.createdAt || lead.addedAt).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : '—';
   const generatedEmails = lead.generatedEmails || lead.emailSequence || [];
 
