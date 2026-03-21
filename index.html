@@ -3385,7 +3385,7 @@ window.addEventListener('load', () => {
   // Show loading state while Supabase connects
   initTerritoryUI();
   updateAiDiscoverUI();
-  switchTab('playbooks');
+  switchTab(localStorage.getItem('fidaCurrentTab') || 'playbooks');
   checkSettingsAutoExpand();
 
   // Load from localStorage first — always have data available immediately
@@ -4289,12 +4289,15 @@ function renderBatchTimeline(leads) {
   var el = document.getElementById('batchTimeline');
   if (!el) return;
 
-  // Group leads by the date they were pushed to sequence (or added if not pushed)
+  // Only show leads that were actually pushed (have _pushedAt timestamp)
   var batches = {};
+  var hasPushData = false;
   leads.forEach(function(l) {
     if (l.status !== 'in_sequence' && l.status !== 'replied') return;
-    var dateKey = (l._pushedAt || l.addedAt || '').substring(0, 10);
-    if (!dateKey) return;
+    var pushDate = l._pushedAt || l._travelContactedAt || '';
+    if (!pushDate) return; // Skip leads without a real push timestamp
+    hasPushData = true;
+    var dateKey = pushDate.substring(0, 10);
     if (!batches[dateKey]) batches[dateKey] = {date:dateKey,total:0,replied:0,inSeq:0,deals:0};
     batches[dateKey].total++;
     if (l.status === 'replied') batches[dateKey].replied++;
@@ -4304,7 +4307,10 @@ function renderBatchTimeline(leads) {
 
   var sorted = Object.values(batches).sort(function(a,b){return a.date.localeCompare(b.date)});
   if (!sorted.length) {
-    el.innerHTML = '<div style="color:var(--muted);font-size:.78rem;text-align:center;padding:20px">No sequences pushed yet — generate emails and push to Instantly to see the timeline</div>';
+    var inSeqCount = leads.filter(function(l){return l.status==='in_sequence'}).length;
+    el.innerHTML = '<div style="color:var(--muted);font-size:.78rem;text-align:center;padding:20px">' +
+      (inSeqCount > 0 ? inSeqCount + ' leads are in sequence but push timestamps are not yet tracked. This will populate automatically with Phase 2 Instantly sync.' : 'No sequences pushed yet — generate emails and push to Instantly to see the timeline') +
+    '</div>';
     return;
   }
 
@@ -4355,6 +4361,16 @@ function renderEmailHealth(leads) {
     else if (tag === 'invalid' || tag === 'abuse' || tag === 'do_not_mail' || tag === 'spamtrap') verified.invalid++;
     else verified.unknown++;
   });
+
+  // If no verification has been done (all unknown/missing), show helpful message
+  var verifiedCount = verified.valid + verified['catch-all'] + verified.invalid;
+  if (verifiedCount === 0) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:.78rem;text-align:center;padding:16px;width:100%">No emails verified yet — run ZeroBounce verification on your contacts to see deliverability health. ' +
+      (verified.unknown > 0 ? '<span style="color:#6eb5ff">' + verified.unknown + ' emails awaiting verification</span>' : '') +
+      (verified.missing > 0 ? ' · <span style="color:#555">' + verified.missing + ' contacts missing email</span>' : '') +
+    '</div>';
+    return;
+  }
 
   var total = leads.length || 1;
   var segments = [
