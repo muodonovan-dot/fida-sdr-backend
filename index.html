@@ -4033,7 +4033,7 @@ function renderFunnel(leads) {
   var html = '';
   stages.forEach(function(s, i) {
     var pct = (s.count / maxCount * 100);
-    var barW = Math.max(pct, 3);
+    var barW = s.count === 0 ? 0 : Math.max(pct, 2);
     var prevCount = i > 0 ? stages[i-1].count : total;
     var convRate = prevCount > 0 ? (s.count / prevCount * 100).toFixed(0) : '—';
     var totalConv = total > 0 ? (s.count / total * 100).toFixed(1) : '0';
@@ -4041,9 +4041,12 @@ function renderFunnel(leads) {
     html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">' +
       '<div style="width:120px;font-size:.7rem;color:var(--muted);text-align:right;flex-shrink:0">' + s.label + '</div>' +
       '<div style="flex:1;position:relative;height:26px;background:rgba(255,255,255,.025);border-radius:5px;overflow:hidden">' +
-        '<div style="height:100%;width:' + barW + '%;background:linear-gradient(90deg,' + s.color + ',' + s.color + 'cc);border-radius:5px;display:flex;align-items:center;padding-left:10px;min-width:50px;transition:width .6s cubic-bezier(.4,0,.2,1)">' +
-          '<span style="font-size:.72rem;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.3)">' + s.count.toLocaleString() + '</span>' +
-        '</div>' +
+        (s.count > 0 ?
+          '<div style="height:100%;width:' + barW + '%;background:linear-gradient(90deg,' + s.color + ',' + s.color + 'cc);border-radius:5px;display:flex;align-items:center;padding-left:10px;min-width:40px;transition:width .6s cubic-bezier(.4,0,.2,1)">' +
+            '<span style="font-size:.72rem;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.3)">' + s.count.toLocaleString() + '</span>' +
+          '</div>'
+        : '<div style="display:flex;align-items:center;padding-left:10px;height:100%"><span style="font-size:.72rem;font-weight:600;color:rgba(255,255,255,.2)">0</span></div>') +
+      '</div>' +
       '</div>' +
       '<div style="width:50px;text-align:right;flex-shrink:0">' +
         (i > 0 ? '<span style="font-size:.62rem;color:' + (parseInt(convRate) >= 50 ? '#00c87a' : parseInt(convRate) >= 20 ? '#f59e0b' : '#ff6b6b') + ';font-weight:600">' + convRate + '%</span>' : '<span style="font-size:.62rem;color:var(--muted)">—</span>') +
