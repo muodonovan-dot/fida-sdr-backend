@@ -2679,19 +2679,41 @@ function loadSettings() {
   }
 }
 async function loadPlaybooksFromSupabase() {
-  if (!sb) return false;
-  try {
-    const userId = getUserId();
-    const { data: pbData, error: pbErr } = await sb
-      .from('playbooks').select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: true });
-    if (pbErr || !pbData?.length) return false;
+  const SUPA_URL = 'https://cqsdsztzyvxtnzrruxeb.supabase.co';
+  const SUPA_KEY = 'sb_publishable_oWLb_blZHL_rayCldsPfMw_OoQs0HMR';
+  const userId = getUserId();
+  const hdrs = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY };
 
-    const { data: leadsData } = await sb
-      .from('leads').select('*')
-      .in('playbook_id', pbData.map(p => p.id))
-      .order('added_at', { ascending: true });
+  try {
+    // Fetch playbooks
+    const pbRes = await fetch(
+      SUPA_URL + '/rest/v1/playbooks?user_id=eq.' + encodeURIComponent(userId) + '&order=created_at.asc',
+      { headers: hdrs }
+    );
+    if (!pbRes.ok) { console.warn('[Supabase] Playbooks fetch failed:', pbRes.status); return false; }
+    const pbData = await pbRes.json();
+    if (!Array.isArray(pbData) || !pbData.length) {
+      console.log('[Supabase] No playbooks found for user', userId);
+      return false;
+    }
+
+    // Fetch leads — may exceed 1000 row default limit, so paginate
+    var allLeadsData = [];
+    var pbIds = pbData.map(function(p) { return p.id; });
+    var offset = 0;
+    var pageSize = 1000;
+    while (true) {
+      var leadsUrl = SUPA_URL + '/rest/v1/leads?user_id=eq.' + encodeURIComponent(userId) +
+        '&order=added_at.asc&offset=' + offset + '&limit=' + pageSize;
+      var leadsRes = await fetch(leadsUrl, { headers: hdrs });
+      if (!leadsRes.ok) break;
+      var page = await leadsRes.json();
+      if (!Array.isArray(page)) break;
+      allLeadsData = allLeadsData.concat(page);
+      if (page.length < pageSize) break;
+      offset += pageSize;
+    }
+    var leadsData = allLeadsData;
 
     playbooks = pbData.map(pb => ({
       id: pb.id, name: pb.name, color: pb.color || '#EF4D05',
@@ -2709,6 +2731,7 @@ async function loadPlaybooksFromSupabase() {
         state: l.state || '',
         country: l.country || '',
         focusedAreas: l.focused_areas || '',
+        source: l.source || 'manual',
         _source: l.source || 'manual',
         _linkedinUrl: l.linkedin_url || '',
         _profilePhotoUrl: l.profile_photo_url || '',
@@ -2720,8 +2743,10 @@ async function loadPlaybooksFromSupabase() {
         verifyStatus: l.verify_status || null,
         _zbStatus: l.zb_status || null,
         phone: l.phone || '',
+        city: l.city || '',
         _city: l.city || '',
         _zip: l.zip || '',
+        department: l.department || '',
         _department: l.department || '',
         _labName: l.lab_name || '',
         _affiliation: l.affiliation || '',
@@ -2834,66 +2859,123 @@ async function syncPlaybooksToSupabase() {
 
   const SUPA_URL = 'https://cqsdsztzyvxtnzrruxeb.supabase.co';
   const SUPA_KEY = 'sb_publishable_oWLb_blZHL_rayCldsPfMw_OoQs0HMR';
+  const headers = {
+    'apikey': SUPA_KEY,
+    'Authorization': 'Bearer ' + SUPA_KEY,
+    'Content-Type': 'application/json',
+    'Prefer': 'resolution=merge-duplicates'
+  };
 
-  const leads = playbooks.flatMap(pb => (pb.leads || []).map(l => ({
-    id: l.id,
-    playbook_id: pb.id,
-    user_id: userId,
-    first_name: l.firstName || l.first_name || '',
-    last_name: l.lastName || l.last_name || '',
-    job_title: l.jobTitle || l.job_title || '',
-    organisation: l.organisation || '',
-    city: l.city || l._city || '',
-    state: l.state || '',
-    country: l.country || '',
-    email: l.email || null,
-    status: l.status || 'new',
-    linkedin_url: l.linkedinUrl || l.linkedin_url || null,
-    profile_photo_url: l._profilePhotoUrl || l.profile_photo_url || null,
-    source: l.source || l._source || 'manual',
-    verify_tag: l._zbStatus || l.zb_status || l.verify_tag || null,
-    zb_status: l._zbStatus || l.zb_status || null,
-    focused_areas: l.focusedAreas || l.focused_areas || null,
-    outreach_hook: l._outreachHook || l.outreach_hook || null,
-    priority_score: l._priorityScore || l.priority_score || null,
-    priority_reason: l._priorityReason || l.priority_reason || null,
-    ai_summary: l.researchContext ? JSON.stringify(l.researchContext) : (l.ai_summary || null),
-    primary_app: (l.researchContext && l.researchContext.application_match) || l.primary_app || null,
-    department: l._department || l.department || null,
-    affiliation: l._affiliation || l.affiliation || null,
-    lab_name: l._labName || l.lab_name || null,
-    tone: l.tone || null,
-    nih_grant_count: l._nihGrantCount || l.nih_grant_count || null,
-    pubmed_count: l._pubmedCount || l.pubmed_count || null,
-    enriched_at: l._enrichedAt || l.enriched_at || null,
-    ai_enriched_at: l._aiEnrichedAt || l.ai_enriched_at || null,
-    added_at: l.createdAt || l.added_at || Date.now()
-  })));
+  // ── Step 1: Upsert playbook rows FIRST (leads have FK to playbooks) ──
+  const pbRows = playbooks.map(function(pb) {
+    return {
+      id: pb.id,
+      user_id: userId,
+      name: pb.name || 'Untitled',
+      color: pb.color || '#EF4D05',
+      brief: pb.brief || '',
+      keywords: pb.keywords || '',
+      angle: pb.angle || '',
+      tone: pb.tone || 'industry',
+      created_at: pb.created_at || new Date().toISOString()
+    };
+  });
 
-  if (!leads.length) return;
-
-  try {
-    const res = await fetch(SUPA_URL + '/rest/v1/leads', {
-      method: 'POST',
-      headers: {
-        'apikey': SUPA_KEY,
-        'Authorization': 'Bearer ' + SUPA_KEY,
-        'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates'
-      },
-      body: JSON.stringify(leads)
-    });
-    if (!res.ok) {
-      const err = await res.text();
-      console.warn('[Supabase sync failed]', res.status, err.substring(0,200));
-      if (syncEl) { syncEl.textContent = '⚠ Sync failed'; setTimeout(() => { if(syncEl) syncEl.textContent=''; }, 3000); }
-    } else {
-      console.log('[Supabase sync] Saved', leads.length, 'leads');
-      if (syncEl) { syncEl.textContent = '✓ Saved to DB'; setTimeout(() => { if(syncEl) syncEl.textContent=''; }, 2000); }
+  if (pbRows.length) {
+    try {
+      const pbRes = await fetch(SUPA_URL + '/rest/v1/playbooks', {
+        method: 'POST', headers: headers,
+        body: JSON.stringify(pbRows)
+      });
+      if (!pbRes.ok) {
+        const err = await pbRes.text();
+        console.warn('[Supabase] Playbook upsert failed:', pbRes.status, err.substring(0, 200));
+        if (syncEl) { syncEl.textContent = '⚠ Playbook sync failed'; setTimeout(function() { if(syncEl) syncEl.textContent=''; }, 4000); }
+        return; // Don't try leads if playbooks failed — FK will break
+      }
+      console.log('[Supabase] Upserted', pbRows.length, 'playbooks');
+    } catch(e) {
+      console.warn('[Supabase] Playbook sync error:', e.message);
+      if (syncEl) { syncEl.textContent = '⚠ Sync failed'; setTimeout(function() { if(syncEl) syncEl.textContent=''; }, 4000); }
+      return;
     }
-  } catch(e) {
-    console.warn('[Supabase sync error]', e.message);
-    if (syncEl) { syncEl.textContent = '⚠ Sync failed'; setTimeout(() => { if(syncEl) syncEl.textContent=''; }, 3000); }
+  }
+
+  // ── Step 2: Upsert all leads ──
+  const leads = playbooks.flatMap(function(pb) {
+    return (pb.leads || []).map(function(l) {
+      return {
+        id: l.id,
+        playbook_id: pb.id,
+        user_id: userId,
+        first_name: l.firstName || l.first_name || '',
+        last_name: l.lastName || l.last_name || '',
+        job_title: l.jobTitle || l.job_title || '',
+        organisation: l.organisation || '',
+        city: l.city || l._city || '',
+        state: l.state || '',
+        country: l.country || '',
+        email: l.email || null,
+        status: l.status || 'new',
+        linkedin_url: l.linkedinUrl || l._linkedinUrl || l.linkedin_url || null,
+        profile_photo_url: l._profilePhotoUrl || l.profile_photo_url || null,
+        source: l.source || l._source || 'manual',
+        verify_tag: l._zbStatus || l.zb_status || l.verifyTag || l.verify_tag || null,
+        zb_status: l._zbStatus || l.zb_status || null,
+        focused_areas: l.focusedAreas || l.focused_areas || null,
+        outreach_hook: l._outreachHook || l.outreach_hook || null,
+        priority_score: l._priorityScore || l.priority_score || null,
+        priority_reason: l._priorityReason || l.priority_reason || null,
+        ai_summary: l.researchContext ? JSON.stringify(l.researchContext) : (l.ai_summary || null),
+        primary_app: (l.researchContext && l.researchContext.application_match) || l.primary_app || null,
+        department: l._department || l.department || null,
+        affiliation: l._affiliation || l.affiliation || null,
+        lab_name: l._labName || l.lab_name || null,
+        tone: l.tone || null,
+        nih_grant_count: l._nihGrantCount || l.nih_grant_count || null,
+        pubmed_count: l._pubmedCount || l.pubmed_count || null,
+        enriched_at: l._enrichedAt || l.enriched_at || null,
+        ai_enriched_at: l._aiEnrichedAt || l.ai_enriched_at || null,
+        added_at: l.addedAt || l.createdAt || l.added_at || new Date().toISOString()
+      };
+    });
+  });
+
+  if (!leads.length) {
+    if (syncEl) { syncEl.textContent = '✓ No leads'; setTimeout(function() { if(syncEl) syncEl.textContent=''; }, 2000); }
+    return;
+  }
+
+  // Batch in groups of 200 to avoid payload limits
+  var batchSize = 200;
+  var totalSaved = 0;
+  var failed = false;
+  for (var i = 0; i < leads.length; i += batchSize) {
+    var batch = leads.slice(i, i + batchSize);
+    try {
+      var res = await fetch(SUPA_URL + '/rest/v1/leads', {
+        method: 'POST', headers: headers,
+        body: JSON.stringify(batch)
+      });
+      if (!res.ok) {
+        var err = await res.text();
+        console.warn('[Supabase] Lead batch failed:', res.status, err.substring(0, 300));
+        failed = true;
+        break;
+      }
+      totalSaved += batch.length;
+    } catch(e) {
+      console.warn('[Supabase] Lead batch error:', e.message);
+      failed = true;
+      break;
+    }
+  }
+
+  if (failed) {
+    if (syncEl) { syncEl.textContent = '⚠ Sync failed (' + totalSaved + '/' + leads.length + ')'; setTimeout(function() { if(syncEl) syncEl.textContent=''; }, 5000); }
+  } else {
+    console.log('[Supabase sync] Saved', totalSaved, 'leads across', pbRows.length, 'playbooks');
+    if (syncEl) { syncEl.textContent = '✓ ' + totalSaved + ' saved'; setTimeout(function() { if(syncEl) syncEl.textContent=''; }, 3000); }
   }
 }
 
@@ -3184,26 +3266,28 @@ window.addEventListener('load', () => {
   buildContactsData();
 
   // Then try Supabase — merge/update if available, but never wipe local data
-  initSupabase().then(async (loggedIn) => {
-    if (!loggedIn) {
-      console.log('[Supabase] Not available — using localStorage only');
-      return;
-    }
+  (async function() {
+    try { await initSupabase(); } catch(e) { console.warn('[Supabase] Init error:', e.message); }
     const emailEl = document.getElementById('navUserEmail');
     if (emailEl && currentUser) {
       emailEl.textContent = currentUser.email;
-      // Update avatar initials
       const avi = document.getElementById('userAvatar');
       if (avi) avi.textContent = currentUser.email.charAt(0).toUpperCase();
     }
-    const loaded = await loadPlaybooksFromSupabase();
-    if (loaded) {
-      renderPlaybooks();
-      buildContactsData();
-      applyContactsFiltersAndRender();
-      updateQueueBadge();
-    }
-  }).catch(e => console.warn('[Supabase] Init error:', e.message));
+    // loadPlaybooksFromSupabase uses direct REST — doesn't need sb client
+    try {
+      const loaded = await loadPlaybooksFromSupabase();
+      if (loaded) {
+        renderPlaybooks();
+        buildContactsData();
+        applyContactsFiltersAndRender();
+        updateQueueBadge();
+        console.log('[Startup] Loaded from Supabase successfully');
+      } else {
+        console.log('[Startup] No data in Supabase — using localStorage');
+      }
+    } catch(e) { console.warn('[Supabase] Load error:', e.message); }
+  })();
 });
 document.getElementById('apiKey').addEventListener('change', e => localStorage.setItem('fidaApiKey', e.target.value.trim()));
     updateSetupStatus();
@@ -12856,6 +12940,7 @@ document.addEventListener('click', function(e) {
 async function checkDbSync() {
   const SUPA_URL = 'https://cqsdsztzyvxtnzrruxeb.supabase.co';
   const SUPA_KEY = 'sb_publishable_oWLb_blZHL_rayCldsPfMw_OoQs0HMR';
+  const userId = getUserId();
 
   // Close any open drawers/modals first
   const drawer = document.getElementById('contactDrawer');
@@ -12865,25 +12950,35 @@ async function checkDbSync() {
 
   showToast('🔍 Checking database sync...', 2000);
 
-  const localLeads = playbooks.flatMap(p => p.leads || []);
+  const localLeads = playbooks.flatMap(function(p) { return p.leads || []; });
   const localCount = localLeads.length;
-  const localWithEmail = localLeads.filter(l => l.email).length;
-  const localEnriched = localLeads.filter(l => l._enrichedAt).length;
-  const localAI = localLeads.filter(l => l._aiEnrichedAt).length;
+  const localWithEmail = localLeads.filter(function(l) { return l.email; }).length;
+  const localEnriched = localLeads.filter(function(l) { return l._enrichedAt; }).length;
+  const localAI = localLeads.filter(function(l) { return l._aiEnrichedAt; }).length;
+  const localPlaybooks = playbooks.length;
 
-  let dbCount = 0, dbWithEmail = 0, dbEnriched = 0, dbAI = 0, dbError = null;
+  let dbCount = 0, dbWithEmail = 0, dbEnriched = 0, dbAI = 0, dbPlaybooks = 0, dbError = null;
 
   try {
+    // Check playbooks
+    const pbRes = await fetch(
+      SUPA_URL + '/rest/v1/playbooks?user_id=eq.' + encodeURIComponent(userId) + '&select=id',
+      { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY } }
+    );
+    const pbData = await pbRes.json();
+    if (Array.isArray(pbData)) dbPlaybooks = pbData.length;
+
+    // Check all leads for this user
     const res = await fetch(
-      SUPA_URL + '/rest/v1/leads?source=eq.linkedin_extension&select=id,email,enriched_at,ai_enriched_at',
+      SUPA_URL + '/rest/v1/leads?user_id=eq.' + encodeURIComponent(userId) + '&select=id,email,enriched_at,ai_enriched_at',
       { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY } }
     );
     const dbLeads = await res.json();
     if (Array.isArray(dbLeads)) {
       dbCount = dbLeads.length;
-      dbWithEmail = dbLeads.filter(l => l.email).length;
-      dbEnriched = dbLeads.filter(l => l.enriched_at).length;
-      dbAI = dbLeads.filter(l => l.ai_enriched_at).length;
+      dbWithEmail = dbLeads.filter(function(l) { return l.email; }).length;
+      dbEnriched = dbLeads.filter(function(l) { return l.enriched_at; }).length;
+      dbAI = dbLeads.filter(function(l) { return l.ai_enriched_at; }).length;
     } else {
       dbError = JSON.stringify(dbLeads).substring(0, 100);
     }
@@ -12910,6 +13005,7 @@ async function checkDbSync() {
           <td style="padding:4px 8px;text-align:center">Status</td>
         </tr>
         ${[
+          ['Playbooks', localPlaybooks, dbPlaybooks],
           ['Total Contacts', localCount, dbCount],
           ['With Email', localWithEmail, dbWithEmail],
           ['NIH Enriched', localEnriched, dbEnriched],
