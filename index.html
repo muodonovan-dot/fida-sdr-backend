@@ -2835,14 +2835,14 @@ async function syncPlaybooksToSupabase() {
     last_name: l.lastName || l.last_name || '',
     job_title: l.jobTitle || l.job_title || '',
     organisation: l.organisation || '',
-    city: l.city || '',
+    city: l.city || l._city || '',
     state: l.state || '',
     country: l.country || '',
     email: l.email || null,
     status: l.status || 'new',
     linkedin_url: l.linkedinUrl || l.linkedin_url || null,
     profile_photo_url: l._profilePhotoUrl || l.profile_photo_url || null,
-    source: l.source || 'manual',
+    source: l.source || l._source || 'manual',
     verify_tag: l._zbStatus || l.zb_status || l.verify_tag || null,
     zb_status: l._zbStatus || l.zb_status || null,
     focused_areas: l.focusedAreas || l.focused_areas || null,
@@ -4779,9 +4779,12 @@ async function processImportFile(file) {
         _linkedinUrl: extractUrl(getField(r, mapping.linkedinUrl)),
         phone: getField(r, mapping.phone),
         _department: getField(r, mapping.department),
+        department: getField(r, mapping.department),
         focusedAreas: getField(r, mapping.focusedAreas),
         _city: getField(r, mapping.city),
+        city: getField(r, mapping.city),
         _source: window._importSource,
+        source: window._importSource,
       };
     }).filter(function(l) { return l.firstName || l.email; });
 
@@ -4944,6 +4947,8 @@ async function executeImportLeads() {
       status: 'pending',
       verifyTag: l.email ? 'unknown' : null,
       addedAt: new Date().toISOString(),
+      _source: source,
+      source: source,
     }));
     if (emailLower) globalEmailIndex.add(emailLower); // prevent within-file dupes too
     added++;
