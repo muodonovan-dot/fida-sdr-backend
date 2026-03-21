@@ -4690,16 +4690,28 @@ async function processImportFile(file) {
     const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
 
     // Smart sheet selection: pick the sheet with the most rows (SciLeads has 7 sheets)
+    // Smart sheet selection: prefer sheets with contact-like headers (email, first name, etc.)
     let bestSheet = wb.SheetNames[0];
-    let bestRowCount = 0;
+    let bestScore = -1;
+    var contactKeywords = ['email','first name','last name','firstname','lastname','phone','job title','linkedin','organisation','organization','company'];
     for (const name of wb.SheetNames) {
       const range = wb.Sheets[name]['!ref'];
       if (!range) continue;
-      const match = range.match(/:.*?(\d+)$/);
-      const rowCount = match ? parseInt(match[1]) : 0;
-      if (rowCount > bestRowCount) { bestRowCount = rowCount; bestSheet = name; }
+      const colMatch = range.match(/:([A-Z]+)/);
+      const rowMatch = range.match(/:.*?(\d+)$/);
+      const colCount = colMatch ? colMatch[1].split('').reduce(function(a,c){return a*26+(c.charCodeAt(0)-64);},0) : 1;
+      const rowCount = rowMatch ? parseInt(rowMatch[1]) : 0;
+      // Check first row for contact-like headers
+      const sheetRows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: false, defval: '' });
+      const hdrs = (sheetRows[0] || []).map(function(h) { return (h || '').toString().toLowerCase().trim(); });
+      var contactHits = 0;
+      contactKeywords.forEach(function(kw) { if (hdrs.some(function(h) { return h.includes(kw); })) contactHits++; });
+      // Score: contact headers worth 1000 each, then rows*cols as tiebreaker
+      var score = (contactHits * 1000) + (rowCount * colCount);
+      console.log('[Import] Sheet "' + name + '": ' + rowCount + ' rows, ' + colCount + ' cols, ' + contactHits + ' contact headers, score=' + score);
+      if (score > bestScore) { bestScore = score; bestSheet = name; }
     }
-    console.log('[Import] Using sheet "' + bestSheet + '" (' + bestRowCount + ' rows) from ' + wb.SheetNames.length + ' sheets');
+    console.log('[Import] Selected sheet "' + bestSheet + '" (score=' + bestScore + ') from ' + wb.SheetNames.length + ' sheets');
 
     const ws = wb.Sheets[bestSheet];
     const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
@@ -4742,7 +4754,7 @@ async function processImportFile(file) {
       mapping.firstName = find('first name','firstname','fname','first');
       mapping.lastName = find('last name','lastname','lname','surname');
       mapping.email = find('email');
-      mapping.jobTitle = find('title','job','position','role');
+      mapping.jobTitle = find('job title','job_title','jobtitle','position','role','title');
       mapping.organisation = find('company','organization','organisation','institution','employer');
       mapping.state = find('state','province');
       mapping.country = find('country');
