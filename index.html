@@ -3216,14 +3216,10 @@ async function autoGenerateKeywords() {
   if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = '🔄 Fetching knowledge base resources...'; }
 
   try {
-    // Step 1: Fetch all resource titles from Supabase
-    var resp = await fetch('https://cqsdsztzyvxtnzrruxeb.supabase.co/rest/v1/fida_resources?select=type,title,url&order=created_at.asc', {
-      headers: {
-        'apikey': 'sb_publishable_oWLb_blZHL_rayCldsPfMw_OoQs0HMR',
-        'Authorization': 'Bearer sb_publishable_oWLb_blZHL_rayCldsPfMw_OoQs0HMR'
-      }
-    });
-    var resources = await resp.json();
+    // Step 1: Fetch all resource titles via backend (avoids CORS/RLS issues)
+    var resp = await fetch(BACKEND + '/list-resources');
+    var data = await resp.json();
+    var resources = data.resources || [];
 
     if (!resources || !resources.length) {
       if (statusEl) { statusEl.textContent = '⚠️ No resources found in knowledge base'; }
