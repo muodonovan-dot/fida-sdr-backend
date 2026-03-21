@@ -678,6 +678,76 @@ footer a { color: var(--orange-light, #ff7a3d); text-decoration: none; }
 tr:hover .row-actions-inline { display:flex; }
 .contact-row { transition: background .1s; }
 .contact-row td { vertical-align: middle; }
+
+/* ── LOCATION BADGES ── */
+.loc-badge {
+  font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:5px;
+  white-space:nowrap;font-family:'Outfit',sans-serif;letter-spacing:.02em;
+}
+.loc-in  { background:rgba(0,200,122,.15);color:#00c87a;border:1px solid rgba(0,200,122,.3); }
+.loc-out { background:rgba(239,77,5,.1); color:var(--orange-light);border:1px solid rgba(239,77,5,.25); }
+.loc-neutral { background:rgba(255,255,255,.07);color:var(--muted);border:1px solid var(--border); }
+.loc-empty { color:var(--muted);font-size:.7rem; }
+
+.loc-verified    { background:rgba(0,119,181,.15);color:#5ba4cf;border:1px solid rgba(0,119,181,.3); }
+.loc-in-verified { background:rgba(0,200,122,.2); color:#00c87a;border:1px solid rgba(0,200,122,.4);font-weight:800; }
+.loc-conflict    { background:rgba(240,192,64,.15);color:#f0c040;border:1px solid rgba(240,192,64,.3); }
+
+
+/* ── CONTACTS PAGE ENHANCEMENTS ── */
+.sort-icon { font-size:.65rem; color:var(--muted); margin-left:2px; }
+.contacts-table th { cursor:default; }
+.contacts-table th[onclick] { cursor:pointer; }
+.contacts-table th[onclick]:hover { color:#fff; }
+
+/* Row hover actions */
+.contacts-table tbody tr { cursor:pointer; position:relative; }
+.contacts-table tbody tr:hover td { background:rgba(255,255,255,.03); }
+
+/* Email status pill */
+.email-pill {
+  font-size:.68rem;padding:2px 7px;border-radius:10px;font-weight:600;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;display:inline-block;
+}
+.email-pill.verified { background:rgba(0,200,122,.12);color:#00c87a;border:1px solid rgba(0,200,122,.25); }
+.email-pill.guessed  { background:rgba(240,192,64,.1); color:#f0c040;border:1px solid rgba(240,192,64,.2); }
+.email-pill.missing  { background:rgba(255,255,255,.05);color:var(--muted);border:1px solid var(--border); }
+
+/* Source badge */
+.source-dot {
+  font-size:.68rem;padding:2px 7px;border-radius:5px;font-weight:600;white-space:nowrap;
+}
+.source-dot.pubmed    { background:rgba(59,130,246,.15);color:#93c5fd; }
+.source-dot.nih       { background:rgba(16,185,129,.12);color:#6ee7b7; }
+.source-dot.linkedin  { background:rgba(0,119,181,.15); color:#5ba4cf; }
+.source-dot.autodiscover { background:rgba(239,77,5,.12);color:var(--orange-light); }
+.source-dot.manual    { background:rgba(255,255,255,.08);color:var(--muted); }
+
+/* Pagination */
+.pg-btn {
+  padding:5px 10px;border-radius:6px;border:1px solid var(--border);
+  background:var(--bg3);color:var(--muted);cursor:pointer;font-size:.75rem;
+  font-family:inherit;transition:.12s;
+}
+.pg-btn:hover:not(:disabled) { border-color:var(--orange);color:#fff; }
+.pg-btn.active { background:rgba(239,77,5,.2);border-color:var(--orange);color:var(--orange-light);font-weight:700; }
+.pg-btn:disabled { opacity:.35;cursor:default; }
+
+/* Contact drawer */
+.drawer-section { padding:16px 20px;border-bottom:1px solid var(--border); }
+.drawer-label { font-size:.65rem;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px; }
+.drawer-field { display:flex;align-items:flex-start;gap:10px;margin-bottom:8px; }
+.drawer-field-icon { font-size:.85rem;margin-top:1px;flex-shrink:0;width:18px;text-align:center; }
+.drawer-field-val { font-size:.8rem;color:var(--text);line-height:1.5; }
+.drawer-field-val.muted { color:var(--muted); }
+.drawer-note-input {
+  width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border);
+  border-radius:7px;padding:8px 10px;color:var(--text);font-size:.78rem;
+  font-family:inherit;resize:vertical;min-height:60px;line-height:1.5;
+}
+.drawer-note-input:focus { outline:none;border-color:rgba(239,77,5,.5); }
+
+</div>
 </style>
 </head>
 <body>
@@ -1677,14 +1747,15 @@ tr:hover .row-actions-inline { display:flex; }
 </div><!-- end #pageContacts -->
 
 <!-- ── CONTACT DETAIL DRAWER ── -->
-<div id="contactDrawer" style="position:fixed;top:0;right:-440px;width:420px;height:100vh;background:var(--bg2);border-left:1px solid var(--border);z-index:1000;display:flex;flex-direction:column;transition:right .25s cubic-bezier(.4,0,.2,1);overflow:hidden">
+<div id="contactDrawerOverlay" onclick="closeContactDrawer()" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,.75);z-index:999;display:none;align-items:center;justify-content:center;backdrop-filter:blur(5px)">
+<div id="contactDrawer" onclick="event.stopPropagation()" style="background:#13111f;border:1px solid rgba(255,255,255,.09);border-radius:16px;width:700px;max-width:96vw;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(0,0,0,.7);overflow:hidden">
   <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
     <div style="font-family:Outfit,sans-serif;font-weight:700;font-size:.9rem;color:#fff">Contact Details</div>
     <button onclick="closeContactDrawer()" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:4px 8px">✕</button>
   </div>
   <div id="contactDrawerBody" style="overflow-y:auto;flex:1;padding:0"></div>
 </div>
-<div id="contactDrawerOverlay" onclick="closeContactDrawer()" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,.3);z-index:999;display:none;backdrop-filter:blur(2px)"></div>
+</div>
 
 </div><!-- close stray div -->
 <!-- ══════════════════════════════════════════════
@@ -6764,7 +6835,7 @@ function openContactDrawer(leadId, pbId) {
         <button onclick="closeContactDrawer();openQuickGenerateModal('${lead.id}','${pbId}')"
           class="btn btn-primary btn-sm" style="flex:1">⚡ Quick Generate</button>
         <button onclick="setActivePlaybook('${pbId}');switchTab('sdr');closeContactDrawer()"
-          class="btn btn-ghost btn-sm" style="flex:1" title="Go to full generate page">Full Page →</button>
+          class="btn btn-ghost btn-sm" style="flex:1" title="Go to Generate page">Generate Page →</button>
         <button onclick="enrichSingleLead('${lead.id}','${pbId}')"
           class="btn btn-ghost btn-sm" style="flex:1" ${hasEmail?'disabled':''}>🔍 Find Email</button>
         <button onclick="findLinkedInForLead({id:'${lead.id}',firstName:'${lead.firstName}',lastName:'${lead.lastName}',organisation:'${(lead.organisation||'').replace(/'/g,'')}'},'${pbId}').then(r=>{if(r.found){openContactDrawer('${lead.id}','${pbId}');showToast(r.linkedinUrl?'🔗 LinkedIn found!':'📍 Location updated')}else{showToast('Not found on LinkedIn')}})"
@@ -6779,14 +6850,78 @@ function openContactDrawer(leadId, pbId) {
 
 
 
-  // Open drawer
-  document.getElementById('contactDrawer').style.right = '0';
-  document.getElementById('contactDrawerOverlay').style.display = 'block';
+  // Inject save bar into drawer shell (outside scroll body) if not already there
+  const drawerShell = document.getElementById('contactDrawer');
+  const _sbLeadId = '${lead.id}';
+  const _sbPbId = '${pbId}';
+  let saveBar = document.getElementById('drawerSaveBar_' + _sbLeadId);
+  if (!saveBar && drawerShell) {
+    saveBar = document.createElement('div');
+    saveBar.id = 'drawerSaveBar_' + _sbLeadId;
+    saveBar.style.cssText = 'flex-shrink:0;padding:10px 22px;background:#13111f;border-top:1px solid rgba(255,255,255,.08)';
+    const saveBtn = document.createElement('button');
+    saveBtn.id = 'drawerSaveBtn_' + _sbLeadId;
+    saveBtn.onclick = function(){ saveContactDrawer(_sbLeadId, _sbPbId); };
+    saveBtn.style.cssText = 'width:100%;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:rgba(255,255,255,.4);font-weight:600;cursor:pointer;font-family:inherit;font-size:.82rem;transition:all .2s';
+    saveBtn.textContent = '💾 Save Changes';
+    saveBar.appendChild(saveBtn);
+    drawerShell.appendChild(saveBar);
+  }
+
+  // Force-style all inputs — beats global input[type="text"] rule
+  body.querySelectorAll('input').forEach(el => {
+    el.style.cssText = 'background:rgba(255,255,255,0.04)!important;border:none!important;border-bottom:1.5px solid rgba(255,255,255,0.15)!important;border-radius:0!important;padding:6px 0!important;color:#fff!important;width:100%!important;box-sizing:border-box!important;font-size:.82rem!important;font-family:inherit!important;outline:none!important;overflow:hidden!important;text-overflow:ellipsis!important;';
+    el.addEventListener('focus', function(){ this.style.borderBottomColor='#EF4D05'; });
+    el.addEventListener('blur', function(){ this.style.borderBottomColor='rgba(255,255,255,0.15)'; });
+    el.addEventListener('input', function(){ markDrawerDirty(_sbLeadId); });
+  });
+  const notesEl = body.querySelector('textarea');
+  if (notesEl) notesEl.addEventListener('input', () => markDrawerDirty(_sbLeadId));
+
+  // Open as centered modal
+  const overlay = document.getElementById('contactDrawerOverlay');
+  overlay.style.display = 'flex';
 }
 
 function closeContactDrawer() {
-  document.getElementById('contactDrawer').style.right = '-440px';
   document.getElementById('contactDrawerOverlay').style.display = 'none';
+  window._drawerDirty = false;
+}
+
+function markDrawerDirty(leadId) {
+  window._drawerDirty = true;
+  const btn = document.getElementById('drawerSaveBtn_' + leadId);
+  if (btn && !btn._dirty) {
+    btn._dirty = true;
+    btn.style.background = '#EF4D05';
+    btn.style.color = '#fff';
+    btn.style.borderColor = '#EF4D05';
+  }
+}
+
+function saveContactDrawer(leadId, pbId) {
+  const btn = document.getElementById('drawerSaveBtn_' + leadId);
+  if (btn) {
+    btn.textContent = '✅ Saved!';
+    btn.style.background = '#00c87a';
+    btn.style.color = '#fff';
+    btn.style.borderColor = '#00c87a';
+    btn.disabled = true;
+    setTimeout(() => {
+      btn.textContent = '💾 Save Changes';
+      btn.style.background = 'rgba(255,255,255,.04)';
+      btn.style.color = 'rgba(255,255,255,.4)';
+      btn.style.borderColor = 'rgba(255,255,255,.1)';
+      btn._dirty = false;
+      btn.disabled = false;
+    }, 2000);
+  }
+  savePlaybooksToStorage();
+  buildContactsData();
+  if (document.getElementById('pageContacts')?.style.display !== 'none') {
+    applyContactsFiltersAndRender();
+  }
+  window._drawerDirty = false;
 }
 
 function saveContactNote(leadId, pbId, note) {
@@ -12421,73 +12556,4 @@ async function checkDbSync() {
   </div>
 </div>
 </body>
-
-/* ── LOCATION BADGES ── */
-.loc-badge {
-  font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:5px;
-  white-space:nowrap;font-family:'Outfit',sans-serif;letter-spacing:.02em;
-}
-.loc-in  { background:rgba(0,200,122,.15);color:#00c87a;border:1px solid rgba(0,200,122,.3); }
-.loc-out { background:rgba(239,77,5,.1); color:var(--orange-light);border:1px solid rgba(239,77,5,.25); }
-.loc-neutral { background:rgba(255,255,255,.07);color:var(--muted);border:1px solid var(--border); }
-.loc-empty { color:var(--muted);font-size:.7rem; }
-
-.loc-verified    { background:rgba(0,119,181,.15);color:#5ba4cf;border:1px solid rgba(0,119,181,.3); }
-.loc-in-verified { background:rgba(0,200,122,.2); color:#00c87a;border:1px solid rgba(0,200,122,.4);font-weight:800; }
-.loc-conflict    { background:rgba(240,192,64,.15);color:#f0c040;border:1px solid rgba(240,192,64,.3); }
-
-
-/* ── CONTACTS PAGE ENHANCEMENTS ── */
-.sort-icon { font-size:.65rem; color:var(--muted); margin-left:2px; }
-.contacts-table th { cursor:default; }
-.contacts-table th[onclick] { cursor:pointer; }
-.contacts-table th[onclick]:hover { color:#fff; }
-
-/* Row hover actions */
-.contacts-table tbody tr { cursor:pointer; position:relative; }
-.contacts-table tbody tr:hover td { background:rgba(255,255,255,.03); }
-
-/* Email status pill */
-.email-pill {
-  font-size:.68rem;padding:2px 7px;border-radius:10px;font-weight:600;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;display:inline-block;
-}
-.email-pill.verified { background:rgba(0,200,122,.12);color:#00c87a;border:1px solid rgba(0,200,122,.25); }
-.email-pill.guessed  { background:rgba(240,192,64,.1); color:#f0c040;border:1px solid rgba(240,192,64,.2); }
-.email-pill.missing  { background:rgba(255,255,255,.05);color:var(--muted);border:1px solid var(--border); }
-
-/* Source badge */
-.source-dot {
-  font-size:.68rem;padding:2px 7px;border-radius:5px;font-weight:600;white-space:nowrap;
-}
-.source-dot.pubmed    { background:rgba(59,130,246,.15);color:#93c5fd; }
-.source-dot.nih       { background:rgba(16,185,129,.12);color:#6ee7b7; }
-.source-dot.linkedin  { background:rgba(0,119,181,.15); color:#5ba4cf; }
-.source-dot.autodiscover { background:rgba(239,77,5,.12);color:var(--orange-light); }
-.source-dot.manual    { background:rgba(255,255,255,.08);color:var(--muted); }
-
-/* Pagination */
-.pg-btn {
-  padding:5px 10px;border-radius:6px;border:1px solid var(--border);
-  background:var(--bg3);color:var(--muted);cursor:pointer;font-size:.75rem;
-  font-family:inherit;transition:.12s;
-}
-.pg-btn:hover:not(:disabled) { border-color:var(--orange);color:#fff; }
-.pg-btn.active { background:rgba(239,77,5,.2);border-color:var(--orange);color:var(--orange-light);font-weight:700; }
-.pg-btn:disabled { opacity:.35;cursor:default; }
-
-/* Contact drawer */
-.drawer-section { padding:16px 20px;border-bottom:1px solid var(--border); }
-.drawer-label { font-size:.65rem;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px; }
-.drawer-field { display:flex;align-items:flex-start;gap:10px;margin-bottom:8px; }
-.drawer-field-icon { font-size:.85rem;margin-top:1px;flex-shrink:0;width:18px;text-align:center; }
-.drawer-field-val { font-size:.8rem;color:var(--text);line-height:1.5; }
-.drawer-field-val.muted { color:var(--muted); }
-.drawer-note-input {
-  width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border);
-  border-radius:7px;padding:8px 10px;color:var(--text);font-size:.78rem;
-  font-family:inherit;resize:vertical;min-height:60px;line-height:1.5;
-}
-.drawer-note-input:focus { outline:none;border-color:rgba(239,77,5,.5); }
-
-</html></div>
+</html>
