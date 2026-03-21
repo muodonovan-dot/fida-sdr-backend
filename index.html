@@ -748,6 +748,19 @@ tr:hover .row-actions-inline { display:flex; }
 .drawer-note-input:focus { outline:none;border-color:rgba(239,77,5,.5); }
 
 </div>
+/* ── Import Leads page ─────────────────────────────────── */
+.import-source-btn {
+  padding:5px 14px;border-radius:20px;border:1px solid rgba(255,255,255,.12);
+  background:transparent;color:rgba(255,255,255,.45);font-size:.75rem;cursor:pointer;
+  font-family:inherit;transition:.15s;
+}
+.import-source-btn:hover { border-color:rgba(239,77,5,.4);color:rgba(255,255,255,.8); }
+.import-source-btn.active { background:rgba(239,77,5,.15);border-color:var(--orange);color:#fff;font-weight:600; }
+.import-field-row { display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:.8rem; }
+.import-field-label { width:130px;color:rgba(255,255,255,.5);flex-shrink:0; }
+.import-field-mapped { color:#fff;font-weight:500; }
+.import-field-none { color:rgba(255,255,255,.2);font-style:italic; }
+
 </style>
 </head>
 <body>
@@ -781,6 +794,9 @@ tr:hover .row-actions-inline { display:flex; }
     </button>
     <button class="sidebar-item" id="navLinkedin" onclick="switchTab('linkedin')">
       <span class="si">💼</span><span>LinkedIn</span>
+    </button>
+    <button class="sidebar-item" id="navImport" onclick="switchTab('import')">
+      <span class="si">📥</span><span>Import Leads</span>
     </button>
     <button class="sidebar-item" id="navSdr" onclick="switchTab('sdr')">
       <span class="si">⚡</span><span>Generate</span>
@@ -1597,6 +1613,46 @@ tr:hover .row-actions-inline { display:flex; }
     </div>
   </div>
 </div><!-- end #pageLinkedin -->
+
+<!-- ══════════════════════════════════════════════════════════
+     PAGE: IMPORT LEADS
+════════════════════════════════════════════════════════════ -->
+<div id="pageImport" style="display:none;overflow-y:auto;padding:28px 32px;max-width:780px">
+  <div style="margin-bottom:24px">
+    <div style="font-size:.72rem;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Import Leads</div>
+    <div style="font-size:.82rem;color:var(--muted)">Upload a CSV or Excel file from SciLeads, LeadGeeks, HubSpot, LinkedIn, ZoomInfo, or any other source. Claude will map the columns automatically.</div>
+  </div>
+
+  <!-- Source selector -->
+  <div style="margin-bottom:20px">
+    <div style="font-size:.72rem;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Source</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap" id="importSourceBtns">
+      <button class="import-source-btn active" data-source="scileads" onclick="setImportSource('scileads',this)">SciLeads</button>
+      <button class="import-source-btn" data-source="leadgeeks" onclick="setImportSource('leadgeeks',this)">LeadGeeks</button>
+      <button class="import-source-btn" data-source="linkedin_export" onclick="setImportSource('linkedin_export',this)">LinkedIn Export</button>
+      <button class="import-source-btn" data-source="hubspot" onclick="setImportSource('hubspot',this)">HubSpot</button>
+      <button class="import-source-btn" data-source="zoominfo" onclick="setImportSource('zoominfo',this)">ZoomInfo</button>
+      <button class="import-source-btn" data-source="salesforce" onclick="setImportSource('salesforce',this)">Salesforce</button>
+      <button class="import-source-btn" data-source="manual" onclick="setImportSource('manual',this)">Manual / Other</button>
+    </div>
+  </div>
+
+  <!-- Drop zone -->
+  <div id="importDropzone"
+    style="border:2px dashed rgba(255,255,255,.12);border-radius:12px;padding:40px 24px;text-align:center;cursor:pointer;transition:.2s;margin-bottom:20px;position:relative"
+    ondragover="importDragOver(event)" ondragleave="importDragLeave(event)" ondrop="importDrop(event)"
+    onclick="document.getElementById('importFileInput').click()">
+    <div style="font-size:2rem;margin-bottom:8px;opacity:.5">📂</div>
+    <div style="font-size:.9rem;color:var(--text);margin-bottom:4px">Drop your file here or <span style="color:var(--orange-light);text-decoration:underline">browse</span></div>
+    <div style="font-size:.72rem;color:var(--muted)">CSV, XLSX, XLS — exports from SciLeads, HubSpot, LinkedIn, ZoomInfo, etc.</div>
+    <input type="file" id="importFileInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleImportFile(this)"/>
+  </div>
+
+  <!-- Status / preview area -->
+  <div id="importPreview" style="display:none">
+    <!-- Filled dynamically -->
+  </div>
+</div>
 
 
 <!-- ══════════════════════════════════════════════
@@ -3166,7 +3222,7 @@ function switchTab(tab) {
   // Map tab names to page IDs
   const pageMap = {
     playbooks: 'pagePlaybooks', contacts: 'pageContacts',
-    aiDiscover: 'pageAiDiscover', searchLeads: 'pageSearchLeads', linkedin: 'pageLinkedin',
+    aiDiscover: 'pageAiDiscover', searchLeads: 'pageSearchLeads', linkedin: 'pageLinkedin', import: 'pageImport',
     sdr: 'pageSdr', analytics: 'pageAnalytics', settings: 'pageSettings'
   };
   // Show/hide pages
@@ -3181,7 +3237,7 @@ function switchTab(tab) {
   // Update sidebar active state
   const navMap = {
     playbooks:'navPlaybooks', contacts:'navContacts',
-    aiDiscover:'navAiDiscover', searchLeads:'navSearchLeads', linkedin:'navLinkedin',
+    aiDiscover:'navAiDiscover', searchLeads:'navSearchLeads', linkedin:'navLinkedin', import:'navImport',
     sdr:'navSdr', analytics:'navAnalytics', settings:'navSettings'
   };
   Object.entries(navMap).forEach(([t, id]) => {
@@ -3191,7 +3247,7 @@ function switchTab(tab) {
   // Header title
   const titles = {
     playbooks:'Playbooks', contacts:'Contacts',
-    aiDiscover:'AI Discover', searchLeads:'Search Leads', linkedin:'LinkedIn Leads',
+    aiDiscover:'AI Discover', searchLeads:'Search Leads', linkedin:'LinkedIn Leads', import:'Import Leads',
     sdr:'Generate Emails', analytics:'Analytics', settings:'Settings'
   };
   const titleEl = document.getElementById('contentTitle');
@@ -4603,6 +4659,242 @@ function closeModal() { document.getElementById('previewModal').classList.remove
 document.getElementById('previewModal').addEventListener('click', e => { if (e.target===document.getElementById('previewModal')) closeModal(); });
 
 // Export CSV
+// ══════════════════════════════════════════════════════════
+// IMPORT LEADS — CSV/Excel upload with Claude field mapping
+// ══════════════════════════════════════════════════════════
+
+window._importSource = 'scileads';
+
+function setImportSource(source, btn) {
+  window._importSource = source;
+  document.querySelectorAll('.import-source-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function importDragOver(e) {
+  e.preventDefault();
+  document.getElementById('importDropzone').style.borderColor = 'var(--orange)';
+  document.getElementById('importDropzone').style.background = 'rgba(239,77,5,.04)';
+}
+function importDragLeave(e) {
+  document.getElementById('importDropzone').style.borderColor = 'rgba(255,255,255,.12)';
+  document.getElementById('importDropzone').style.background = '';
+}
+function importDrop(e) {
+  e.preventDefault();
+  importDragLeave(e);
+  const file = e.dataTransfer.files[0];
+  if (file) processImportFile(file);
+}
+function handleImportFile(input) {
+  const file = input.files[0];
+  if (file) processImportFile(file);
+  input.value = '';
+}
+
+async function processImportFile(file) {
+  const preview = document.getElementById('importPreview');
+  preview.style.display = 'block';
+  preview.innerHTML = '<div style="color:var(--muted);font-size:.82rem;padding:16px 0">\u23f3 Reading file...</div>';
+
+  try {
+    const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+    if (!rows.length) { preview.innerHTML = '<div style="color:var(--orange)">No data found in file.</div>'; return; }
+
+    const headers = (rows[0] || []).map(h => (h || '').toString().trim());
+    const sampleRows = rows.slice(1, 6);
+
+    preview.innerHTML = '<div style="color:var(--muted);font-size:.82rem;padding:16px 0">\ud83e\udd16 Mapping ' + headers.length + ' columns with Claude...</div>';
+
+    const apiKey = localStorage.getItem('fidaApiKey');
+    let mapping = null;
+
+    if (apiKey) {
+      try {
+        const prompt = "You are mapping CSV column headers to a contact schema for a biotech sales tool.\n\nHeaders from the uploaded file:\n" +
+          headers.map(function(h, i) { return i + ': "' + h + '"'; }).join('\\n') +
+          "\n\nSample row 1: " + JSON.stringify(sampleRows[0] || []) +
+          "\n\nMap these headers to our schema fields. Return ONLY a JSON object where keys are our schema fields and values are the column index (0-based integer) or null if not present:\n{\n  \"firstName\": <index or null>,\n  \"lastName\": <index or null>,\n  \"email\": <index or null>,\n  \"jobTitle\": <index or null>,\n  \"organisation\": <index or null>,\n  \"state\": <index or null>,\n  \"country\": <index or null>,\n  \"linkedinUrl\": <index or null>,\n  \"phone\": <index or null>,\n  \"department\": <index or null>,\n  \"focusedAreas\": <index or null>,\n  \"city\": <index or null>\n}\n\nRules:\n- First Name, firstname, fname, first -> firstName\n- Last Name, lastname, lname, last, surname -> lastName\n- Email, email address, work email -> email\n- Title, job title, position, role -> jobTitle\n- Company, organization, organisation, institution, employer -> organisation\n- LinkedIn, linkedin url, profile url -> linkedinUrl\n- Department, dept, lab, division -> department\nReturn ONLY valid JSON, no markdown.";
+
+        const resp = await callClaude(apiKey, prompt, 400);
+        const cleaned = resp.replace(/```json|```/g, '').trim();
+        mapping = JSON.parse(cleaned);
+      } catch(e) {
+        console.warn('[Import] Claude mapping failed:', e.message);
+      }
+    }
+
+    // Fallback heuristic mapping
+    if (!mapping) {
+      mapping = {};
+      const hLower = headers.map(h => h.toLowerCase());
+      const find = function() {
+        for (let i = 0; i < arguments.length; i++) {
+          const idx = hLower.findIndex(h => h.includes(arguments[i]));
+          if (idx >= 0) return idx;
+        }
+        return null;
+      };
+      mapping.firstName = find('first name','firstname','fname','first');
+      mapping.lastName = find('last name','lastname','lname','surname');
+      mapping.email = find('email');
+      mapping.jobTitle = find('title','job','position','role');
+      mapping.organisation = find('company','organization','organisation','institution','employer');
+      mapping.state = find('state','province');
+      mapping.country = find('country');
+      mapping.linkedinUrl = find('linkedin');
+      mapping.phone = find('phone','telephone','mobile');
+      mapping.department = find('department','dept','lab','division');
+      mapping.focusedAreas = find('focus','research','specialty','keywords');
+      mapping.city = find('city','location');
+    }
+
+    const parsedLeads = rows.slice(1).filter(r => r.length > 0).map(function(r) {
+      return {
+        firstName: mapping.firstName !== null && mapping.firstName !== undefined ? String(r[mapping.firstName] || '') : '',
+        lastName: mapping.lastName !== null && mapping.lastName !== undefined ? String(r[mapping.lastName] || '') : '',
+        email: mapping.email !== null && mapping.email !== undefined ? String(r[mapping.email] || '') : '',
+        jobTitle: mapping.jobTitle !== null && mapping.jobTitle !== undefined ? String(r[mapping.jobTitle] || '') : '',
+        organisation: mapping.organisation !== null && mapping.organisation !== undefined ? String(r[mapping.organisation] || '') : '',
+        state: mapping.state !== null && mapping.state !== undefined ? String(r[mapping.state] || '') : '',
+        country: mapping.country !== null && mapping.country !== undefined ? String(r[mapping.country] || '') : '',
+        _linkedinUrl: mapping.linkedinUrl !== null && mapping.linkedinUrl !== undefined ? String(r[mapping.linkedinUrl] || '') : '',
+        phone: mapping.phone !== null && mapping.phone !== undefined ? String(r[mapping.phone] || '') : '',
+        _department: mapping.department !== null && mapping.department !== undefined ? String(r[mapping.department] || '') : '',
+        focusedAreas: mapping.focusedAreas !== null && mapping.focusedAreas !== undefined ? String(r[mapping.focusedAreas] || '') : '',
+        _city: mapping.city !== null && mapping.city !== undefined ? String(r[mapping.city] || '') : '',
+        _source: window._importSource,
+      };
+    }).filter(function(l) { return l.firstName || l.email; });
+
+    showImportPreview(parsedLeads, mapping, headers, sampleRows, file.name);
+
+  } catch(e) {
+    preview.innerHTML = '<div style="color:var(--orange)">Error reading file: ' + e.message + '</div>';
+  }
+}
+
+function showImportPreview(leads, mapping, headers, sampleRows, filename) {
+  const preview = document.getElementById('importPreview');
+  const source = window._importSource;
+
+  const fieldLabels = {
+    firstName:'First Name', lastName:'Last Name', email:'Email',
+    jobTitle:'Job Title', organisation:'Organisation', state:'State',
+    country:'Country', linkedinUrl:'LinkedIn URL', phone:'Phone',
+    department:'Department', focusedAreas:'Research Focus', city:'City'
+  };
+
+  let mappingRows = '';
+  Object.entries(fieldLabels).forEach(function([field, label]) {
+    const colIdx = mapping[field];
+    const colName = (colIdx !== null && colIdx !== undefined) ? headers[colIdx] : null;
+    const sampleVal = (colIdx !== null && colIdx !== undefined && sampleRows[0]) ? String(sampleRows[0][colIdx] || '') : '';
+    mappingRows += '<div class="import-field-row">' +
+      '<div class="import-field-label">' + label + '</div>' +
+      (colName
+        ? '<div class="import-field-mapped">\u2190 \"' + colName + '\" <span style="color:var(--muted);font-size:.72rem">(e.g. ' + sampleVal.substring(0,30) + ')</span></div>'
+        : '<div class="import-field-none">not found</div>') +
+      '</div>';
+  });
+
+  const pbOptions = playbooks.map(pb => '<option value="' + pb.id + '">' + pb.name + '</option>').join('');
+  const sourceNames = { scileads:'SciLeads', leadgeeks:'LeadGeeks', linkedin_export:'LinkedIn Export',
+    hubspot:'HubSpot', zoominfo:'ZoomInfo', salesforce:'Salesforce', manual:'Manual' };
+
+  preview._leads = leads;
+  preview.innerHTML =
+    '<div style="background:rgba(0,200,122,.06);border:1px solid rgba(0,200,122,.2);border-radius:10px;padding:14px 18px;margin-bottom:20px">' +
+      '<div style="font-size:.8rem;color:#00c87a;font-weight:700;margin-bottom:2px">\u2705 ' + leads.length + ' leads ready from <em>' + filename + '</em></div>' +
+      '<div style="font-size:.73rem;color:var(--muted)">Source: <strong style="color:#fff">' + (sourceNames[source] || source) + '</strong></div>' +
+    '</div>' +
+    '<div style="margin-bottom:18px">' +
+      '<div style="font-size:.72rem;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">Column Mapping</div>' +
+      mappingRows +
+    '</div>' +
+    '<div style="margin-bottom:20px">' +
+      '<div style="font-size:.72rem;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Assign to Playbook</div>' +
+      '<select id="importPlaybookSelect" style="width:100%;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.82rem">' +
+        '<option value="">— Create new playbook from filename —</option>' +
+        pbOptions +
+      '</select>' +
+    '</div>' +
+    '<div style="display:flex;gap:10px">' +
+      '<button onclick="executeImportLeads()" style="flex:1;padding:11px;border-radius:8px;border:none;background:var(--orange);color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:.88rem">\ud83d\udce5 Import ' + leads.length + ' Leads</button>' +
+      '<button onclick="var p=document.getElementById(\"importPreview\");if(p)p.style.display=\'none\'" style="padding:11px 18px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:.82rem">Cancel</button>' +
+    '</div>';
+}
+
+async function executeImportLeads() {
+  const preview = document.getElementById('importPreview');
+  const leads = preview._leads;
+  if (!leads || !leads.length) return;
+
+  const pbSelect = document.getElementById('importPlaybookSelect');
+  const selectedPbId = pbSelect ? pbSelect.value : '';
+  const source = window._importSource;
+
+  let targetPb;
+  if (selectedPbId) {
+    targetPb = playbooks.find(p => p.id === selectedPbId);
+  } else {
+    const sourceNames = { scileads:'SciLeads Import', leadgeeks:'LeadGeeks Import', linkedin_export:'LinkedIn Export',
+      hubspot:'HubSpot Import', zoominfo:'ZoomInfo Import', salesforce:'Salesforce Import', manual:'Manual Import' };
+    const pbName = (sourceNames[source] || 'Imported Leads') + ' \u2014 ' + new Date().toLocaleDateString();
+    targetPb = { id: 'pb_' + Date.now(), name: pbName, color: '#5ba4cf',
+      brief: '', keywords: '', angle: '', tone: 'academic', methodology: '', leads: [], created_at: new Date().toISOString() };
+    playbooks.push(targetPb);
+  }
+
+  // Build a global email index across ALL playbooks for dedup
+  const globalEmailIndex = new Set();
+  playbooks.forEach(function(pb) {
+    (pb.leads || []).forEach(function(l) {
+      if (l.email) globalEmailIndex.add(l.email.toLowerCase().trim());
+    });
+  });
+
+  let added = 0, dupes = 0, crossPlaybookDupes = 0;
+  leads.forEach(function(l) {
+    const emailLower = (l.email || '').toLowerCase().trim();
+    if (emailLower && globalEmailIndex.has(emailLower)) {
+      // Already exists somewhere in the app
+      const inTargetPb = targetPb.leads.find(e => (e.email || '').toLowerCase() === emailLower);
+      dupes++;
+      if (!inTargetPb) crossPlaybookDupes++;
+      return;
+    }
+    targetPb.leads.push(Object.assign({}, l, {
+      id: 'lead_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+      status: 'pending',
+      verifyTag: l.email ? 'unknown' : null,
+      addedAt: new Date().toISOString(),
+    }));
+    if (emailLower) globalEmailIndex.add(emailLower); // prevent within-file dupes too
+    added++;
+  });
+
+  await savePlaybooksToStorage();
+  buildContactsData();
+  syncPlaybooksToSupabase();
+
+  let toastMsg = '\u2705 Imported ' + added + ' leads \u2192 ' + targetPb.name;
+  if (dupes > 0) {
+    toastMsg += ' (' + dupes + ' duplicate' + (dupes > 1 ? 's' : '') + ' skipped';
+    if (crossPlaybookDupes > 0) toastMsg += ', ' + crossPlaybookDupes + ' already in other playbooks';
+    toastMsg += ')';
+  }
+  showToast(toastMsg, 5000);
+  preview.style.display = 'none';
+
+  setTimeout(function() {
+    setActivePlaybook(targetPb.id);
+    switchTab('contacts');
+  }, 800);
+}
+
 function exportCSV() {
   const cap = document.getElementById('dailyCap').value;
   const done = results.filter(r => r.status==='done' && !isDNC(r) && r.verifyTag!=='invalid');
