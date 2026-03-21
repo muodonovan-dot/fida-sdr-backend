@@ -219,6 +219,17 @@ app.post('/instantly-push', async (req, res) => {
     }
 
     const campaignId = campData.id;
+
+    // Instantly ignores campaign_schedule on POST — must PATCH it separately
+    const scheduleToApply = normalizeSchedule(campaign_schedule);
+    const patchResp = await fetch(`https://api.instantly.ai/api/v2/campaigns/${campaignId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + instantlyKey },
+      body: JSON.stringify({ campaign_schedule: scheduleToApply })
+    });
+    const patchData = await patchResp.json();
+    console.log('Schedule PATCH:', patchResp.status, JSON.stringify(patchData?.campaign_schedule?.schedules?.[0]?.days || patchData).substring(0, 200));
+
     let pushed = 0, failed = 0;
 
     // Instantly V2 correct flow per support:
