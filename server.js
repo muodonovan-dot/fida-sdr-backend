@@ -146,14 +146,14 @@ app.post('/instantly-push', async (req, res) => {
       if (!sched) return {
         schedules: [{
           name: 'Business Hours',
-          timing: { from: '08:00', to: '17:00' },
+          timing: { from: '08:00', to: '18:00' },
           days: { monday: true, tuesday: true, wednesday: true, thursday: true, friday: true, saturday: false, sunday: false },
           timezone: 'America/Chicago'
         }]
       };
       if (sched.schedules) {
         sched.schedules.forEach(s => {
-          s.timezone = 'America/Chicago';
+          if (!s.timezone) s.timezone = 'America/Chicago'; // only default if not set
           // Convert array format to object if needed
           if (Array.isArray(s.days)) {
             const all = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
@@ -206,6 +206,7 @@ app.post('/instantly-push', async (req, res) => {
       } catch(e) { console.warn('Could not fetch Instantly accounts:', e.message); }
     }
 
+    console.log('Campaign schedule being sent:', JSON.stringify(campaignBody.campaign_schedule));
     const campResp = await fetch('https://api.instantly.ai/api/v2/campaigns', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + instantlyKey },
@@ -278,30 +279,15 @@ app.post('/instantly-push', async (req, res) => {
           leadId = listData.items?.[0]?.id;
           if (leadId) console.log('Found existing lead:', lead.email, '| id:', leadId);
         }
-      }
-
-      if (!leadId) { failed++; continue; }
-
-      // Step 2: Move lead to campaign
-      console.log('Step 2: Moving lead to campaign:', leadId, '->', campaignId);
-      // The /leads/move endpoint is for bulk-moving between campaigns, not initial add.
-      // Instead: PATCH the lead immediately after creation to set campaign
-      console.log('Step 2: PATCHing lead to set campaign:', leadId, '->', campaignId);
-      const moveRes = await fetch(`https://api.instantly.ai/api/v2/leads/${leadId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + instantlyKey },
-        body: JSON.stringify({ campaign: campaignId })
-      });
-      if (moveRes.ok) {
+      } // end else (create failed)
+      // campaign is included in the create payload, so no separate move step needed
+      if (leadId) {
         pushed++;
-        const moveData = await moveRes.json();
-        console.log('Lead moved to campaign OK:', lead.email, '| job:', moveData.id || JSON.stringify(moveData).substring(0,100));
+        console.log('Lead created and linked to campaign:', lead.email, '| id:', leadId);
       } else {
         failed++;
-        const errText = await moveRes.text();
-        console.error('Move to campaign failed:', lead.email, moveRes.status, errText.substring(0, 200));
       }
-    }
+    } // end for loop
 
     await fetch(`https://api.instantly.ai/api/v2/campaigns/${campaignId}/activate`, {
       method: 'POST',
@@ -396,7 +382,7 @@ RESEARCH CONTEXT: ${researchContext ? JSON.stringify(researchContext) : 'No spec
 FIDA NEO: 40nL sample, label-free, measures Rh/polydispersity/aggregation in native conditions. ${appDesc}. Cytiva/Biacore partner.
 CAMPAIGN: ${contextDescriptions[campaignContext] || contextDescriptions.generic}
 ${kbText ? `KNOWLEDGE BASE:\n${kbText}` : ''}
-Write a ${emailCount}-email sequence. Each email: concise (150-200 words), reference their research, non-spammy subject, soft CTA, sign off as: Best,\n${senderName}\nFida Bio. Each follow-up uses a different angle.
+Address the recipient by their first name ${lead.firstName} - NEVER write [name] or [First Name] or any placeholder. Write a ${emailCount}-email sequence. Each email: concise (150-200 words), reference their research, non-spammy subject, soft CTA, sign off as: Best,\n${senderName}\nFida Bio. Each follow-up uses a different angle.
 Return ONLY valid JSON: { "personalization_note": "...", "matched_app": "...", ${Array.from({length: emailCount}, (_, i) => `"email${i+1}": { "subject": "...", "body": "..." }`).join(', ')} }`;
 
   try {
