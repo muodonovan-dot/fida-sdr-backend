@@ -4763,6 +4763,11 @@ async function processImportFile(file) {
   }
 }
 
+function closeImportModal() {
+  const m = document.getElementById('importModal');
+  if (m) m.remove();
+}
+
 function showImportPreview(leads, mapping, headers, sampleRows, filename) {
   const source = window._importSource || 'scileads';
 
@@ -4806,7 +4811,7 @@ function showImportPreview(leads, mapping, headers, sampleRows, filename) {
   const modal = document.createElement('div');
   modal.id = 'importModal';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)';
-  modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
+  modal.onclick = function(e) { if (e.target === modal) closeImportModal(); };
 
   modal.innerHTML =
     '<div onclick="event.stopPropagation()" style="background:#13111f;border:1px solid rgba(255,255,255,.1);border-radius:16px;width:580px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.7);overflow:hidden">' +
@@ -4817,7 +4822,7 @@ function showImportPreview(leads, mapping, headers, sampleRows, filename) {
           '<div style="font-family:Outfit,sans-serif;font-weight:700;font-size:1rem;color:#fff">' + leads.length + ' leads ready to import</div>' +
           '<div style="font-size:.72rem;color:rgba(255,255,255,.3);margin-top:2px">' + filename + '</div>' +
         '</div>' +
-        '<button onclick="var m=document.getElementById(\"importModal\");if(m)m.remove()" style="background:transparent;border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.4);padding:4px 12px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:.72rem">✕ Cancel</button>' +
+        '<button onclick="closeImportModal()" style="background:transparent;border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.4);padding:4px 12px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:.72rem">✕ Cancel</button>' +
       '</div>' +
 
       // Scrollable body
@@ -4826,7 +4831,7 @@ function showImportPreview(leads, mapping, headers, sampleRows, filename) {
         // Source selector
         '<div style="margin-bottom:20px">' +
           '<div style="font-size:.65rem;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Source</div>' +
-          '<select id="importSourceSelect" style="width:100%;padding:9px 12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#fff;font-family:inherit;font-size:.84rem">' +
+          '<select id="importSourceSelect" style="width:100%;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.84rem">' +
             sourceOptions +
           '</select>' +
         '</div>' +
@@ -4843,7 +4848,7 @@ function showImportPreview(leads, mapping, headers, sampleRows, filename) {
         // Playbook selector
         '<div style="margin-bottom:4px">' +
           '<div style="font-size:.65rem;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Assign to Playbook</div>' +
-          '<select id="importPlaybookSelect" style="width:100%;padding:9px 12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#fff;font-family:inherit;font-size:.84rem">' +
+          '<select id="importPlaybookSelect" style="width:100%;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.84rem">' +
             '<option value="">— Create new playbook from source name —</option>' +
             pbOptions +
           '</select>' +
