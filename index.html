@@ -2789,7 +2789,7 @@ async function syncPlaybooksToSupabase() {
   const userId = getUserId();
   if (!userId) return;
   const syncEl = document.getElementById('syncStatus');
-  if (syncEl) syncEl.textContent = '⟳ Syncing...';
+  if (syncEl) { syncEl.textContent = '⟳ Syncing...'; syncEl.style.color = 'var(--orange-light)'; }
 
   const SUPA_URL = 'https://cqsdsztzyvxtnzrruxeb.supabase.co';
   const SUPA_KEY = 'sb_publishable_oWLb_blZHL_rayCldsPfMw_OoQs0HMR';
@@ -2807,8 +2807,11 @@ async function syncPlaybooksToSupabase() {
     methodology: pb.methodology || '',
     created_at: pb.createdAt || pb.created_at || new Date().toISOString()
   }));
+
+  let pbOk = false, leadsOk = false;
+
   try {
-    await fetch(SUPA_URL + '/rest/v1/playbooks', {
+    const pbRes = await fetch(SUPA_URL + '/rest/v1/playbooks', {
       method: 'POST',
       headers: {
         'apikey': SUPA_KEY,
@@ -2818,6 +2821,8 @@ async function syncPlaybooksToSupabase() {
       },
       body: JSON.stringify(pbRows)
     });
+    pbOk = pbRes.ok;
+    if (!pbRes.ok) console.warn('[Supabase playbooks sync failed]', pbRes.status, await pbRes.text().catch(()=>''));
   } catch(e) { console.warn('[Supabase playbooks sync error]', e.message); }
 
   const leads = playbooks.flatMap(pb => (pb.leads || []).map(l => ({
@@ -2828,15 +2833,15 @@ async function syncPlaybooksToSupabase() {
     last_name: l.lastName || l.last_name || '',
     job_title: l.jobTitle || l.job_title || '',
     organisation: l.organisation || '',
-    city: l.city || '',
+    city: l._city || l.city || '',
     state: l.state || '',
     country: l.country || '',
     email: l.email || null,
     status: l.status || 'new',
-    linkedin_url: l.linkedinUrl || l.linkedin_url || null,
+    linkedin_url: l._linkedinUrl || l.linkedinUrl || l.linkedin_url || null,
     profile_photo_url: l._profilePhotoUrl || l.profile_photo_url || null,
-    source: l.source || 'manual',
-    verify_tag: l._zbStatus || l.zb_status || l.verify_tag || null,
+    source: l._source || l.source || 'manual',
+    verify_tag: l.verifyTag || l._zbStatus || l.zb_status || l.verify_tag || null,
     zb_status: l._zbStatus || l.zb_status || null,
     focused_areas: l.focusedAreas || l.focused_areas || null,
     outreach_hook: l._outreachHook || l.outreach_hook || null,
@@ -2852,11 +2857,11 @@ async function syncPlaybooksToSupabase() {
     pubmed_count: l._pubmedCount || l.pubmed_count || null,
     enriched_at: l._enrichedAt || l.enriched_at || null,
     ai_enriched_at: l._aiEnrichedAt || l.ai_enriched_at || null,
-    added_at: l.createdAt || l.added_at || Date.now()
+    added_at: l.addedAt || l.createdAt || l.added_at || Date.now()
   })));
 
   if (!leads.length) {
-    if (syncEl) { syncEl.textContent = '✓ Saved to DB'; setTimeout(() => { if(syncEl) syncEl.textContent=''; }, 2000); }
+    if (syncEl) { syncEl.textContent = pbOk ? '✓ Synced' : '⚠ Sync failed'; syncEl.style.color = pbOk ? 'var(--green)' : '#ff6b35'; setTimeout(() => { if(syncEl) { syncEl.textContent=''; syncEl.style.color=''; } }, 3000); }
     return;
   }
 
@@ -2871,17 +2876,28 @@ async function syncPlaybooksToSupabase() {
       },
       body: JSON.stringify(leads)
     });
+    leadsOk = res.ok;
     if (!res.ok) {
       const err = await res.text();
-      console.warn('[Supabase sync failed]', res.status, err.substring(0,200));
-      if (syncEl) { syncEl.textContent = '⚠ Sync failed'; setTimeout(() => { if(syncEl) syncEl.textContent=''; }, 3000); }
+      console.warn('[Supabase leads sync failed]', res.status, err.substring(0,200));
     } else {
-      console.log('[Supabase sync] Saved', leads.length, 'leads');
-      if (syncEl) { syncEl.textContent = '✓ Saved to DB'; setTimeout(() => { if(syncEl) syncEl.textContent=''; }, 2000); }
+      console.log('[Supabase sync]', leads.length, 'leads saved');
     }
   } catch(e) {
     console.warn('[Supabase sync error]', e.message);
-    if (syncEl) { syncEl.textContent = '⚠ Sync failed'; setTimeout(() => { if(syncEl) syncEl.textContent=''; }, 3000); }
+  }
+
+  // Show clear status
+  if (syncEl) {
+    const now = new Date().toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
+    if (pbOk && leadsOk) {
+      syncEl.textContent = `✓ Synced ${leads.length} leads · ${now}`;
+      syncEl.style.color = 'var(--green)';
+    } else {
+      syncEl.textContent = `⚠ Sync failed · ${now}`;
+      syncEl.style.color = '#ff6b35';
+    }
+    // Don't clear — leave the timestamp visible so Mike knows when last sync happened
   }
 }
 
@@ -3166,20 +3182,20 @@ window.addEventListener('load', () => {
   switchTab('playbooks');
   checkSettingsAutoExpand();
 
-  // Always clear stale localStorage — Supabase is the source of truth
-  localStorage.removeItem('fidaPlaybooks');
+  // Load from localStorage first — always have data available immediately
+  loadPlaybooks();
+  renderPlaybooks();
+  buildContactsData();
 
-  // Then init Supabase — ALWAYS reload from DB to get freshest data
+  // Then try Supabase — merge/update if available, but never wipe local data
   initSupabase().then(async (loggedIn) => {
     if (!loggedIn) {
-      // No Supabase — fall back to localStorage only
       console.log('[Supabase] Not available — using localStorage only');
       return;
     }
     const emailEl = document.getElementById('navUserEmail');
     if (emailEl && currentUser) {
       emailEl.textContent = currentUser.email;
-      // Update avatar initials
       const avi = document.getElementById('userAvatar');
       if (avi) avi.textContent = currentUser.email.charAt(0).toUpperCase();
     }
@@ -3189,6 +3205,7 @@ window.addEventListener('load', () => {
       buildContactsData();
       applyContactsFiltersAndRender();
       updateQueueBadge();
+      showToast('✓ Synced from database', 1500);
     }
   }).catch(e => console.warn('[Supabase] Init error:', e.message));
 });
@@ -6967,7 +6984,7 @@ function openContactDrawer(leadId, pbId) {
           <div style="font-size:.62rem;color:var(--muted)">publications</div>
         </div>` : ''}
       </div>` : !isEnriched ? `
-      <button onclick="enrichLeadProfile({id:'${lead.id}',firstName:'${lead.firstName}',lastName:'${lead.lastName}',organisation:'${(lead.organisation||'').replace(/'/g,'')}'},'${pbId}').then(()=>{openContactDrawer('${lead.id}','${pbId}');showToast('Profile enriched!')})"
+      <button onclick="enrichProfileFromDrawer('${lead.id}','${pbId}')"
         style="width:100%;margin-top:8px;padding:8px;border-radius:7px;border:1px solid rgba(240,192,64,.3);background:rgba(240,192,64,.06);color:#f0c040;cursor:pointer;font-family:inherit;font-size:.75rem">
         🔬 Fetch NIH Funding + Research Impact
       </button>` : `<div style="font-size:.72rem;color:var(--muted);margin-top:8px">No NIH funding or research impact data found</div>`}
@@ -7169,7 +7186,7 @@ function openContactDrawer(leadId, pbId) {
       ${lead._priorityReason ? `<div style="font-size:.7rem;color:var(--muted);margin-top:4px">${lead._priorityReason}</div>` : ''}` : ''}
 
     </div>` : `<div class="drawer-section">
-      <button onclick="enrichLeadAI({id:'${lead.id}',firstName:'${lead.firstName}',lastName:'${lead.lastName}',organisation:'${(lead.organisation||'').replace(/'/g,'')}',jobTitle:'${(lead.jobTitle||'').replace(/'/g,'')}',focusedAreas:'${(lead.focusedAreas||'').substring(0,100).replace(/'/g,'')}',_nihRecentGrant:'${(lead._nihRecentGrant||'').substring(0,80).replace(/'/g,'')}',_nihTotalFundingFormatted:'${lead._nihTotalFundingFormatted||''}',_hIndex:${lead._hIndex||0},_pubmedCount:${lead._pubmedCount||0},_recentPubs:${JSON.stringify(lead._recentPubs||[]).replace(/'/g,'')},_topPapers:${JSON.stringify(lead._topPapers||[])}},'${pbId}').then(r=>{ if(r){openContactDrawer('${lead.id}','${pbId}');showToast('✅ AI analysis complete')} else {showToast('AI enrichment failed',4000)}})"
+      <button onclick="enrichLeadAIFromDrawer('${lead.id}','${pbId}')"
         style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(167,139,250,.3);background:rgba(167,139,250,.06);color:#a78bfa;cursor:pointer;font-family:inherit;font-size:.8rem;font-weight:600">
         🧠 Generate AI Intelligence for this lead
       </button>
@@ -7200,10 +7217,10 @@ function openContactDrawer(leadId, pbId) {
           class="btn btn-ghost btn-sm" style="flex:1" title="Go to Generate page">Generate Page →</button>
         <button onclick="enrichSingleLead('${lead.id}','${pbId}')"
           class="btn btn-ghost btn-sm" style="flex:1" ${hasEmail?'disabled':''}>🔍 Find Email</button>
-        <button onclick="findLinkedInForLead({id:'${lead.id}',firstName:'${lead.firstName}',lastName:'${lead.lastName}',organisation:'${(lead.organisation||'').replace(/'/g,'')}'},'${pbId}').then(r=>{if(r.found){openContactDrawer('${lead.id}','${pbId}');showToast(r.linkedinUrl?'🔗 LinkedIn found!':'📍 Location updated')}else{showToast('Not found on LinkedIn')}})"
+        <button onclick="findLinkedInFromDrawer('${lead.id}','${pbId}')"
           class="btn btn-ghost btn-sm" style="flex:1;color:#5ba4cf;border-color:rgba(0,119,181,.3)">🔗 LinkedIn</button>
       </div>
-      ${!isEnriched ? `<button onclick="enrichLeadProfile({id:'${lead.id}',firstName:'${lead.firstName}',lastName:'${lead.lastName}',organisation:'${(lead.organisation||'').replace(/'/g,'')}'},'${pbId}').then(()=>{openContactDrawer('${lead.id}','${pbId}');showToast('✅ Profile enriched!')})"
+      ${!isEnriched ? `<button onclick="enrichProfileFromDrawer('${lead.id}','${pbId}')"
         style="width:100%;margin-top:8px;padding:9px;border-radius:8px;border:1px solid rgba(240,192,64,.3);background:rgba(240,192,64,.06);color:#f0c040;cursor:pointer;font-family:inherit;font-size:.8rem;font-weight:600">
         🔬 Enrich Profile (NIH + Research Impact)
       </button>` : `<div style="font-size:.65rem;color:var(--muted);margin-top:8px;text-align:center">Last enriched ${new Date(lead._enrichedAt).toLocaleDateString()}</div>`}
@@ -10951,6 +10968,44 @@ function sendQgEmail() {
 // primary/secondary app, priority score
 // One Claude call per lead — uses existing Anthropic key
 // ══════════════════════════════════════════════════════════
+
+// Safe wrapper — looks up lead from playbooks instead of inlining data in onclick
+async function enrichLeadAIFromDrawer(leadId, pbId) {
+  const pb = playbooks.find(p => p.id === pbId);
+  const lead = pb?.leads?.find(l => l.id === leadId);
+  if (!lead) { showToast('Lead not found'); return; }
+  const r = await enrichLeadAI(lead, pbId);
+  if (r) {
+    openContactDrawer(leadId, pbId);
+    showToast('✅ AI analysis complete');
+  } else {
+    showToast('AI enrichment failed', 4000);
+  }
+}
+
+// Safe wrapper for LinkedIn lookup from contact drawer
+async function findLinkedInFromDrawer(leadId, pbId) {
+  const pb = playbooks.find(p => p.id === pbId);
+  const lead = pb?.leads?.find(l => l.id === leadId);
+  if (!lead) { showToast('Lead not found'); return; }
+  const r = await findLinkedInForLead(lead, pbId);
+  if (r && r.found) {
+    openContactDrawer(leadId, pbId);
+    showToast(r.linkedinUrl ? '🔗 LinkedIn found!' : '📍 Location updated');
+  } else {
+    showToast('Not found on LinkedIn');
+  }
+}
+
+// Safe wrapper for profile enrichment from contact drawer
+async function enrichProfileFromDrawer(leadId, pbId) {
+  const pb = playbooks.find(p => p.id === pbId);
+  const lead = pb?.leads?.find(l => l.id === leadId);
+  if (!lead) { showToast('Lead not found'); return; }
+  await enrichLeadProfile(lead, pbId);
+  openContactDrawer(leadId, pbId);
+  showToast('✅ Profile enriched!');
+}
 
 async function enrichLeadAI(lead, pbId) {
   const apiKey = localStorage.getItem('fidaApiKey');
