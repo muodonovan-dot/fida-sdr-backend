@@ -116,11 +116,12 @@ app.post('/find-email', async (req, res) => {
           const lastAffilId = best.last_known_institutions?.[0]?.id;
           if (lastAffilId) {
             try {
-              const instResp = await fetch(`${lastAffilId}?mailto=muodonovan@gmail.com`);
+              // lastAffilId is like https://openalex.org/I101407740 — convert to API URL
+              const instApiUrl = lastAffilId.replace('https://openalex.org/', 'https://api.openalex.org/institutions/') + '?mailto=muodonovan@gmail.com';
+              const instResp = await fetch(instApiUrl);
               const instData = await instResp.json();
               const homepage = instData.homepage_url || '';
               if (homepage) {
-                // Extract domain from homepage URL
                 const domainMatch = homepage.match(/https?:\/\/(?:www\.)?([^\/]+)/);
                 if (domainMatch) resolvedDomain = domainMatch[1];
               }
