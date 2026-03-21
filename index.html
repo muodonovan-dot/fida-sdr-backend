@@ -2067,8 +2067,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_oWLb_blZHL_rayCldsPfMw_OoQs0HMR';
 function getUserId() {
   let uid = localStorage.getItem('fidaUserId');
   if (!uid) {
-    // Auto-generate a stable unique ID on first load
-    uid = 'fida_' + Math.random().toString(36).slice(2,8) + Math.random().toString(36).slice(2,8);
+    uid = 'michael@fida';
     localStorage.setItem('fidaUserId', uid);
   }
   return uid;
@@ -2686,11 +2685,14 @@ async function loadPlaybooksFromSupabase() {
 
   try {
     // Fetch playbooks
-    const pbRes = await fetch(
-      SUPA_URL + '/rest/v1/playbooks?user_id=eq.' + encodeURIComponent(userId) + '&order=created_at.asc',
-      { headers: hdrs }
-    );
-    if (!pbRes.ok) { console.warn('[Supabase] Playbooks fetch failed:', pbRes.status); return false; }
+    var pbUrl = SUPA_URL + '/rest/v1/playbooks?user_id=eq.' + encodeURIComponent(userId) + '&order=created_at.asc';
+    console.log('[Supabase] Loading playbooks from:', pbUrl);
+    const pbRes = await fetch(pbUrl, { headers: hdrs });
+    if (!pbRes.ok) {
+      var pbErr = await pbRes.text();
+      console.warn('[Supabase] Playbooks fetch failed:', pbRes.status, pbErr.substring(0, 200));
+      return false;
+    }
     const pbData = await pbRes.json();
     if (!Array.isArray(pbData) || !pbData.length) {
       console.log('[Supabase] No playbooks found for user', userId);
@@ -2936,7 +2938,7 @@ async function syncPlaybooksToSupabase() {
         pubmed_count: l._pubmedCount || l.pubmed_count || null,
         enriched_at: l._enrichedAt || l.enriched_at || null,
         ai_enriched_at: l._aiEnrichedAt || l.ai_enriched_at || null,
-        added_at: l.addedAt || l.createdAt || l.added_at || new Date().toISOString()
+        added_at: (function() { var v = l.addedAt || l.createdAt || l.added_at; if (!v) return new Date().toISOString(); if (typeof v === 'number') return new Date(v).toISOString(); return v; })()
       };
     });
   });
@@ -2960,6 +2962,7 @@ async function syncPlaybooksToSupabase() {
       if (!res.ok) {
         var err = await res.text();
         console.warn('[Supabase] Lead batch failed:', res.status, err.substring(0, 300));
+        showToast('⚠️ DB sync error: ' + res.status + ' — ' + err.substring(0, 100), 8000);
         failed = true;
         break;
       }
@@ -12937,6 +12940,16 @@ document.addEventListener('click', function(e) {
 
 
 // ── DB Sync Health Check ──────────────────────────────────────────────────────
+async function forceDbSync(btn) {
+  if (btn) { btn.textContent = '⏳ Syncing...'; btn.disabled = true; }
+  await syncPlaybooksToSupabase();
+  // Close old modal and re-open with fresh data
+  var oldModal = document.getElementById('dbStatusModal');
+  if (oldModal) oldModal.remove();
+  showToast('✅ Sync complete — refreshing status...');
+  await checkDbSync();
+}
+
 async function checkDbSync() {
   const SUPA_URL = 'https://cqsdsztzyvxtnzrruxeb.supabase.co';
   const SUPA_KEY = 'sb_publishable_oWLb_blZHL_rayCldsPfMw_OoQs0HMR';
@@ -13024,7 +13037,7 @@ async function checkDbSync() {
       </table>
 
       <div style="margin-top:16px;display:flex;gap:8px">
-        <button onclick="(async()=>{this.textContent='⏳ Syncing...';this.disabled=true;await syncPlaybooksToSupabase();document.getElementById('dbStatusModal')?.remove();showToast('✅ All data saved to database');})()"
+        <button onclick="forceDbSync(this)"
           style="flex:1;padding:9px;border-radius:8px;background:var(--orange);color:#fff;border:none;cursor:pointer;font-weight:700;font-family:Outfit,sans-serif;font-size:.82rem">
           🔄 Force Sync Now
         </button>
