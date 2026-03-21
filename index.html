@@ -1666,6 +1666,14 @@ tr:hover .row-actions-inline { display:flex; }
       style="white-space:nowrap;color:var(--red);border-color:rgba(239,68,68,.3)" title="Delete all contacts">
       🗑️ Delete All
     </button>
+    <button class="btn btn-ghost btn-sm" onclick="removeContactsWithoutEmail()"
+      style="white-space:nowrap;color:#f59e0b;border-color:rgba(245,158,11,.3)" title="Remove contacts with no email address">
+      ✂️ No Email
+    </button>
+    <button class="btn btn-ghost btn-sm" onclick="removeInvalidEmails()"
+      style="white-space:nowrap;color:#ef4444;border-color:rgba(239,68,68,.3)" title="Remove contacts with invalid/bounced emails">
+      ✂️ Invalid
+    </button>
 
     <button class="btn btn-ghost btn-sm" onclick="verifyAllEmails()" style="white-space:nowrap;color:#5ba4cf;border-color:rgba(91,164,207,.3)" title="Run ZeroBounce verification on all emails">
       ✓ Verify Emails
@@ -4778,6 +4786,15 @@ async function processImportFile(file) {
       if (idx === null || idx === undefined || idx < 0) return '';
       return String(r[idx] || '');
     }
+    // Clean SciLeads-style "keyword#score;keyword#score" → "keyword, keyword"
+    function cleanTaggedField(val) {
+      if (!val) return '';
+      // If it contains the #number;pattern, clean it
+      if (val.match(/\w#\d+/)) {
+        return val.split(';').map(function(t) { return t.replace(/#\d+$/, '').trim(); }).filter(Boolean).join(', ');
+      }
+      return val;
+    }
 
     const parsedLeads = rows.slice(1).filter(r => r.length > 0).map(function(r) {
       return {
@@ -4792,7 +4809,7 @@ async function processImportFile(file) {
         phone: getField(r, mapping.phone),
         _department: getField(r, mapping.department),
         department: getField(r, mapping.department),
-        focusedAreas: getField(r, mapping.focusedAreas),
+        focusedAreas: cleanTaggedField(getField(r, mapping.focusedAreas)),
         _city: getField(r, mapping.city),
         city: getField(r, mapping.city),
         _source: window._importSource,
@@ -12401,6 +12418,84 @@ async function bulkDelete() {
       }
       console.log('[Supabase] Deleted', ids.length, 'leads');
     } catch(e) { console.warn('[Supabase] Delete error:', e.message); }
+  }
+}
+
+function removeContactsWithoutEmail() {
+  // Count across active playbook filter or all
+  const activePbId = document.getElementById('cfPlaybook')?.value || '';
+  let count = 0;
+  playbooks.forEach(function(pb) {
+    if (activePbId && pb.id !== activePbId) return;
+    (pb.leads || []).forEach(function(l) {
+      if (!l.email || !l.email.trim()) count++;
+    });
+  });
+  if (!count) { showToast('All contacts have emails — nothing to remove'); return; }
+  const scope = activePbId ? 'this playbook' : 'all playbooks';
+  if (!confirm('Remove ' + count + ' contact' + (count > 1 ? 's' : '') + ' without email addresses from ' + scope + '?\n\nThis cannot be undone.')) return;
+
+  const removedIds = [];
+  playbooks.forEach(function(pb) {
+    if (activePbId && pb.id !== activePbId) return;
+    const before = (pb.leads || []).length;
+    pb.leads = (pb.leads || []).filter(function(l) {
+      if (!l.email || !l.email.trim()) { removedIds.push(l.id); return false; }
+      return true;
+    });
+  });
+  savePlaybooksToStorage();
+  buildContactsData();
+  applyContactsFiltersAndRender();
+  showToast('✂️ Removed ' + removedIds.length + ' contacts without emails');
+  deleteLeadsFromSupabase(removedIds);
+}
+
+function removeInvalidEmails() {
+  const activePbId = document.getElementById('cfPlaybook')?.value || '';
+  let count = 0;
+  playbooks.forEach(function(pb) {
+    if (activePbId && pb.id !== activePbId) return;
+    (pb.leads || []).forEach(function(l) {
+      const tag = (l.verifyTag || l._zbStatus || '').toLowerCase();
+      if (tag === 'invalid' || tag === 'abuse' || tag === 'do_not_mail' || tag === 'spamtrap') count++;
+    });
+  });
+  if (!count) { showToast('No invalid emails found — nothing to remove'); return; }
+  const scope = activePbId ? 'this playbook' : 'all playbooks';
+  if (!confirm('Remove ' + count + ' contact' + (count > 1 ? 's' : '') + ' with invalid/bounced emails from ' + scope + '?\n\nThis includes: invalid, abuse, do_not_mail, and spamtrap statuses.\n\nThis cannot be undone.')) return;
+
+  const removedIds = [];
+  playbooks.forEach(function(pb) {
+    if (activePbId && pb.id !== activePbId) return;
+    pb.leads = (pb.leads || []).filter(function(l) {
+      const tag = (l.verifyTag || l._zbStatus || '').toLowerCase();
+      if (tag === 'invalid' || tag === 'abuse' || tag === 'do_not_mail' || tag === 'spamtrap') { removedIds.push(l.id); return false; }
+      return true;
+    });
+  });
+  savePlaybooksToStorage();
+  buildContactsData();
+  applyContactsFiltersAndRender();
+  showToast('✂️ Removed ' + removedIds.length + ' contacts with invalid emails');
+  deleteLeadsFromSupabase(removedIds);
+}
+
+function deleteLeadsFromSupabase(ids) {
+  if (!ids.length) return;
+  var SUPA_URL = 'https://cqsdsztzyvxtnzrruxeb.supabase.co';
+  var SUPA_KEY = 'sb_publishable_oWLb_blZHL_rayCldsPfMw_OoQs0HMR';
+  var batchSize = 50;
+  for (var i = 0; i < ids.length; i += batchSize) {
+    var batch = ids.slice(i, i + batchSize);
+    var idList = batch.map(function(id) { return '"' + id + '"'; }).join(',');
+    fetch(SUPA_URL + '/rest/v1/leads?id=in.(' + idList + ')', {
+      method: 'DELETE',
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+    }).then(function(r) {
+      if (r.ok) console.log('[Supabase] Deleted batch of', batch.length, 'leads');
+      else console.warn('[Supabase] Delete failed', r.status);
+    }).catch(function(e) { console.warn('[Supabase] Delete error', e.message); });
   }
 }
 
