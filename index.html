@@ -1328,7 +1328,36 @@ tr:hover .row-actions-inline { display:flex; }
     </div>
   </div>
 
-  
+  <!-- PROSPECT RESULTS TABLE -->
+  <div id="prospectResultsCard" class="card" style="display:none;margin-top:18px">
+    <div class="card-header">
+      <div class="step-badge">🎯</div>
+      <div class="card-title">Discovered Prospects</div>
+      <div class="card-tag" style="background:rgba(0,200,122,.15);color:#00c87a"><span id="prospectResultCount">0</span> found</div>
+      <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="addAllProspectsToPlaybook()">
+        ➕ Add All to Playbook
+      </button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th style="width:28px"><input type="checkbox" id="selectAllProspects" onclick="toggleAllProspects(this)" title="Select all"></th>
+          <th>Name</th>
+          <th>Institution</th>
+          <th>Signal</th>
+          <th>Year</th>
+          <th>Source</th>
+          <th></th>
+        </tr></thead>
+        <tbody id="prospectTableBody"></tbody>
+      </table>
+    </div>
+    <div style="padding:10px 14px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm" onclick="addSelectedProspects()">➕ Add Selected</button>
+      <button class="btn btn-ghost btn-sm" onclick="addTopProspects(20)">➕ Add Top 20</button>
+      <button class="btn btn-ghost btn-sm" onclick="addAllProspectsToPlaybook()">➕ Add All</button>
+    </div>
+  </div>
 
 </div><!-- end #pageAiDiscover -->
 
@@ -6080,7 +6109,7 @@ async function runAIDiscover() {
   document.getElementById('aiDiscoverReport').style.display = 'none';
   document.getElementById('aiDiscoverLog').innerHTML = '';
   prospectResults = [];
-  document.getElementById('prospectResultsCard').style.display = 'none';
+  var _prc=document.getElementById('prospectResultsCard'); if(_prc) _prc.style.display='none';
 
   const territory = getTerritoryFilter();
   const territoryDesc = territory.mode === 'us' && territory.states.length > 0
@@ -6600,7 +6629,7 @@ async function runProspectSearch() {
   const msg = document.getElementById('prospectSearchMsg');
   const maxResults = parseInt(document.getElementById('prospectMaxResults').value) || 50;
   msg.innerHTML = '<span style="color:var(--muted)">⏳ Searching...</span>';
-  document.getElementById('prospectResultsCard').style.display = 'none';
+  var _prc=document.getElementById('prospectResultsCard'); if(_prc) _prc.style.display='none';
   prospectResults = [];
 
   try {
@@ -7034,7 +7063,7 @@ function renderProspectResults(msg) {
     hasAiScores
       ? `${prospectResults.length} results . ${prospectResults.filter(r=>(r._aiScore||0)>=8).length} strong matches`
       : `${prospectResults.length} results`;
-  document.getElementById('prospectResultsCard').style.display = 'block';
+  var _prc=document.getElementById('prospectResultsCard'); if(_prc) _prc.style.display='block';
   document.getElementById('prospectActionBar').style.display = 'none';
   msg.innerHTML = `<span style="color:var(--green)">✓ ${prospectResults.length} prospects found</span>`;
 }
