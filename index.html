@@ -2938,6 +2938,8 @@ async function syncPlaybooksToSupabase() {
         pubmed_count: l._pubmedCount || l.pubmed_count || null,
         enriched_at: l._enrichedAt || l.enriched_at || null,
         ai_enriched_at: l._aiEnrichedAt || l.ai_enriched_at || null,
+        phone: l.phone || null,
+        generated_emails: l.generatedEmails ? (typeof l.generatedEmails === 'object' ? JSON.stringify(l.generatedEmails) : l.generatedEmails) : (l.generated_emails || null),
         added_at: (function() { var v = l.addedAt || l.createdAt || l.added_at; if (!v) return new Date().toISOString(); if (typeof v === 'number') return new Date(v).toISOString(); return v; })()
       };
     });
@@ -2952,6 +2954,7 @@ async function syncPlaybooksToSupabase() {
   var batchSize = 200;
   var totalSaved = 0;
   var failed = false;
+  var failReason = '';
   for (var i = 0; i < leads.length; i += batchSize) {
     var batch = leads.slice(i, i + batchSize);
     try {
@@ -2961,13 +2964,14 @@ async function syncPlaybooksToSupabase() {
       });
       if (!res.ok) {
         var err = await res.text();
-        console.warn('[Supabase] Lead batch failed:', res.status, err.substring(0, 300));
-        showToast('⚠️ DB sync error: ' + res.status + ' — ' + err.substring(0, 100), 8000);
+        failReason = res.status + ': ' + err.substring(0, 200);
+        console.warn('[Supabase] Lead batch failed:', failReason);
         failed = true;
         break;
       }
       totalSaved += batch.length;
     } catch(e) {
+      failReason = 'Network: ' + e.message;
       console.warn('[Supabase] Lead batch error:', e.message);
       failed = true;
       break;
@@ -2975,10 +2979,11 @@ async function syncPlaybooksToSupabase() {
   }
 
   if (failed) {
-    if (syncEl) { syncEl.textContent = '⚠ Sync failed (' + totalSaved + '/' + leads.length + ')'; setTimeout(function() { if(syncEl) syncEl.textContent=''; }, 5000); }
+    showToast('⚠️ Lead sync failed — ' + failReason.substring(0, 120), 10000);
+    if (syncEl) { syncEl.textContent = '⚠ FAILED'; syncEl.style.color = '#ff6b6b'; }
   } else {
     console.log('[Supabase sync] Saved', totalSaved, 'leads across', pbRows.length, 'playbooks');
-    if (syncEl) { syncEl.textContent = '✓ ' + totalSaved + ' saved'; setTimeout(function() { if(syncEl) syncEl.textContent=''; }, 3000); }
+    if (syncEl) { syncEl.textContent = '✓ ' + totalSaved + ' saved'; syncEl.style.color = '#00c87a'; setTimeout(function() { if(syncEl) syncEl.textContent=''; }, 5000); }
   }
 }
 
@@ -7339,8 +7344,10 @@ function openContactDrawer(leadId, pbId) {
 
   // Inject save bar into drawer shell (outside scroll body) if not already there
   const drawerShell = document.getElementById('contactDrawer');
-  const _sbLeadId = '${lead.id}';
-  const _sbPbId = '${pbId}';
+  const _sbLeadId = lead.id;
+  const _sbPbId = pbId;
+  // Remove any existing save bar from previous contact
+  drawerShell.querySelectorAll('[id^="drawerSaveBar_"]').forEach(function(el) { el.remove(); });
   let saveBar = document.getElementById('drawerSaveBar_' + _sbLeadId);
   if (!saveBar && drawerShell) {
     saveBar = document.createElement('div');
@@ -12967,11 +12974,9 @@ async function checkDbSync() {
   const SUPA_KEY = 'sb_publishable_oWLb_blZHL_rayCldsPfMw_OoQs0HMR';
   const userId = getUserId();
 
-  // Close any open drawers/modals first
-  const drawer = document.getElementById('contactDrawer');
-  const overlay = document.getElementById('contactDrawerOverlay');
-  if (drawer) drawer.style.display = 'none';
-  if (overlay) overlay.style.display = 'none';
+  // Close DB status modal if already open
+  var existingDbModal = document.getElementById('dbStatusModal');
+  if (existingDbModal) existingDbModal.remove();
 
   showToast('🔍 Checking database sync...', 2000);
 
