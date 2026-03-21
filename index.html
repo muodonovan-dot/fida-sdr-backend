@@ -2940,7 +2940,7 @@ async function syncPlaybooksToSupabase() {
         ai_enriched_at: l._aiEnrichedAt || l.ai_enriched_at || null,
         phone: l.phone || null,
         generated_emails: l.generatedEmails ? (typeof l.generatedEmails === 'object' ? JSON.stringify(l.generatedEmails) : l.generatedEmails) : (l.generated_emails || null),
-        added_at: (function() { var v = l.addedAt || l.createdAt || l.added_at; if (!v) return new Date().toISOString(); if (typeof v === 'number') return new Date(v).toISOString(); return v; })()
+        added_at: (function() { var v = l.addedAt || l.createdAt || l.added_at; if (!v) return Date.now(); if (typeof v === 'number') return v; var d = new Date(v).getTime(); return isNaN(d) ? Date.now() : d; })()
       };
     });
   });
