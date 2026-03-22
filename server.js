@@ -1277,39 +1277,150 @@ Return ONLY valid JSON, no other text.`;
   // STEP 4: Pattern guess
   if (!foundEmail && organisation) {
     try {
-      // Try to resolve org domain
       let domain = null;
       const orgLower = organisation.toLowerCase();
 
-      // Common patterns
-      const commonDomains = {
-        'harvard': 'harvard.edu', 'mit': 'mit.edu', 'stanford': 'stanford.edu',
-        'yale': 'yale.edu', 'columbia': 'columbia.edu', 'princeton': 'princeton.edu',
-        'johns hopkins': 'jhu.edu', 'duke': 'duke.edu', 'upenn': 'upenn.edu',
-        'nih': 'nih.gov', 'cdc': 'cdc.gov'
+      // Comprehensive university/institution domain map (200+ entries)
+      const domainMap = {
+        // Ivy League
+        'harvard': 'harvard.edu', 'yale': 'yale.edu', 'princeton': 'princeton.edu',
+        'columbia': 'columbia.edu', 'upenn': 'upenn.edu', 'penn ': 'upenn.edu',
+        'brown university': 'brown.edu', 'dartmouth': 'dartmouth.edu', 'cornell': 'cornell.edu',
+        // Top research
+        'stanford': 'stanford.edu', 'mit': 'mit.edu', 'caltech': 'caltech.edu',
+        'johns hopkins': 'jhu.edu', 'duke': 'duke.edu', 'uchicago': 'uchicago.edu',
+        'university of chicago': 'uchicago.edu', 'northwestern': 'northwestern.edu',
+        'wash u': 'wustl.edu', 'washington university in st': 'wustl.edu',
+        // UC system
+        'uc berkeley': 'berkeley.edu', 'berkeley': 'berkeley.edu', 'ucla': 'ucla.edu',
+        'uc san diego': 'ucsd.edu', 'ucsd': 'ucsd.edu', 'ucsf': 'ucsf.edu',
+        'uc san francisco': 'ucsf.edu', 'uc davis': 'ucdavis.edu', 'uc irvine': 'uci.edu',
+        'uc santa barbara': 'ucsb.edu', 'uc santa cruz': 'ucsc.edu', 'uc riverside': 'ucr.edu',
+        // Big state universities
+        'university of michigan': 'umich.edu', 'umich': 'umich.edu',
+        'university of texas': 'utexas.edu', 'ut austin': 'utexas.edu',
+        'md anderson': 'mdanderson.org', 'ut southwestern': 'utsouthwestern.edu',
+        'university of washington': 'uw.edu', 'uw madison': 'wisc.edu',
+        'university of wisconsin': 'wisc.edu', 'wisc': 'wisc.edu',
+        'university of minnesota': 'umn.edu', 'umn': 'umn.edu',
+        'ohio state': 'osu.edu', 'penn state': 'psu.edu',
+        'university of florida': 'ufl.edu', 'university of north carolina': 'unc.edu',
+        'unc chapel hill': 'unc.edu', 'university of virginia': 'virginia.edu',
+        'university of maryland': 'umd.edu', 'university of pittsburgh': 'pitt.edu',
+        'pitt': 'pitt.edu', 'university of colorado': 'colorado.edu',
+        'university of iowa': 'uiowa.edu', 'university of illinois': 'illinois.edu',
+        'uiuc': 'illinois.edu', 'purdue': 'purdue.edu',
+        'indiana university': 'indiana.edu', 'university of indiana': 'indiana.edu',
+        'michigan state': 'msu.edu', 'iowa state': 'iastate.edu',
+        'university of nebraska': 'unl.edu', 'university of kansas': 'ku.edu',
+        'university of missouri': 'missouri.edu', 'mizzou': 'missouri.edu',
+        'university of kentucky': 'uky.edu', 'university of tennessee': 'utk.edu',
+        'vanderbilt': 'vanderbilt.edu', 'emory': 'emory.edu',
+        'georgia tech': 'gatech.edu', 'georgia institute': 'gatech.edu',
+        'university of georgia': 'uga.edu', 'clemson': 'clemson.edu',
+        'virginia tech': 'vt.edu', 'nc state': 'ncsu.edu',
+        'north carolina state': 'ncsu.edu', 'university of south carolina': 'sc.edu',
+        'university of alabama': 'ua.edu', 'auburn': 'auburn.edu',
+        'lsu': 'lsu.edu', 'louisiana state': 'lsu.edu',
+        'university of arkansas': 'uark.edu', 'university of oklahoma': 'ou.edu',
+        'oklahoma state': 'okstate.edu', 'texas a&m': 'tamu.edu', 'tamu': 'tamu.edu',
+        'baylor': 'baylor.edu', 'rice': 'rice.edu', 'smu': 'smu.edu',
+        'tcu': 'tcu.edu', 'texas tech': 'ttu.edu',
+        'university of arizona': 'arizona.edu', 'arizona state': 'asu.edu',
+        'university of utah': 'utah.edu', 'byu': 'byu.edu',
+        'university of new mexico': 'unm.edu', 'university of nevada': 'unr.edu',
+        'unlv': 'unlv.edu', 'colorado state': 'colostate.edu',
+        'university of oregon': 'uoregon.edu', 'oregon state': 'oregonstate.edu',
+        'washington state': 'wsu.edu',
+        // Medical schools (many use different domains)
+        'mayo clinic': 'mayo.edu', 'cleveland clinic': 'ccf.org',
+        'mount sinai': 'mssm.edu', 'nyu': 'nyu.edu', 'nyu langone': 'nyulangone.org',
+        'weill cornell': 'med.cornell.edu', 'memorial sloan': 'mskcc.org',
+        'mass general': 'mgh.harvard.edu', 'brigham': 'bwh.harvard.edu',
+        'dana-farber': 'dfci.harvard.edu', 'boston university': 'bu.edu',
+        'tufts': 'tufts.edu', 'georgetown': 'georgetown.edu',
+        'george washington': 'gwu.edu', 'drexel': 'drexel.edu',
+        'thomas jefferson': 'jefferson.edu', 'temple': 'temple.edu',
+        'rutgers': 'rutgers.edu', 'uconn': 'uconn.edu',
+        'university of connecticut': 'uconn.edu',
+        'wayne state': 'wayne.edu', 'wayne': 'wayne.edu',
+        'case western': 'case.edu', 'cincinnati': 'uc.edu',
+        'university of cincinnati': 'uc.edu',
+        'university of rochester': 'rochester.edu', 'rochester': 'rochester.edu',
+        'university at buffalo': 'buffalo.edu', 'suny': 'buffalo.edu',
+        'stony brook': 'stonybrook.edu',
+        // Pharma / biotech companies
+        'pfizer': 'pfizer.com', 'novartis': 'novartis.com', 'roche': 'roche.com',
+        'genentech': 'gene.com', 'amgen': 'amgen.com', 'gilead': 'gilead.com',
+        'merck': 'merck.com', 'abbvie': 'abbvie.com', 'bristol': 'bms.com',
+        'johnson & johnson': 'jnj.com', 'eli lilly': 'lilly.com', 'lilly': 'lilly.com',
+        'astrazeneca': 'astrazeneca.com', 'sanofi': 'sanofi.com',
+        'boehringer': 'boehringer-ingelheim.com', 'regeneron': 'regeneron.com',
+        'biogen': 'biogen.com', 'moderna': 'modernatx.com',
+        'takeda': 'takeda.com', 'bayer': 'bayer.com',
+        // Government / national labs
+        'nih': 'nih.gov', 'national institutes of health': 'nih.gov',
+        'cdc': 'cdc.gov', 'fda': 'fda.hhs.gov',
+        'los alamos': 'lanl.gov', 'sandia': 'sandia.gov',
+        'argonne': 'anl.gov', 'brookhaven': 'bnl.gov',
+        'oak ridge': 'ornl.gov', 'lawrence berkeley': 'lbl.gov',
+        'pacific northwest': 'pnnl.gov',
+        // International
+        'oxford': 'ox.ac.uk', 'cambridge': 'cam.ac.uk', 'imperial college': 'imperial.ac.uk',
+        'ucl': 'ucl.ac.uk', 'university college london': 'ucl.ac.uk',
+        'eth zurich': 'ethz.ch', 'epfl': 'epfl.ch',
+        'max planck': 'mpg.de', 'karolinska': 'ki.se',
+        'university of toronto': 'utoronto.ca', 'mcgill': 'mcgill.ca',
+        'ubc': 'ubc.ca', 'university of british columbia': 'ubc.ca',
+        'university of melbourne': 'unimelb.edu.au',
+        'university of sydney': 'sydney.edu.au',
+        'kyowa kirin': 'kyowakirin.com', 'kyowa': 'kyowakirin.com',
+        // More research institutions
+        'scripps': 'scripps.edu', 'salk': 'salk.edu', 'broad institute': 'broadinstitute.org',
+        'whitehead': 'wi.mit.edu', 'cold spring harbor': 'cshl.edu',
+        'jackson lab': 'jax.org', 'fred hutch': 'fredhutch.org',
+        'st. jude': 'stjude.org', 'children\'s hospital': 'chop.edu',
+        'institute of technology': 'edu'
       };
 
-      for (const [key, dom] of Object.entries(commonDomains)) {
+      // Try matching against the comprehensive map
+      for (const [key, dom] of Object.entries(domainMap)) {
         if (orgLower.includes(key)) { domain = dom; break; }
       }
 
-      // Generic university pattern
-      if (!domain && orgLower.includes('university of ')) {
-        const uniName = orgLower.replace('university of ', '').split(/\s+/)[0];
-        domain = `${uniName}.edu`;
+      // Generic university pattern (if no specific match)
+      if (!domain) {
+        // Try "University of X" pattern
+        const uofMatch = orgLower.match(/university of (\w+)/);
+        if (uofMatch) {
+          domain = `${uofMatch[1]}.edu`;
+        }
       }
-      if (!domain && orgLower.includes('university')) {
-        const parts = orgLower.replace('university', '').trim().split(/\s+/);
-        if (parts[0]) domain = `${parts[0]}.edu`;
+      if (!domain) {
+        // Try "X University" pattern
+        const xuMatch = orgLower.match(/(\w+)\s+university/);
+        if (xuMatch && xuMatch[1].length > 2) {
+          domain = `${xuMatch[1]}.edu`;
+        }
+      }
+      if (!domain) {
+        // Try "X Institute of Technology" pattern
+        const xitMatch = orgLower.match(/(\w+)\s+institute/);
+        if (xitMatch && xitMatch[1].length > 2) {
+          domain = `${xitMatch[1]}.edu`;
+        }
       }
 
       if (domain) {
-        const firstInitial = firstName[0].toLowerCase();
+        // Clean firstName: strip middle initials, take only first part
+        const cleanFirst = firstName.split(/\s+/)[0].toLowerCase().replace(/[^a-z]/g, '');
         const lastLower = lastName.toLowerCase().replace(/[^a-z]/g, '');
+        const firstInitial = cleanFirst[0] || '';
         const patterns = [
           `${firstInitial}${lastLower}@${domain}`,
-          `${firstName.toLowerCase()}.${lastLower}@${domain}`,
-          `${firstName.toLowerCase()}${lastLower}@${domain}`,
+          `${cleanFirst}.${lastLower}@${domain}`,
+          `${cleanFirst}${lastLower}@${domain}`,
+          `${lastLower}.${cleanFirst}@${domain}`,
           `${lastLower}@${domain}`
         ];
 
@@ -1320,10 +1431,10 @@ Return ONLY valid JSON, no other text.`;
         steps.push({
           step: 'Pattern Guess',
           found: true,
-          detail: `Guessed: ${patterns[0]} (also tried: ${patterns.slice(1).join(', ')})`
+          detail: `Guessed: ${patterns[0]} (domain: ${domain}, also: ${patterns.slice(1, 3).join(', ')})`
         });
       } else {
-        steps.push({ step: 'Pattern Guess', found: false, detail: 'Could not resolve domain' });
+        steps.push({ step: 'Pattern Guess', found: false, detail: 'Could not resolve domain from: ' + organisation });
       }
     } catch (e) {
       steps.push({ step: 'Pattern Guess', found: false, detail: `Error: ${e.message}` });
