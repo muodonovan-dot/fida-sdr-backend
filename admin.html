@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Admin Dashboard — LeadGeeks</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg: #0F1A13; --bg2: #152019; --bg3: #0A1410;
+    --border: #1B3022; --green: #2E7D32; --green-light: #66BB6A;
+    --gold: #F9A825; --text: #E8F5E9; --muted: #6B9978;
+    --red: #e74c3c; --blue: #4FC3F7;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  .header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .header h1 { font-size: 18px; font-weight: 600; }
+  .header .badge { font-size: 11px; background: var(--green); color: #fff; padding: 3px 10px; border-radius: 10px; }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+  .login-gate { display: flex; align-items: center; justify-content: center; min-height: 80vh; }
+  .login-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 32px; width: 100%; max-width: 380px; text-align: center; }
+  .login-box h2 { font-size: 16px; margin-bottom: 16px; }
+  .login-box input { width: 100%; padding: 10px 14px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; margin-bottom: 12px; outline: none; }
+  .login-box input:focus { border-color: var(--green); }
+  .login-box button { width: 100%; padding: 10px; background: var(--green); color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .login-box button:hover { background: var(--green-light); }
+  .login-box .error { color: var(--red); font-size: 12px; margin-top: 8px; }
+
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+  .stat-card { background: var(--bg2); border-radius: 8px; padding: 16px; }
+  .stat-card .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; }
+  .stat-card .value { font-size: 28px; font-weight: 600; margin-top: 4px; }
+  .stat-card .value.green { color: var(--green-light); }
+  .stat-card .value.gold { color: var(--gold); }
+  .stat-card .value.blue { color: var(--blue); }
+
+  .section { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 20px; overflow: hidden; }
+  .section-header { padding: 14px 20px; border-bottom: 1px solid var(--border); font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; }
+  .section-header .count { font-size: 11px; background: var(--bg3); color: var(--muted); padding: 2px 8px; border-radius: 10px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 10px 16px; color: var(--muted); font-weight: 400; font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; border-bottom: 1px solid var(--border); }
+  td { padding: 10px 16px; border-bottom: 1px solid rgba(27,48,34,0.5); }
+  tr:hover td { background: rgba(27,48,34,0.3); }
+
+  .badge-active { background: rgba(46,125,50,0.2); color: var(--green-light); padding: 2px 8px; border-radius: 10px; font-size: 11px; }
+  .badge-new { background: rgba(249,168,37,0.2); color: var(--gold); padding: 2px 8px; border-radius: 10px; font-size: 11px; }
+
+  .refresh-btn { background: transparent; color: var(--muted); border: 1px solid var(--border); padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+  .refresh-btn:hover { border-color: var(--green); color: var(--green-light); }
+
+  .loading { text-align: center; padding: 40px; color: var(--muted); }
+  .timestamp { font-size: 11px; color: var(--muted); }
+
+  #dashboard { display: none; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN GATE -->
+<div id="loginGate" class="login-gate">
+  <div class="login-box">
+    <h2>Admin Dashboard</h2>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Enter admin password to continue</p>
+    <input type="password" id="adminPass" placeholder="Password" onkeydown="if(event.key==='Enter')adminLogin()"/>
+    <button onclick="adminLogin()">Sign In</button>
+    <div id="loginError" class="error"></div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+  <div class="header">
+    <div style="display:flex;align-items:center;gap:12px">
+      <h1>LeadGeeks Admin</h1>
+      <span class="badge">Live</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <span class="timestamp" id="lastRefresh"></span>
+      <button class="refresh-btn" onclick="loadDashboard()">Refresh</button>
+      <button class="refresh-btn" onclick="localStorage.removeItem('lgAdminAuth');location.reload()">Logout</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- STATS -->
+    <div class="stats-grid">
+      <div class="stat-card"><div class="label">Total users</div><div class="value green" id="statUsers">-</div></div>
+      <div class="stat-card"><div class="label">Total leads</div><div class="value" id="statLeads">-</div></div>
+      <div class="stat-card"><div class="label">Total playbooks</div><div class="value gold" id="statPlaybooks">-</div></div>
+      <div class="stat-card"><div class="label">Resources loaded</div><div class="value blue" id="statResources">-</div></div>
+    </div>
+
+    <!-- USERS TABLE -->
+    <div class="section">
+      <div class="section-header">
+        <span>Users</span>
+        <span class="count" id="userCount">loading...</span>
+      </div>
+      <div id="usersTable"><div class="loading">Loading users...</div></div>
+    </div>
+
+    <!-- PER-USER BREAKDOWN -->
+    <div class="section">
+      <div class="section-header">
+        <span>Playbook details</span>
+      </div>
+      <div id="playbooksTable"><div class="loading">Loading playbooks...</div></div>
+    </div>
+
+    <!-- SYSTEM HEALTH -->
+    <div class="section">
+      <div class="section-header">
+        <span>System health</span>
+      </div>
+      <div id="healthTable"><div class="loading">Checking...</div></div>
+    </div>
+
+    <!-- RECENT ACTIVITY -->
+    <div class="section">
+      <div class="section-header">
+        <span>Recent leads (last 20 added)</span>
+      </div>
+      <div id="recentLeads"><div class="loading">Loading...</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPA_URL = 'https://cqsdsztzyvxtnzrruxeb.supabase.co';
+const SUPA_KEY = 'sb_publishable_oWLb_blZHL_rayCldsPfMw_OoQs0HMR';
+const BACKEND = 'https://fida-sdr-backend.onrender.com';
+// Simple admin password - change this to something secure
+const ADMIN_PASS = 'leadgeeks2026';
+
+function adminLogin() {
+  const pass = document.getElementById('adminPass').value;
+  if (pass === ADMIN_PASS) {
+    localStorage.setItem('lgAdminAuth', 'true');
+    document.getElementById('loginGate').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    loadDashboard();
+  } else {
+    document.getElementById('loginError').textContent = 'Wrong password';
+  }
+}
+
+// Auto-login if already authenticated
+if (localStorage.getItem('lgAdminAuth') === 'true') {
+  document.getElementById('loginGate').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  loadDashboard();
+}
+
+async function supaFetch(path) {
+  const r = await fetch(SUPA_URL + '/rest/v1/' + path, {
+    headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Prefer': 'count=exact' }
+  });
+  const count = r.headers.get('content-range');
+  const data = await r.json();
+  return { data, count };
+}
+
+async function loadDashboard() {
+  document.getElementById('lastRefresh').textContent = 'Last refresh: ' + new Date().toLocaleTimeString();
+
+  try {
+    // 1. Get all leads grouped by user
+    const { data: allLeads, count: leadsCount } = await supaFetch('leads?select=user_id,email,first_name,last_name,organisation,status,created_at,playbook_id&order=created_at.desc&limit=5000');
+    const { data: allPlaybooks, count: pbCount } = await supaFetch('playbooks?select=id,name,user_id,created_at,brief,keywords,angle&order=created_at.desc');
+    const { data: allResources } = await supaFetch('fida_resources?select=id&limit=1');
+
+    // Parse counts from content-range header
+    const totalLeads = leadsCount ? parseInt(leadsCount.split('/')[1]) : allLeads.length;
+    const totalPlaybooks = pbCount ? parseInt(pbCount.split('/')[1]) : allPlaybooks.length;
+
+    // Group by user
+    const userMap = {};
+    allLeads.forEach(function(l) {
+      if (!userMap[l.user_id]) userMap[l.user_id] = { leads: 0, withEmail: 0, playbooks: new Set(), lastActivity: null };
+      userMap[l.user_id].leads++;
+      if (l.email) userMap[l.user_id].withEmail++;
+      if (l.playbook_id) userMap[l.user_id].playbooks.add(l.playbook_id);
+      if (!userMap[l.user_id].lastActivity || l.created_at > userMap[l.user_id].lastActivity) {
+        userMap[l.user_id].lastActivity = l.created_at;
+      }
+    });
+    // Also count playbooks for users with no leads
+    allPlaybooks.forEach(function(pb) {
+      if (!userMap[pb.user_id]) userMap[pb.user_id] = { leads: 0, withEmail: 0, playbooks: new Set(), lastActivity: pb.created_at };
+      userMap[pb.user_id].playbooks.add(pb.id);
+    });
+
+    var users = Object.keys(userMap);
+
+    // Stats
+    document.getElementById('statUsers').textContent = users.length;
+    document.getElementById('statLeads').textContent = totalLeads.toLocaleString();
+    document.getElementById('statPlaybooks').textContent = totalPlaybooks;
+    document.getElementById('statResources').textContent = allResources.length > 0 ? '141' : '0';
+
+    // Users table
+    document.getElementById('userCount').textContent = users.length + ' users';
+    var usersHtml = '<table><thead><tr><th>User</th><th>Leads</th><th>With email</th><th>Playbooks</th><th>Last activity</th><th>Status</th></tr></thead><tbody>';
+    users.sort(function(a, b) { return (userMap[b].lastActivity || '') > (userMap[a].lastActivity || '') ? 1 : -1; });
+    users.forEach(function(uid) {
+      var u = userMap[uid];
+      var ago = u.lastActivity ? timeSince(new Date(u.lastActivity)) : 'never';
+      var isRecent = u.lastActivity && (Date.now() - new Date(u.lastActivity).getTime()) < 24 * 60 * 60 * 1000;
+      usersHtml += '<tr>';
+      usersHtml += '<td style="font-weight:500">' + escHtml(uid) + '</td>';
+      usersHtml += '<td>' + u.leads + '</td>';
+      usersHtml += '<td>' + u.withEmail + ' <span style="color:var(--muted);font-size:11px">(' + (u.leads ? Math.round(u.withEmail/u.leads*100) : 0) + '%)</span></td>';
+      usersHtml += '<td>' + u.playbooks.size + '</td>';
+      usersHtml += '<td class="timestamp">' + ago + '</td>';
+      usersHtml += '<td>' + (isRecent ? '<span class="badge-active">Active</span>' : '<span class="badge-new">Inactive</span>') + '</td>';
+      usersHtml += '</tr>';
+    });
+    usersHtml += '</tbody></table>';
+    document.getElementById('usersTable').innerHTML = usersHtml;
+
+    // Playbooks table
+    var pbHtml = '<table><thead><tr><th>Playbook name</th><th>User</th><th>Leads</th><th>Angle</th><th>Keywords</th><th>Created</th></tr></thead><tbody>';
+    allPlaybooks.forEach(function(pb) {
+      var leadCount = allLeads.filter(function(l) { return l.playbook_id === pb.id; }).length;
+      pbHtml += '<tr>';
+      pbHtml += '<td style="font-weight:500">' + escHtml(pb.name) + '</td>';
+      pbHtml += '<td style="color:var(--muted)">' + escHtml(pb.user_id) + '</td>';
+      pbHtml += '<td>' + leadCount + '</td>';
+      pbHtml += '<td style="color:var(--muted);font-size:11px">' + escHtml(pb.angle || '-') + '</td>';
+      pbHtml += '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:11px">' + escHtml((pb.keywords || '').substring(0, 80)) + '</td>';
+      pbHtml += '<td class="timestamp">' + new Date(pb.created_at).toLocaleDateString() + '</td>';
+      pbHtml += '</tr>';
+    });
+    pbHtml += '</tbody></table>';
+    document.getElementById('playbooksTable').innerHTML = pbHtml;
+
+    // Recent leads
+    var recentHtml = '<table><thead><tr><th>Name</th><th>Email</th><th>Organisation</th><th>User</th><th>Added</th></tr></thead><tbody>';
+    allLeads.slice(0, 20).forEach(function(l) {
+      recentHtml += '<tr>';
+      recentHtml += '<td>' + escHtml((l.first_name || '') + ' ' + (l.last_name || '')) + '</td>';
+      recentHtml += '<td style="color:' + (l.email ? 'var(--green-light)' : 'var(--muted)') + '">' + escHtml(l.email || 'no email') + '</td>';
+      recentHtml += '<td style="color:var(--muted);font-size:11px">' + escHtml(l.organisation || '-') + '</td>';
+      recentHtml += '<td style="color:var(--muted);font-size:11px">' + escHtml(l.user_id) + '</td>';
+      recentHtml += '<td class="timestamp">' + timeSince(new Date(l.created_at)) + '</td>';
+      recentHtml += '</tr>';
+    });
+    recentHtml += '</tbody></table>';
+    document.getElementById('recentLeads').innerHTML = recentHtml;
+
+    // System health
+    var healthHtml = '<table><thead><tr><th>Service</th><th>Status</th><th>Details</th></tr></thead><tbody>';
+    // Check backend
+    try {
+      var hStart = Date.now();
+      var hResp = await fetch(BACKEND + '/health');
+      var hData = await hResp.json();
+      var hTime = Date.now() - hStart;
+      healthHtml += '<tr><td>Backend (Render)</td><td><span class="badge-active">Online</span></td><td class="timestamp">' + hTime + 'ms response</td></tr>';
+    } catch(e) {
+      healthHtml += '<tr><td>Backend (Render)</td><td><span style="color:var(--red)">Offline</span></td><td class="timestamp">' + e.message + '</td></tr>';
+    }
+    // Check Supabase
+    healthHtml += '<tr><td>Supabase DB</td><td><span class="badge-active">Online</span></td><td class="timestamp">' + totalLeads + ' leads, ' + totalPlaybooks + ' playbooks</td></tr>';
+    // Check resources
+    try {
+      var rResp = await fetch(BACKEND + '/list-resources');
+      var rData = await rResp.json();
+      healthHtml += '<tr><td>Resource library</td><td><span class="badge-active">' + rData.count + ' loaded</span></td><td class="timestamp">fida_resources table</td></tr>';
+    } catch(e) {
+      healthHtml += '<tr><td>Resource library</td><td><span style="color:var(--red)">Error</span></td><td class="timestamp">' + e.message + '</td></tr>';
+    }
+    healthHtml += '</tbody></table>';
+    document.getElementById('healthTable').innerHTML = healthHtml;
+
+  } catch(e) {
+    console.error('Dashboard error:', e);
+    document.getElementById('usersTable').innerHTML = '<div class="loading" style="color:var(--red)">Error loading data: ' + e.message + '</div>';
+  }
+}
+
+function timeSince(date) {
+  var s = Math.floor((Date.now() - date) / 1000);
+  if (s < 60) return s + 's ago';
+  if (s < 3600) return Math.floor(s/60) + 'm ago';
+  if (s < 86400) return Math.floor(s/3600) + 'h ago';
+  return Math.floor(s/86400) + 'd ago';
+}
+
+function escHtml(str) {
+  var d = document.createElement('div');
+  d.textContent = str || '';
+  return d.innerHTML;
+}
+</script>
+</body>
+</html>
