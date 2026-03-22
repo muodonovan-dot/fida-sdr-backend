@@ -1885,23 +1885,17 @@ tr:hover .row-actions-inline { display:flex; }
         <button class="btn btn-ghost btn-sm" onclick="testInstantly()">Test</button>
       </div>
     </div>
-    <div>
+    <div style="display:none">
       <div class="field-label">Google API Key <span style="font-weight:400;color:var(--muted)">(LinkedIn finder + location)</span></div>
       <div class="input-row">
         <input type="password" id="googleApiKey" placeholder="AIza..." autocomplete="off" oninput="saveGoogleKeys()"/>
         <button class="btn btn-ghost btn-sm" onclick="testGoogleCse()">Test</button>
       </div>
-      <div style="font-size:.68rem;color:var(--muted);margin-top:4px">
-        <a href="https://console.cloud.google.com/" target="_blank" style="color:var(--orange-light)">console.cloud.google.com</a> → Enable "Custom Search JSON API" → Create credentials → API key · 100 free searches/day
-      </div>
     </div>
-    <div>
+    <div style="display:none">
       <div class="field-label">Google CSE ID <span style="font-weight:400;color:var(--muted)">(Programmable Search Engine ID)</span></div>
       <div class="input-row">
         <input type="text" id="googleCseId" placeholder="e.g. 017576662512468239146:omuauf_lfve" oninput="saveGoogleKeys()"/>
-      </div>
-      <div style="font-size:.68rem;color:var(--muted);margin-top:4px">
-        <a href="https://programmablesearchengine.google.com/" target="_blank" style="color:var(--orange-light)">programmablesearchengine.google.com</a> → New search engine → Search entire web → copy the ID
       </div>
     </div>
     <div class="full">
@@ -2126,14 +2120,63 @@ async function initSupabase() {
 }
 
 // Sign out and redirect to login
+// Clear only the current user's namespaced keys on sign out
 async function signOut() {
   try {
+    // Clear user-specific localStorage keys
+    var prefix = 'fida_' + (getUserId() || '') + '_';
+    var keysToRemove = [];
+    for (var i = 0; i < localStorage.length; i++) {
+      var key = localStorage.key(i);
+      if (key && key.startsWith(prefix)) keysToRemove.push(key);
+    }
+    keysToRemove.forEach(function(k) { localStorage.removeItem(k); });
     if (sb) await sb.auth.signOut();
   } catch(e) { console.warn('Sign out error:', e.message); }
   localStorage.removeItem('fidaUserId');
   localStorage.removeItem('fidaUserEmail');
   window.location.href = '/login.html';
 }
+
+// User-scoped localStorage: each user's settings are namespaced by their email
+// This means User A's API keys, territory, sender name etc. won't leak to User B
+// even if they use the same browser.
+// Keys that should NOT be namespaced (shared across users on same browser):
+var _globalKeys = new Set(['fidaUserId', 'fidaUserEmail', 'fidaCurrentTab']);
+
+var _origSetItem = localStorage.setItem.bind(localStorage);
+var _origGetItem = localStorage.getItem.bind(localStorage);
+var _origRemoveItem = localStorage.removeItem.bind(localStorage);
+
+localStorage.setItem = function(key, value) {
+  if (key && key.startsWith('fida') && !_globalKeys.has(key)) {
+    var uid = _origGetItem('fidaUserId') || '';
+    if (uid) return _origSetItem('fida_' + uid + '_' + key, value);
+  }
+  return _origSetItem(key, value);
+};
+
+localStorage.getItem = function(key) {
+  if (key && key.startsWith('fida') && !_globalKeys.has(key)) {
+    var uid = _origGetItem('fidaUserId') || '';
+    if (uid) {
+      var val = _origGetItem('fida_' + uid + '_' + key);
+      // Fallback: if no namespaced value exists, try the old unnamespaced key
+      // This handles migration from old format to new
+      if (val === null) return _origGetItem(key);
+      return val;
+    }
+  }
+  return _origGetItem(key);
+};
+
+localStorage.removeItem = function(key) {
+  if (key && key.startsWith('fida') && !_globalKeys.has(key)) {
+    var uid = _origGetItem('fidaUserId') || '';
+    if (uid) return _origRemoveItem('fida_' + uid + '_' + key);
+  }
+  return _origRemoveItem(key);
+};
 
 const BACKEND = 'https://fida-sdr-backend.onrender.com';
 
@@ -3586,7 +3629,6 @@ function renderSettingsKeyStatus() {
   // Update key status indicators next to each input
   const keyStatuses = [
     { elId: 'anthropicKey', has: !!apiKey, label: 'Anthropic (required for AI generation)' },
-    { elId: 'googleApiKey', has: !!googleKey, label: 'Google CSE (required for LinkedIn finder)' },
     { elId: 'instantlyKey', has: !!instantlyKey, label: 'Instantly (required for email campaigns)' },
   ];
 

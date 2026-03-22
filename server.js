@@ -780,8 +780,13 @@ app.post('/instantly-launch', async (req, res) => {
 // POST /find-linkedin  (Google Custom Search -- LinkedIn finder)
 // ====================================================================
 app.post('/find-linkedin', async (req, res) => {
+  // Use built-in Google keys as default -- users can override with their own
+  const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || 'AIzaSyCD_9rKKAD0AgaMR4Kf5fSWvXXrf_fBL7o';
+  const GOOGLE_CSE_ID = process.env.GOOGLE_CSE_ID || 'e50ed9b2fc3ca4cc2';
   const { firstName, lastName, organisation, googleApiKey, googleCseId } = req.body;
-  if (!googleApiKey || !googleCseId) {
+  const apiKey = googleApiKey || GOOGLE_API_KEY;
+  const cseId = googleCseId || GOOGLE_CSE_ID;
+  if (!apiKey || !cseId) {
     return res.status(400).json({ error: 'Missing Google API key or CSE ID' });
   }
   if (!firstName || !lastName) {
@@ -790,7 +795,7 @@ app.post('/find-linkedin', async (req, res) => {
   try {
     const org = organisation || '';
     const query = `"${firstName} ${lastName}" ${org ? '"' + org + '"' : ''} site:linkedin.com/in`;
-    const url = `https://www.googleapis.com/customsearch/v1?key=${googleApiKey}&cx=${googleCseId}&q=${encodeURIComponent(query)}&num=3`;
+    const url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cseId}&q=${encodeURIComponent(query)}&num=3`;
     const resp = await fetch(url);
     const data = await resp.json();
     if (!resp.ok) {
@@ -803,7 +808,7 @@ app.post('/find-linkedin', async (req, res) => {
     if (!items.length) {
       // Retry with looser query (no org)
       const looseQuery = `"${firstName} ${lastName}" site:linkedin.com/in`;
-      const looseUrl = `https://www.googleapis.com/customsearch/v1?key=${googleApiKey}&cx=${googleCseId}&q=${encodeURIComponent(looseQuery)}&num=3`;
+      const looseUrl = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cseId}&q=${encodeURIComponent(looseQuery)}&num=3`;
       const looseResp = await fetch(looseUrl);
       const looseData = await looseResp.json();
       const looseItems = looseData.items || [];
