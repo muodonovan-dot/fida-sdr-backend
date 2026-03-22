@@ -2137,6 +2137,40 @@ async function signOut() {
 
 const BACKEND = 'https://fida-sdr-backend.onrender.com';
 
+// Helper: get Supabase headers with the authenticated user's JWT token
+// This is critical for RLS — the JWT carries the user's email so Supabase
+// can enforce row-level security (user can only see their own data)
+function getSupabaseAuthToken() {
+  if (sb && sb.auth) {
+    try {
+      // getSession() is async but the session is cached locally after initSupabase
+      var session = sb.auth.session || null;
+      // Supabase v2 stores session internally, access via _getSession sync
+      if (!session && sb.auth.getSession) {
+        // Fallback: use the stored access token
+        var storageKey = 'sb-cqsdsztzyvxtnzrruxeb-auth-token';
+        var stored = localStorage.getItem(storageKey);
+        if (stored) {
+          var parsed = JSON.parse(stored);
+          if (parsed.access_token) return parsed.access_token;
+        }
+      }
+      if (session && session.access_token) return session.access_token;
+    } catch(e) { /* fall through */ }
+  }
+  return SUPABASE_ANON_KEY; // fallback to anon key
+}
+
+function getSupabaseHeaders(withContent) {
+  var token = getSupabaseAuthToken();
+  var h = {
+    'apikey': SUPABASE_ANON_KEY,
+    'Authorization': 'Bearer ' + token
+  };
+  if (withContent) h['Content-Type'] = 'application/json';
+  return h;
+}
+
 // Contacts page state (declared early to avoid initialization errors)
 let contactsData = [];
 let filteredContactsData = [];
@@ -2711,7 +2745,7 @@ async function loadPlaybooksFromSupabase() {
   const SUPA_URL = 'https://cqsdsztzyvxtnzrruxeb.supabase.co';
   const SUPA_KEY = 'sb_publishable_oWLb_blZHL_rayCldsPfMw_OoQs0HMR';
   const userId = getUserId();
-  const hdrs = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY };
+  const hdrs = getSupabaseHeaders();
 
   try {
     // Fetch playbooks
@@ -2895,13 +2929,7 @@ async function syncPlaybooksToSupabase() {
   if (syncEl) syncEl.textContent = '⟳ Syncing...';
 
   const SUPA_URL = 'https://cqsdsztzyvxtnzrruxeb.supabase.co';
-  const SUPA_KEY = 'sb_publishable_oWLb_blZHL_rayCldsPfMw_OoQs0HMR';
-  const headers = {
-    'apikey': SUPA_KEY,
-    'Authorization': 'Bearer ' + SUPA_KEY,
-    'Content-Type': 'application/json',
-    'Prefer': 'resolution=merge-duplicates'
-  };
+  const headers = Object.assign(getSupabaseHeaders(true), { 'Prefer': 'resolution=merge-duplicates' });
 
   // ── Step 1: Upsert playbook rows FIRST (leads have FK to playbooks) ──
   const pbRows = playbooks.map(function(pb) {
@@ -3029,7 +3057,7 @@ async function syncPlaybooksToSupabase() {
   // ── Step 3: Delete orphan playbooks & leads (in DB but not local) ──
   try {
     var dbPbRes = await fetch(SUPA_URL + '/rest/v1/playbooks?user_id=eq.' + encodeURIComponent(userId) + '&select=id', {
-      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+      headers: getSupabaseHeaders()
     });
     var dbPbList = await dbPbRes.json();
     if (Array.isArray(dbPbList)) {
@@ -3039,11 +3067,11 @@ async function syncPlaybooksToSupabase() {
         console.log('[Supabase] Deleting', orphanPbIds.length, 'orphan playbooks');
         // Delete orphan leads first (FK), then playbooks
         for (var oi = 0; oi < orphanPbIds.length; oi++) {
-          await fetch(SUPA_URL + '/rest/v1/leads?playbook_id=eq.' + orphanPbIds[oi], {
-            method: 'DELETE', headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+          await fetch(SUPA_URL + '/rest/v1/leads?playbook_id=eq.' + orphanPbIds[oi] + '&user_id=eq.' + encodeURIComponent(userId), {
+            method: 'DELETE', headers: getSupabaseHeaders()
           });
-          await fetch(SUPA_URL + '/rest/v1/playbooks?id=eq.' + orphanPbIds[oi], {
-            method: 'DELETE', headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+          await fetch(SUPA_URL + '/rest/v1/playbooks?id=eq.' + orphanPbIds[oi] + '&user_id=eq.' + encodeURIComponent(userId), {
+            method: 'DELETE', headers: getSupabaseHeaders()
           });
         }
         console.log('[Supabase] Cleaned up', orphanPbIds.length, 'deleted playbooks');
@@ -3054,7 +3082,7 @@ async function syncPlaybooksToSupabase() {
     var localLeadIds = new Set();
     playbooks.forEach(function(pb) { (pb.leads || []).forEach(function(l) { localLeadIds.add(l.id); }); });
     var dbLeadRes = await fetch(SUPA_URL + '/rest/v1/leads?user_id=eq.' + encodeURIComponent(userId) + '&select=id', {
-      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+      headers: getSupabaseHeaders()
     });
     var dbLeadList = await dbLeadRes.json();
     if (Array.isArray(dbLeadList)) {
@@ -3066,7 +3094,7 @@ async function syncPlaybooksToSupabase() {
           var delBatch = orphanLeadIds.slice(di, di + delBatchSize);
           var idList = delBatch.map(function(id) { return '"' + id + '"'; }).join(',');
           await fetch(SUPA_URL + '/rest/v1/leads?id=in.(' + idList + ')', {
-            method: 'DELETE', headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+            method: 'DELETE', headers: getSupabaseHeaders()
           });
         }
         console.log('[Supabase] Cleaned up', orphanLeadIds.length, 'deleted leads');
@@ -5314,7 +5342,7 @@ async function startGeneration() {
               const SUPA_KEY = 'sb_publishable_oWLb_blZHL_rayCldsPfMw_OoQs0HMR';
               fetch(SUPA_URL + '/rest/v1/leads?id=eq.' + encodeURIComponent(pbLead.id), {
                 method: 'PATCH',
-                headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' },
+                headers: getSupabaseHeaders(true),
                 body: JSON.stringify({ status: 'generated', generated_emails: JSON.stringify(d.emails) })
               }).catch(e => console.warn('Generated emails save error:', e.message));
             }
@@ -12255,7 +12283,7 @@ async function patchLeadField(leadId, field, value) {
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/leads?id=eq.' + encodeURIComponent(leadId), {
       method: 'PATCH',
-      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' },
+      headers: getSupabaseHeaders(true),
       body: JSON.stringify({ [dbField]: value })
     });
     if (!res.ok) console.warn('[patchLeadField]', res.status);
@@ -14297,7 +14325,7 @@ function deleteLeadsFromSupabase(ids) {
     var idList = batch.map(function(id) { return '"' + id + '"'; }).join(',');
     fetch(SUPA_URL + '/rest/v1/leads?id=in.(' + idList + ')', {
       method: 'DELETE',
-      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+      headers: getSupabaseHeaders()
     }).then(function(r) {
       if (r.ok) console.log('[Supabase] Deleted batch of', batch.length, 'leads');
       else console.warn('[Supabase] Delete failed', r.status);
@@ -14705,7 +14733,7 @@ async function checkDbSync() {
     // Check playbooks
     const pbRes = await fetch(
       SUPA_URL + '/rest/v1/playbooks?user_id=eq.' + encodeURIComponent(userId) + '&select=id',
-      { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY } }
+      { headers: getSupabaseHeaders() }
     );
     const pbData = await pbRes.json();
     if (Array.isArray(pbData)) dbPlaybooks = pbData.length;
@@ -14713,7 +14741,7 @@ async function checkDbSync() {
     // Check all leads for this user
     const res = await fetch(
       SUPA_URL + '/rest/v1/leads?user_id=eq.' + encodeURIComponent(userId) + '&select=id,email,enriched_at,ai_enriched_at',
-      { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY } }
+      { headers: getSupabaseHeaders() }
     );
     const dbLeads = await res.json();
     if (Array.isArray(dbLeads)) {
