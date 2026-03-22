@@ -1160,6 +1160,13 @@ tr:hover .row-actions-inline { display:flex; }
     <div id="dealPipelineContent"></div>
   </div>
 
+  <!-- ROW 5b: PROSPECTING ROI -->
+  <div id="prospectingRoiCard" class="card" style="margin-bottom:18px;padding:20px 24px;display:none">
+    <div style="font-family:Outfit,sans-serif;font-weight:700;font-size:.85rem;color:#fff;margin-bottom:4px">📈 Prospecting ROI</div>
+    <div style="font-size:.68rem;color:var(--muted);margin-bottom:14px">Proof your prospecting is generating real pipeline</div>
+    <div id="prospectingRoiContent"></div>
+  </div>
+
   <!-- ROW 6: BATCH TIMELINE -->
   <div class="card" style="margin-bottom:18px;padding:20px 24px">
     <div style="font-family:Outfit,sans-serif;font-weight:700;font-size:.85rem;color:#fff;margin-bottom:14px">📅 Sequence Timeline</div>
@@ -2843,6 +2850,7 @@ async function loadPlaybooksFromSupabase() {
         dealValue: l.deal_value || null,
         dealStage: l.deal_stage || null,
         dealCreatedAt: l.deal_created_at || null,
+        dealClosedAt: l.deal_closed_at || null,
       }))
     }));
 
@@ -3005,6 +3013,7 @@ async function syncPlaybooksToSupabase() {
         deal_value: l.dealValue || l.deal_value || null,
         deal_stage: l.dealStage || l.deal_stage || null,
         deal_created_at: l.dealCreatedAt || l.deal_created_at || null,
+        deal_closed_at: l.dealClosedAt || l.deal_closed_at || null,
         added_at: (function() { var v = l.addedAt || l.createdAt || l.added_at; if (!v) return Date.now(); if (typeof v === 'number') return v; var d = new Date(v).getTime(); return isNaN(d) ? Date.now() : d; })()
       };
     });
@@ -4014,6 +4023,7 @@ function generateDemoData() {
       _pushedAt: pushDate ? pushDate.toISOString() : null,
       dealStage: dealStage, dealValue: dealValue,
       dealCreatedAt: dealStage ? new Date(addedDate.getTime() + 86400000 * 5).toISOString() : null,
+      dealClosedAt: (dealStage === 'won' || dealStage === 'lost') ? new Date(addedDate.getTime() + 86400000 * 15).toISOString() : null,
       generatedEmails: (st !== 'new') ? { email1: { subject: 'test', body: 'test' } } : null,
       _pbName: '', _pbId: '', _pbColor: '#EF4D05'
     });
@@ -4060,6 +4070,7 @@ function renderPipelineOverview() {
   renderTerritoryChart(leads);
   renderSequenceCards(leads);
   renderDealPipeline(leads);
+  renderProspectingROI(leads);
   renderBatchTimeline(leads);
   renderEmailHealth(leads);
 }
@@ -4341,13 +4352,15 @@ function renderDealPipeline(leads) {
   var lostVal = lost.reduce(function(s,l){return s+(l.dealValue||0)},0);
   var totalVal = oppVal+wonVal+lostVal;
   var avgDeal = (opp.length+won.length)>0?Math.round((oppVal+wonVal)/(opp.length+won.length)):0;
-  var winRate = (won.length+lost.length)>0?((won.length/(won.length+lost.length))*100).toFixed(0):'—';
+  var winRate = (won.length+lost.length)>0?((won.length/(won.length+lost.length))*100).toFixed(0):'--';
+
+  var fmtVal = function(v) { return v >= 1000000 ? '$' + (v/1000000).toFixed(1) + 'M' : v >= 1000 ? '$' + Math.round(v/1000) + 'K' : '$' + v.toLocaleString(); };
 
   var html = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">';
-  html += '<div style="text-align:center"><div style="font-size:1.4rem;font-weight:800;color:#f59e0b;font-family:Outfit">$'+(oppVal>=1000?Math.round(oppVal/1000)+'K':oppVal.toLocaleString())+'</div><div style="font-size:.62rem;color:var(--muted)">Pipeline ('+opp.length+')</div></div>';
-  html += '<div style="text-align:center"><div style="font-size:1.4rem;font-weight:800;color:#00c87a;font-family:Outfit">$'+(wonVal>=1000?Math.round(wonVal/1000)+'K':wonVal.toLocaleString())+'</div><div style="font-size:.62rem;color:var(--muted)">Won ('+won.length+')</div></div>';
-  html += '<div style="text-align:center"><div style="font-size:1.4rem;font-weight:800;color:var(--muted);font-family:Outfit">$'+(avgDeal>=1000?Math.round(avgDeal/1000)+'K':avgDeal.toLocaleString())+'</div><div style="font-size:.62rem;color:var(--muted)">Avg Deal</div></div>';
-  html += '<div style="text-align:center"><div style="font-size:1.4rem;font-weight:800;color:'+(parseInt(winRate)>=50?'#00c87a':'#f59e0b')+';font-family:Outfit">'+winRate+'%</div><div style="font-size:.62rem;color:var(--muted)">Win Rate</div></div>';
+  html += '<div style="text-align:center"><div style="font-size:1.4rem;font-weight:800;color:#f59e0b;font-family:Outfit">' + fmtVal(oppVal) + '</div><div style="font-size:.62rem;color:var(--muted)">Open Pipeline (' + opp.length + ')</div></div>';
+  html += '<div style="text-align:center"><div style="font-size:1.4rem;font-weight:800;color:#00c87a;font-family:Outfit">' + fmtVal(wonVal) + '</div><div style="font-size:.62rem;color:var(--muted)">Won Revenue (' + won.length + ')</div></div>';
+  html += '<div style="text-align:center"><div style="font-size:1.4rem;font-weight:800;color:var(--muted);font-family:Outfit">' + fmtVal(avgDeal) + '</div><div style="font-size:.62rem;color:var(--muted)">Avg Deal Size</div></div>';
+  html += '<div style="text-align:center"><div style="font-size:1.4rem;font-weight:800;color:' + (parseInt(winRate)>=50?'#00c87a':'#f59e0b') + ';font-family:Outfit">' + winRate + '%</div><div style="font-size:.62rem;color:var(--muted)">Win Rate</div></div>';
   html += '</div>';
 
   // Pipeline bar
@@ -4359,16 +4372,87 @@ function renderDealPipeline(leads) {
     html += '</div>';
   }
 
-  // Open opportunities list
-  if (opp.length) {
-    html += '<div style="font-size:.62rem;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Open Opportunities</div>';
-    opp.sort(function(a,b){return (b.dealValue||0)-(a.dealValue||0)}).slice(0,8).forEach(function(l){
-      html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04)">' +
-        '<div><span style="font-size:.78rem;color:var(--text);font-weight:600">'+(l.firstName||'')+' '+(l.lastName||'')+'</span> <span style="font-size:.65rem;color:var(--muted)">'+(l.organisation||'')+'</span></div>' +
-        '<div style="font-size:.85rem;font-weight:700;color:#f59e0b">$'+(l.dealValue||0).toLocaleString()+'</div>' +
+  // All deals list (not just open)
+  if (deals.length) {
+    html += '<div style="font-size:.62rem;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">All Deals (' + deals.length + ')</div>';
+    deals.sort(function(a,b){return (b.dealValue||0)-(a.dealValue||0)}).slice(0,12).forEach(function(l){
+      var stageColor = l.dealStage==='won' ? '#00c87a' : l.dealStage==='lost' ? '#ff6b6b' : '#f59e0b';
+      var stageIcon = l.dealStage==='won' ? '🟢' : l.dealStage==='lost' ? '🔴' : '🟡';
+      var closedText = l.dealClosedAt ? ' · Closed ' + new Date(l.dealClosedAt).toLocaleDateString() : '';
+      var flaggedText = l.dealCreatedAt ? new Date(l.dealCreatedAt).toLocaleDateString() : '';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)">' +
+        '<div style="flex:1;min-width:0">' +
+          '<div><span style="font-size:.78rem;color:var(--text);font-weight:600">' + (l.firstName||'') + ' ' + (l.lastName||'') + '</span> <span style="font-size:.65rem;color:var(--muted)">' + (l.organisation||'') + '</span></div>' +
+          '<div style="font-size:.58rem;color:var(--muted)">Flagged ' + flaggedText + closedText + '</div>' +
+        '</div>' +
+        '<div style="text-align:right;flex-shrink:0;margin-left:12px">' +
+          '<div style="font-size:.85rem;font-weight:700;color:' + stageColor + '">' + fmtVal(l.dealValue||0) + '</div>' +
+          '<div style="font-size:.58rem;color:' + stageColor + '">' + stageIcon + ' ' + (l.dealStage||'').charAt(0).toUpperCase() + (l.dealStage||'').slice(1) + '</div>' +
+        '</div>' +
       '</div>';
     });
   }
+
+  content.innerHTML = html;
+}
+
+// ── PROSPECTING ROI ──
+function renderProspectingROI(leads) {
+  var card = document.getElementById('prospectingRoiCard');
+  var content = document.getElementById('prospectingRoiContent');
+  if (!card||!content) return;
+
+  var total = leads.length;
+  var withEmail = leads.filter(function(l){return l.email}).length;
+  var contacted = leads.filter(function(l){return l.status==='in_sequence'||l.status==='replied'}).length;
+  var replied = leads.filter(function(l){return l.status==='replied'}).length;
+  var deals = leads.filter(function(l){return l.dealStage}).length;
+  var won = leads.filter(function(l){return l.dealStage==='won'});
+  var wonVal = won.reduce(function(s,l){return s+(l.dealValue||0)},0);
+  var pipelineVal = leads.filter(function(l){return l.dealStage==='opportunity'}).reduce(function(s,l){return s+(l.dealValue||0)},0);
+  var totalPipeline = pipelineVal + wonVal;
+
+  // Always show this card since it tells the ROI story even without deals
+  card.style.display = 'block';
+
+  var fmtVal = function(v) { return v >= 1000000 ? '$' + (v/1000000).toFixed(1) + 'M' : v >= 1000 ? '$' + Math.round(v/1000) + 'K' : '$' + v.toLocaleString(); };
+
+  // ROI funnel: Leads Found -> Contacted -> Replied -> Became Deals -> Revenue
+  var steps = [
+    { label: 'Leads Found', count: total, color: '#6eb5ff' },
+    { label: 'Contacted', count: contacted, color: '#EF4D05' },
+    { label: 'Replied', count: replied, color: '#00c87a' },
+    { label: 'Became Opportunities', count: deals, color: '#f59e0b' },
+    { label: 'Won', count: won.length, color: '#10b981' }
+  ];
+
+  var html = '';
+
+  // Arrow funnel — the story a manager wants to see
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:20px;flex-wrap:wrap">';
+  steps.forEach(function(s, i) {
+    var prevCount = i > 0 ? steps[i-1].count : total;
+    var convPct = prevCount > 0 && i > 0 ? ((s.count / prevCount) * 100).toFixed(0) : '';
+    html += '<div style="flex:1;min-width:80px;text-align:center;padding:12px 4px;background:rgba(255,255,255,.02);border-radius:8px;border:1px solid rgba(255,255,255,.04)">';
+    html += '<div style="font-size:1.2rem;font-weight:800;color:' + s.color + ';font-family:Outfit">' + s.count.toLocaleString() + '</div>';
+    html += '<div style="font-size:.58rem;color:var(--muted);margin-top:2px">' + s.label + '</div>';
+    if (convPct) {
+      html += '<div style="font-size:.55rem;color:' + (parseInt(convPct) >= 20 ? '#00c87a' : parseInt(convPct) >= 5 ? '#f59e0b' : 'var(--muted)') + ';margin-top:3px;font-weight:600">' + convPct + '% conv.</div>';
+    }
+    html += '</div>';
+    if (i < steps.length - 1) {
+      html += '<div style="font-size:.85rem;color:rgba(255,255,255,.15);flex-shrink:0">&#8594;</div>';
+    }
+  });
+  html += '</div>';
+
+  // Bottom line — the money story
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:16px;background:rgba(0,200,122,.03);border:1px solid rgba(0,200,122,.1);border-radius:10px">';
+  html += '<div style="text-align:center"><div style="font-size:1.6rem;font-weight:800;color:#f59e0b;font-family:Outfit">' + fmtVal(totalPipeline) + '</div><div style="font-size:.62rem;color:var(--muted)">Total Pipeline Generated</div></div>';
+  html += '<div style="text-align:center"><div style="font-size:1.6rem;font-weight:800;color:#00c87a;font-family:Outfit">' + fmtVal(wonVal) + '</div><div style="font-size:.62rem;color:var(--muted)">Closed Won Revenue</div></div>';
+  var costPerLead = total > 0 && totalPipeline > 0 ? Math.round(totalPipeline / total) : 0;
+  html += '<div style="text-align:center"><div style="font-size:1.6rem;font-weight:800;color:#6eb5ff;font-family:Outfit">' + fmtVal(costPerLead) + '</div><div style="font-size:.62rem;color:var(--muted)">Pipeline per Lead</div></div>';
+  html += '</div>';
 
   content.innerHTML = html;
 }
@@ -8244,10 +8328,10 @@ function renderContactsTable(data, total) {
 
       <!-- DEAL -->
       <td>
-        ${c.dealStage ? `<div style="text-align:center">
+        ${c.dealStage ? `<div style="text-align:center;cursor:pointer" onclick="event.stopPropagation();openContactDrawer('${c.id}','${c._playbookId}')">
           <div style="font-size:.78rem;font-weight:700;color:${c.dealStage==='won'?'#00c87a':c.dealStage==='lost'?'#ff6b6b':'#f59e0b'}">$${(c.dealValue||0).toLocaleString()}</div>
           <div style="font-size:.58rem;color:${c.dealStage==='won'?'#00c87a':c.dealStage==='lost'?'rgba(255,107,107,.7)':'rgba(245,158,11,.6)'};text-transform:uppercase;font-weight:600;letter-spacing:.04em">${c.dealStage}</div>
-        </div>` : '<span style="color:var(--muted);font-size:.72rem">—</span>'}
+        </div>` : `<button onclick="event.stopPropagation();flagAsOpportunity('${c.id}','${c._playbookId}')" style="padding:3px 8px;border-radius:5px;border:1px solid rgba(245,158,11,.2);background:rgba(245,158,11,.05);color:rgba(245,158,11,.5);cursor:pointer;font-family:inherit;font-size:.62rem;font-weight:600;white-space:nowrap;transition:all .15s" onmouseenter="this.style.background='rgba(245,158,11,.15)';this.style.color='#f59e0b';this.style.borderColor='rgba(245,158,11,.4)'" onmouseleave="this.style.background='rgba(245,158,11,.05)';this.style.color='rgba(245,158,11,.5)';this.style.borderColor='rgba(245,158,11,.2)'">+ Deal</button>`}
       </td>
 
       <!-- SCORE — uses AI priority score if available, else engagement score -->
@@ -8690,7 +8774,7 @@ function openContactDrawer(leadId, pbId) {
       <!-- ── OPPORTUNITY FLAG ── -->
       <div class="drawer-section" style="margin-top:16px;background:${lead.dealStage ? 'rgba(0,200,122,.04)' : 'rgba(255,255,255,.02)'};border:1px solid ${lead.dealStage === 'won' ? 'rgba(0,200,122,.3)' : lead.dealStage === 'lost' ? 'rgba(239,68,68,.2)' : lead.dealStage === 'opportunity' ? 'rgba(245,158,11,.3)' : 'rgba(255,255,255,.06)'};border-radius:10px;padding:14px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${lead.dealStage ? '10px' : '0'}">
-          <div style="font-size:.72rem;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.08em">💰 Opportunity</div>
+          <div style="font-size:.72rem;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.08em">💰 Deal Tracking</div>
           ${!lead.dealStage ? `<button onclick="flagAsOpportunity('${lead.id}','${pbId}')" style="padding:5px 12px;border-radius:6px;border:1px solid rgba(245,158,11,.3);background:rgba(245,158,11,.08);color:#f59e0b;cursor:pointer;font-family:inherit;font-size:.72rem;font-weight:600">Flag as Opportunity</button>` : ''}
         </div>
         ${lead.dealStage ? `
@@ -8706,7 +8790,7 @@ function openContactDrawer(leadId, pbId) {
             </div>
             <div>
               <div style="font-size:.62rem;color:var(--muted);margin-bottom:3px">Stage</div>
-              <select id="drawerDealStage_${lead.id}" onchange="markDrawerDirty('${lead.id}')"
+              <select id="drawerDealStage_${lead.id}" onchange="onDealStageChange('${lead.id}');markDrawerDirty('${lead.id}')"
                 style="width:100%;padding:6px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.78rem">
                 <option value="opportunity" ${lead.dealStage==='opportunity'?'selected':''}>🟡 Opportunity</option>
                 <option value="won" ${lead.dealStage==='won'?'selected':''}>🟢 Won</option>
@@ -8715,7 +8799,9 @@ function openContactDrawer(leadId, pbId) {
             </div>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center">
-            <div style="font-size:.65rem;color:var(--muted)">Flagged ${lead.dealCreatedAt ? new Date(lead.dealCreatedAt).toLocaleDateString() : 'today'}</div>
+            <div style="font-size:.65rem;color:var(--muted)">
+              Flagged ${lead.dealCreatedAt ? new Date(lead.dealCreatedAt).toLocaleDateString() : 'today'}${lead.dealClosedAt ? ` · Closed ${new Date(lead.dealClosedAt).toLocaleDateString()}` : ''}
+            </div>
             <button onclick="removeOpportunity('${lead.id}','${pbId}')" style="font-size:.65rem;color:rgba(239,68,68,.6);background:none;border:none;cursor:pointer;font-family:inherit">Remove flag</button>
           </div>
         ` : ''}
@@ -8784,7 +8870,17 @@ function saveContactDrawer(leadId, pbId) {
     var lead = pb ? (pb.leads || []).find(function(l) { return l.id === leadId; }) : null;
     if (lead) {
       if (dealValEl) lead.dealValue = parseFloat(dealValEl.value) || 0;
-      if (dealStageEl) lead.dealStage = dealStageEl.value;
+      if (dealStageEl) {
+        var newStage = dealStageEl.value;
+        var oldStage = lead.dealStage;
+        lead.dealStage = newStage;
+        // Auto-set dealClosedAt when moving to won/lost, clear when moving back to opportunity
+        if ((newStage === 'won' || newStage === 'lost') && oldStage === 'opportunity') {
+          lead.dealClosedAt = new Date().toISOString();
+        } else if (newStage === 'opportunity' && (oldStage === 'won' || oldStage === 'lost')) {
+          lead.dealClosedAt = null;
+        }
+      }
     }
   }
 
@@ -8812,6 +8908,13 @@ function saveContactDrawer(leadId, pbId) {
   window._drawerDirty = false;
 }
 
+// Called when the deal stage dropdown changes — visual feedback in the drawer
+function onDealStageChange(leadId) {
+  var stageEl = document.getElementById('drawerDealStage_' + leadId);
+  if (!stageEl) return;
+  // Just mark dirty — actual dealClosedAt logic runs on save
+}
+
 function flagAsOpportunity(leadId, pbId) {
   var pb = playbooks.find(function(p) { return p.id === pbId; });
   var lead = pb ? (pb.leads || []).find(function(l) { return l.id === leadId; }) : null;
@@ -8819,6 +8922,7 @@ function flagAsOpportunity(leadId, pbId) {
   lead.dealStage = 'opportunity';
   lead.dealValue = 0;
   lead.dealCreatedAt = new Date().toISOString();
+  lead.dealClosedAt = null;
   savePlaybooksToStorage();
   buildContactsData();
   applyContactsFiltersAndRender();
@@ -8834,6 +8938,7 @@ function removeOpportunity(leadId, pbId) {
   delete lead.dealStage;
   delete lead.dealValue;
   delete lead.dealCreatedAt;
+  delete lead.dealClosedAt;
   savePlaybooksToStorage();
   buildContactsData();
   applyContactsFiltersAndRender();
