@@ -7512,15 +7512,54 @@ async function runProspectEmailPipeline() {
     var r = candidates[ci];
     if (aiDiscoverStop) break;
 
+    // If lead already has an email from PubMed/enrichment, skip find-email
+    if (r.email && r.email.includes('@')) {
+      r._emailStatus = 'found';
+      found++;
+      logAiStep('📧 [' + (ci+1) + '/' + candidates.length + '] ' + (r.fullName || '') + ' — already has email: ' + r.email);
+      // Go straight to verification
+      if (zbKey) {
+        r._emailStatus = 'verifying';
+        renderProspectResults(fakeMsg);
+        var zbResult = await verifyEmailZB(r.email, zbKey);
+        if (zbResult.valid) {
+          r._emailStatus = zbResult.tag === 'valid' ? 'verified' : 'catch-all';
+          verified++;
+          logAiStep('  ✅ Verified: ' + zbResult.tag);
+        } else {
+          r._emailStatus = 'invalid';
+          failed++;
+          found--;
+          logAiStep('  ❌ Invalid: ' + zbResult.raw);
+        }
+      } else {
+        r._emailStatus = 'catch-all';
+        verified++;
+        logAiStep('  ⚠️ Unverified (no ZeroBounce key)');
+      }
+      renderProspectResults(fakeMsg);
+      if (ci < candidates.length - 1) await new Promise(function(res) { setTimeout(res, 300); });
+      continue;
+    }
+
     // Mark as enriching
     r._emailStatus = 'enriching';
     renderProspectResults(fakeMsg);
 
     try {
       // Step 1: Try to find email via backend waterfall
-      var org = r.institution || '';
+      var org = r.institution || r.organisation || '';
+      // Also try to get the parent org name (university) not just department
+      var orgName = r.orgName || r.organisation || r.affiliation || '';
+      // If org looks like a department, try to extract the university from affiliation
+      if (org && !org.toLowerCase().includes('university') && !org.toLowerCase().includes('institute') && (r.affiliation || '').toLowerCase().includes('university')) {
+        org = r.affiliation;
+      }
       var firstName = r.firstName || (r.fullName || '').split(' ')[0] || '';
       var lastName = r.lastName || (r.fullName || '').split(' ').slice(1).join(' ') || '';
+
+      // Strip middle initials from firstName (e.g. "Marian J" -> "Marian")
+      firstName = firstName.split(' ')[0];
 
       if (!firstName || !lastName) {
         r._emailStatus = 'not_found';
