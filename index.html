@@ -3556,10 +3556,10 @@ function switchTab(tab) {
   var ac = document.querySelector('.app-content');
   if (outsidePages.includes(tab)) {
     if (cb2) cb2.style.display = 'none';
-    if (ac) ac.style.overflow = 'auto';
+    if (ac) ac.style.setProperty('overflow-y', 'auto', 'important');
   } else {
     if (cb2) cb2.style.display = '';
-    if (ac) ac.style.overflow = 'hidden';
+    if (ac) ac.style.setProperty('overflow-y', 'hidden', 'important');
   }
   // Hide old hero block
   const hero = document.getElementById('heroBlock');
