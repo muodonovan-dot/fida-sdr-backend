@@ -1415,146 +1415,98 @@ tr:hover .row-actions-inline { display:flex; }
      PAGE: SEARCH LEADS (SciLeads-style)
 ════════════════════════════════════════════ -->
 <div id="pageSearchLeads" style="display:none">
-  <div class="search-shell">
+  <div style="height:calc(100vh - 52px);display:flex;flex-direction:column;overflow:hidden">
 
-    <!-- LEFT FILTER PANEL -->
-    <div class="search-filters-panel">
-
-      <!-- Keyword search -->
-      <div style="margin-bottom:4px;font-size:.65rem;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.1em">Keywords</div>
-      <input class="sf-keyword" id="sfKeyword" type="text" placeholder="e.g. Biacore, SPR, protein binding..." oninput="liveSearchDebounce()"/>
-      
-      <!-- Search sources -->
-      <div style="font-size:.65rem;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Search Across</div>
-      <div class="sf-source-pills">
-        <span class="sf-source-pill active" data-source="pubmed" onclick="toggleSearchSource(this)">📄 Publications</span>
-        <span class="sf-source-pill active" data-source="grants" onclick="toggleSearchSource(this)">💰 NIH Grants</span>
-        <span class="sf-source-pill active" data-source="trials" onclick="toggleSearchSource(this)">🧪 Clinical Trials</span>
+    <!-- SEARCH BAR - the hero -->
+    <div style="padding:16px 24px 0;flex-shrink:0">
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px">
+        <div style="flex:1;position:relative">
+          <input type="text" id="sfKeyword" placeholder="Search PubMed, NIH Grants, Clinical Trials... (e.g. CRISPR delivery, antibody aggregation, protein folding)"
+            style="width:100%;box-sizing:border-box;padding:12px 16px;background:var(--navy-light);border:1px solid var(--border);border-radius:10px;color:#fff;font-size:.9rem"
+            onkeydown="if(event.key==='Enter')runNewSearch()"
+            oninput="liveSearchDebounce()"/>
+        </div>
+        <button onclick="runNewSearch()" style="padding:12px 28px;background:var(--orange);color:#fff;border:none;border-radius:10px;font-size:.9rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">Search</button>
       </div>
 
-      <div class="sf-divider"></div>
+      <!-- Source toggles + Quick filters - single row -->
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid var(--border)">
 
-      <!-- Research Application -->
-      <div class="sf-section">
-        <div class="sf-section-hdr" onclick="toggleSfSection(this)">
-          <span class="sf-section-title">🧬 Research Application</span>
-          <span class="sf-section-arrow open">▲</span>
+        <!-- Sources -->
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-right:2px">Search:</span>
+          <span class="sf-source-pill active" data-source="pubmed" onclick="toggleSearchSource(this)" style="font-size:.75rem;padding:4px 10px">Publications</span>
+          <span class="sf-source-pill active" data-source="grants" onclick="toggleSearchSource(this)" style="font-size:.75rem;padding:4px 10px">NIH Grants</span>
+          <span class="sf-source-pill active" data-source="trials" onclick="toggleSearchSource(this)" style="font-size:.75rem;padding:4px 10px">Clinical Trials</span>
         </div>
-        <div class="sf-section-body">
-          <div class="sf-pill-group" id="sfAppPills">
-            <span class="sf-pill active" data-val="">All</span>
-            <span class="sf-pill" data-val="SPR Biacore">SPR / Biacore</span>
-            <span class="sf-pill" data-val="antibody">Antibodies</span>
-            <span class="sf-pill" data-val="protein characterization">Protein Char.</span>
-            <span class="sf-pill" data-val="drug discovery">Drug Discovery</span>
-            <span class="sf-pill" data-val="structural biology">Structural Bio</span>
-            <span class="sf-pill" data-val="membrane protein">Membrane Proteins</span>
-            <span class="sf-pill" data-val="kinetics binding">Kinetics / Binding</span>
-          </div>
-        </div>
-      </div>
 
-      <div class="sf-divider"></div>
+        <div style="width:1px;height:20px;background:var(--border)"></div>
 
-      <!-- Institution Type -->
-      <div class="sf-section">
-        <div class="sf-section-hdr" onclick="toggleSfSection(this)">
-          <span class="sf-section-title">🏢 Institution Type</span>
-          <span class="sf-section-arrow open">▲</span>
+        <!-- Institution Type -->
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Type:</span>
+          <select id="sfInstSelect" style="padding:4px 8px;background:var(--navy-light);border:1px solid var(--border);border-radius:6px;color:#fff;font-size:.75rem">
+            <option value="">All</option>
+            <option value="university">University</option>
+            <option value="pharma">Pharma</option>
+            <option value="biotech">Biotech</option>
+            <option value="hospital">Hospital</option>
+            <option value="government">Gov / Lab</option>
+          </select>
         </div>
-        <div class="sf-section-body">
-          <div class="sf-pill-group" id="sfInstPills">
-            <span class="sf-pill active" data-val="">All</span>
-            <span class="sf-pill" data-val="university">University</span>
-            <span class="sf-pill" data-val="pharma">Pharma</span>
-            <span class="sf-pill" data-val="biotech">Biotech</span>
-            <span class="sf-pill" data-val="hospital">Hospital / Medical</span>
-            <span class="sf-pill" data-val="government">Gov / National Lab</span>
-          </div>
-        </div>
-      </div>
 
-      <div class="sf-divider"></div>
-
-      <!-- Location -->
-      <div class="sf-section">
-        <div class="sf-section-hdr" onclick="toggleSfSection(this)">
-          <span class="sf-section-title">📍 Location</span>
-          <span class="sf-section-arrow open">▲</span>
+        <!-- Location -->
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Location:</span>
+          <select id="sfLocSelect" style="padding:4px 8px;background:var(--navy-light);border:1px solid var(--border);border-radius:6px;color:#fff;font-size:.75rem" onchange="handleLocSelect(this.value)">
+            <option value="">All US</option>
+            <option value="territory">My Territory</option>
+            <option value="northeast">Northeast</option>
+            <option value="south">South</option>
+            <option value="midwest">Midwest</option>
+            <option value="west">West</option>
+            <option value="intl">International</option>
+          </select>
+          <input type="text" id="sfCountryInput" placeholder="Country..." style="display:none;padding:4px 8px;background:var(--navy-light);border:1px solid var(--border);border-radius:6px;color:#fff;font-size:.75rem;width:120px"/>
         </div>
-        <div class="sf-section-body">
-          <div style="display:flex;gap:6px;margin-bottom:8px">
-            <button class="sf-pill active" id="sfLocUS" onclick="setLocMode('us')">🇺🇸 US States</button>
-            <button class="sf-pill" id="sfLocIntl" onclick="setLocMode('intl')">🌍 International</button>
-          </div>
-          <div id="sfLocUSPanel">
-            <div style="font-size:.65rem;color:var(--muted);margin-bottom:4px">Quick select:</div>
-            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">
-              <button class="sf-pill" onclick="selectRegion('midwest')">Midwest</button>
-              <button class="sf-pill" onclick="selectRegion('south')">South</button>
-              <button class="sf-pill" onclick="selectRegion('northeast')">Northeast</button>
-              <button class="sf-pill" onclick="selectRegion('west')">West</button>
-              <button class="sf-pill" onclick="selectRegion('territory')">My Territory</button>
-            </div>
-            <div id="sfStateGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:3px;max-height:180px;overflow-y:auto"></div>
-          </div>
-          <div id="sfLocIntlPanel" style="display:none">
-            <input class="sf-input" id="sfCountryInput" placeholder="Type country name..."/>
-          </div>
-        </div>
-      </div>
 
-      <div class="sf-divider"></div>
-
-      <!-- Seniority -->
-      <div class="sf-section">
-        <div class="sf-section-hdr" onclick="toggleSfSection(this)">
-          <span class="sf-section-title">👤 Seniority</span>
-          <span class="sf-section-arrow">▼</span>
-        </div>
-        <div class="sf-section-body" style="display:none">
-          <div class="sf-pill-group" id="sfSeniorityPills">
-            <span class="sf-pill active" data-val="">All</span>
-            <span class="sf-pill" data-val="professor">Professor / PI</span>
-            <span class="sf-pill" data-val="associate professor">Assoc. Professor</span>
-            <span class="sf-pill" data-val="postdoc">Postdoc</span>
-            <span class="sf-pill" data-val="director">Director</span>
-            <span class="sf-pill" data-val="scientist">Scientist</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="sf-divider"></div>
-
-      <!-- Date Range -->
-      <div class="sf-section">
-        <div class="sf-section-hdr" onclick="toggleSfSection(this)">
-          <span class="sf-section-title">📅 Activity Date</span>
-          <span class="sf-section-arrow">▼</span>
-        </div>
-        <div class="sf-section-body" style="display:none">
-          <select class="sf-select" id="sfDateRange">
+        <!-- Date -->
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Date:</span>
+          <select id="sfDateRange" style="padding:4px 8px;background:var(--navy-light);border:1px solid var(--border);border-radius:6px;color:#fff;font-size:.75rem">
+            <option value="1">Last year</option>
             <option value="">Any time</option>
-            <option value="1">Last 1 year</option>
-            <option value="2">Last 2 years</option>
             <option value="3">Last 3 years</option>
             <option value="5">Last 5 years</option>
           </select>
         </div>
-      </div>
 
-      <button class="sf-search-btn" onclick="runNewSearch()">🔍 Search</button>
-      <button class="sf-clear-btn" onclick="clearNewSearch()">Clear Filters</button>
+        <!-- Seniority -->
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Seniority:</span>
+          <select id="sfSenioritySelect" style="padding:4px 8px;background:var(--navy-light);border:1px solid var(--border);border-radius:6px;color:#fff;font-size:.75rem">
+            <option value="">All</option>
+            <option value="PI">PI / Lab Head</option>
+            <option value="professor">Professor</option>
+            <option value="director">Director / VP</option>
+            <option value="postdoc">Postdoc</option>
+          </select>
+        </div>
+
+        <div style="margin-left:auto">
+          <button onclick="clearNewSearch()" style="padding:4px 12px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:.72rem;cursor:pointer">Clear</button>
+        </div>
+      </div>
     </div>
 
-    <!-- RIGHT RESULTS PANEL -->
-    <div class="search-results-panel">
-      <div class="sr-toolbar">
-        <div class="sr-count" id="srCount">Enter keywords and click Search</div>
+    <!-- RESULTS - takes up all remaining space -->
+    <div style="flex:1;overflow-y:auto;padding:16px 24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="sr-count" id="srCount" style="font-size:.82rem;color:var(--muted)">Enter keywords and press Search</div>
         <div style="display:flex;align-items:center;gap:8px">
-          <button class="sr-add-all" id="srAddAll" style="display:none" onclick="addAllSearchResults()">➕ Add All to Playbook</button>
-          <div class="sr-sort">
-            Sort: <select id="srSort" onchange="sortSearchResults()">
+          <button class="sr-add-all" id="srAddAll" style="display:none;padding:6px 14px;background:var(--green);color:#fff;border:none;border-radius:6px;font-size:.75rem;cursor:pointer" onclick="addAllSearchResults()">+ Add All to Playbook</button>
+          <div style="font-size:.72rem;color:var(--muted)">
+            Sort: <select id="srSort" onchange="sortSearchResults()" style="padding:2px 6px;background:var(--navy-light);border:1px solid var(--border);border-radius:4px;color:#fff;font-size:.72rem">
               <option value="relevance">Relevance</option>
               <option value="date">Date</option>
             </select>
@@ -1562,14 +1514,16 @@ tr:hover .row-actions-inline { display:flex; }
         </div>
       </div>
       <div id="srResults">
-        <div class="rc-empty">
-          <div class="rc-empty-icon">🔬</div>
-          <div style="font-size:.85rem;font-weight:600;margin-bottom:6px">Search for Researchers</div>
-          <div style="font-size:.78rem;color:var(--muted)">Use the filters on the left to find researchers matching your target profile. Results pull from PubMed, NIH Grants and ClinicalTrials.gov.</div>
+        <div style="text-align:center;padding:80px 20px;color:var(--muted)">
+          <div style="font-size:2.5rem;margin-bottom:12px;opacity:.5">&#x1F50D;</div>
+          <div style="font-size:1rem;font-weight:600;color:var(--text);margin-bottom:8px">Search for Researchers</div>
+          <div style="font-size:.82rem;max-width:400px;margin:0 auto;line-height:1.6">Type any keyword to find researchers from PubMed, NIH grants, and clinical trials. Works for any biotech product or research area.</div>
         </div>
       </div>
     </div>
+
   </div>
+</div><!-- end #pageSearchLeads -->
 </div><!-- end #pageSearchLeads -->
 
 <!-- ════════════════════════════════════════════
@@ -8995,14 +8949,44 @@ function getSelectedStates() {
 
 function getSearchFilters() {
   const keyword = document.getElementById('sfKeyword')?.value?.trim() || '';
-  const appPill = document.querySelector('#sfAppPills .sf-pill.active')?.dataset?.val || '';
-  const instPill = document.querySelector('#sfInstPills .sf-pill.active')?.dataset?.val || '';
-  const seniority = document.querySelector('#sfSeniorityPills .sf-pill.active')?.dataset?.val || '';
+  // New dropdown-based filters (no more pill groups)
+  const instPill = document.getElementById('sfInstSelect')?.value || '';
+  const seniority = document.getElementById('sfSenioritySelect')?.value || '';
   const dateRange = document.getElementById('sfDateRange')?.value || '';
-  const states = sfLocMode === 'us' ? getSelectedStates() : [];
   const country = document.getElementById('sfCountryInput')?.value?.trim() || '';
 
+  // Location: determine from the location dropdown
+  const locVal = document.getElementById('sfLocSelect')?.value || '';
+  let states = [];
+  if (locVal === 'territory') {
+    states = getMyTerritoryStates();
+  } else if (locVal === 'northeast') {
+    states = ['CT','DE','MA','MD','ME','NH','NJ','NY','PA','RI','VT','VA','DC'];
+  } else if (locVal === 'south') {
+    states = ['AL','AR','FL','GA','KY','LA','MS','NC','OK','SC','TN','TX','WV'];
+  } else if (locVal === 'midwest') {
+    states = ['IA','IL','IN','KS','MI','MN','MO','ND','NE','OH','SD','WI'];
+  } else if (locVal === 'west') {
+    states = ['AK','AZ','CA','CO','HI','ID','MT','NM','NV','OR','UT','WA','WY'];
+  }
+  // appPill kept empty for backward compat (no more hardcoded research app pills)
+  const appPill = '';
+
   return { keyword, appPill, instPill, seniority, dateRange, states, country };
+}
+
+function handleLocSelect(val) {
+  var countryInput = document.getElementById('sfCountryInput');
+  if (countryInput) countryInput.style.display = val === 'intl' ? 'inline-block' : 'none';
+}
+
+function getMyTerritoryStates() {
+  var raw = localStorage.getItem('fidaGlobalTerritory') || localStorage.getItem('fidaTerritory') || '';
+  if (raw) {
+    try { return JSON.parse(raw); } catch(e) {}
+    return raw.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+  }
+  return [];
 }
 
 function liveSearchDebounce() {
@@ -9475,12 +9459,14 @@ function _doAddAllSearchResults(activePlaybookId) {
 
 function clearNewSearch() {
   document.getElementById('sfKeyword').value = '';
-  document.querySelectorAll('.sf-pill').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.sf-pill[data-val=""]').forEach(p => p.classList.add('active'));
-  document.querySelectorAll('.sf-state-cb').forEach(cb => cb.checked = false);
+  // Reset all dropdown filters
+  var selects = ['sfInstSelect', 'sfLocSelect', 'sfSenioritySelect'];
+  selects.forEach(function(id) { var el = document.getElementById(id); if (el) el.selectedIndex = 0; });
+  var dateEl = document.getElementById('sfDateRange'); if (dateEl) dateEl.value = '1';
+  var countryEl = document.getElementById('sfCountryInput'); if (countryEl) { countryEl.value = ''; countryEl.style.display = 'none'; }
   searchLeadsResults = [];
-  document.getElementById('srResults').innerHTML = `<div class="rc-empty"><div class="rc-empty-icon">🔬</div><div style="font-size:.85rem;font-weight:600;margin-bottom:6px">Search for Researchers</div><div style="font-size:.78rem;color:var(--muted)">Use the filters on the left to find researchers matching your target profile.</div></div>`;
-  document.getElementById('srCount').innerHTML = 'Enter keywords and click Search';
+  document.getElementById('srResults').innerHTML = '<div style="text-align:center;padding:80px 20px;color:var(--muted)"><div style="font-size:2.5rem;margin-bottom:12px;opacity:.5">&#x1F50D;</div><div style="font-size:1rem;font-weight:600;color:var(--text);margin-bottom:8px">Search for Researchers</div><div style="font-size:.82rem;max-width:400px;margin:0 auto;line-height:1.6">Type any keyword to find researchers from PubMed, NIH grants, and clinical trials.</div></div>';
+  document.getElementById('srCount').innerHTML = 'Enter keywords and press Search';
   document.getElementById('srAddAll').style.display = 'none';
 }
 
