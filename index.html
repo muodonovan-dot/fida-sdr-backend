@@ -9292,10 +9292,18 @@ async function searchPubMedForLeads(terms, filters) {
 
   const leads = [];
   const seenAuthors = new Set();
+  var searchTermsLower = terms.toLowerCase().split(/\s+AND\s+|\s+OR\s+|\s+/i).filter(function(t) { return t.length > 2 && !t.match(/^\(|\)$/); });
+
   articles.forEach(function(article) {
     var pmid = article.querySelector('PMID')?.textContent || '';
     var title = article.querySelector('ArticleTitle')?.textContent || '';
     var year = article.querySelector('PubDate Year')?.textContent || article.querySelector('PubDate MedlineDate')?.textContent || '';
+    var journal = article.querySelector('Journal Title')?.textContent || article.querySelector('MedlineJournalInfo MedlineTA')?.textContent || '';
+    // Extract abstract
+    var abstractEls = article.querySelectorAll('Abstract AbstractText');
+    var abstractText = '';
+    abstractEls.forEach(function(el) { abstractText += (el.textContent || '') + ' '; });
+    abstractText = abstractText.trim();
     var authors = article.querySelectorAll('Author');
     
     // Take first author (PI) and last author (senior) only
@@ -9383,6 +9391,21 @@ async function searchPubMedForLeads(terms, filters) {
         }
       }
       
+      // Build keyword-in-context snippet from abstract
+      var kwicSnippet = '';
+      var fullText = (title + ' ' + abstractText).toLowerCase();
+      for (var ti = 0; ti < searchTermsLower.length; ti++) {
+        var termIdx = fullText.indexOf(searchTermsLower[ti]);
+        if (termIdx >= 0) {
+          var contextStart = Math.max(0, termIdx - 60);
+          var contextEnd = Math.min(fullText.length, termIdx + searchTermsLower[ti].length + 100);
+          var raw = (title + ' ' + abstractText).substring(contextStart, contextEnd);
+          kwicSnippet = (contextStart > 0 ? '...' : '') + raw.trim() + (contextEnd < fullText.length ? '...' : '');
+          break;
+        }
+      }
+      if (!kwicSnippet) kwicSnippet = title.substring(0, 160);
+
       leads.push({
         id: 'pm_' + pmid + '_' + lastName.substring(0,4),
         firstName: firstName,
@@ -9393,7 +9416,10 @@ async function searchPubMedForLeads(terms, filters) {
         country: country || '',
         title: 'Researcher',
         email: '',
-        snippet: title,
+        snippet: kwicSnippet,
+        paperTitle: title,
+        abstract: abstractText.substring(0, 500),
+        journal: journal,
         source: 'PubMed',
         sourceUrl: 'https://pubmed.ncbi.nlm.nih.gov/' + pmid,
         date: year,
@@ -9428,6 +9454,25 @@ async function searchNIHGrantsForLeads(terms, filters) {
     if (!grant.contact_pi_name) return;
     const name = grant.contact_pi_name;
     const nameParts = name.split(',');
+    // Build KWIC snippet from grant abstract
+    var grantAbstract = grant.abstract_text || '';
+    var grantTitle = grant.project_title || '';
+    var grantKwic = '';
+    var grantFullText = (grantTitle + ' ' + grantAbstract).toLowerCase();
+    var grantTerms = terms.toLowerCase().split(/\s+/).filter(function(t) { return t.length > 2; });
+    for (var gi = 0; gi < grantTerms.length; gi++) {
+      var gIdx = grantFullText.indexOf(grantTerms[gi]);
+      if (gIdx >= 0) {
+        var gStart = Math.max(0, gIdx - 60);
+        var gEnd = Math.min(grantFullText.length, gIdx + grantTerms[gi].length + 100);
+        grantKwic = (gStart > 0 ? '...' : '') + (grantTitle + ' ' + grantAbstract).substring(gStart, gEnd).trim() + (gEnd < grantFullText.length ? '...' : '');
+        break;
+      }
+    }
+    if (!grantKwic) grantKwic = grantTitle.substring(0, 160);
+
+    var funding = grant.award_amount ? '$' + Number(grant.award_amount).toLocaleString() : '';
+
     leads.push({
       id: `nih_${grant.project_num || Math.random()}`,
       firstName: nameParts[1]?.trim() || '',
@@ -9438,7 +9483,10 @@ async function searchNIHGrantsForLeads(terms, filters) {
       country: grant.organization?.org_country || 'US',
       title: 'Principal Investigator',
       email: '',
-      snippet: grant.project_title || '',
+      snippet: grantKwic,
+      paperTitle: grantTitle,
+      abstract: grantAbstract.substring(0, 500),
+      funding: funding,
       source: 'NIH Grant',
       sourceUrl: `https://reporter.nih.gov/project-details/${grant.project_num}`,
       date: grant.fiscal_year?.toString() || '',
@@ -9575,16 +9623,35 @@ function renderSearchPage() {
   }
 }
 
+function highlightTerms(text, searchInput) {
+  if (!text || !searchInput) return text || '';
+  var terms = (searchInput || '').split(/\s+/).filter(function(t) { return t.length > 2 && !t.match(/^AND$|^OR$|^\($|^\)$/i); });
+  var result = text;
+  terms.forEach(function(term) {
+    var re = new RegExp('(' + term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+    result = result.replace(re, '<mark style="background:#f59e0b44;color:#f0c040;padding:0 1px;border-radius:2px">$1</mark>');
+  });
+  return result;
+}
+
+function toggleSearchRow(id) {
+  var detail = document.getElementById('srDetail_' + id);
+  if (detail) detail.style.display = detail.style.display === 'none' ? 'table-row' : 'none';
+}
+
 function renderSearchTable(pageResults) {
-  var html = '<table style="width:100%;border-collapse:collapse;font-size:.78rem">';
+  var searchInput = document.getElementById('sfKeyword')?.value || '';
+  var thStyle = 'text-align:left;padding:8px 8px;color:var(--muted);font-weight:400;font-size:.65rem;text-transform:uppercase;letter-spacing:.05em';
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:.78rem;table-layout:fixed">';
+  html += '<colgroup><col style="width:180px"/><col style="width:200px"/><col style="width:45px"/><col style="width:90px"/><col style="width:45px"/><col/><col style="width:110px"/></colgroup>';
   html += '<thead><tr style="border-bottom:1px solid var(--border)">';
-  html += '<th style="text-align:left;padding:8px 10px;color:var(--muted);font-weight:400;font-size:.68rem;text-transform:uppercase;letter-spacing:.05em">Name</th>';
-  html += '<th style="text-align:left;padding:8px 10px;color:var(--muted);font-weight:400;font-size:.68rem;text-transform:uppercase;letter-spacing:.05em">Institution</th>';
-  html += '<th style="text-align:left;padding:8px 6px;color:var(--muted);font-weight:400;font-size:.68rem;text-transform:uppercase;letter-spacing:.05em">State</th>';
-  html += '<th style="text-align:left;padding:8px 6px;color:var(--muted);font-weight:400;font-size:.68rem;text-transform:uppercase;letter-spacing:.05em">Source</th>';
-  html += '<th style="text-align:left;padding:8px 6px;color:var(--muted);font-weight:400;font-size:.68rem;text-transform:uppercase;letter-spacing:.05em">Year</th>';
-  html += '<th style="text-align:left;padding:8px 10px;color:var(--muted);font-weight:400;font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;max-width:300px">Research</th>';
-  html += '<th style="text-align:center;padding:8px 6px;color:var(--muted);font-weight:400;font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;width:100px">Action</th>';
+  html += '<th style="' + thStyle + '">Name</th>';
+  html += '<th style="' + thStyle + '">Institution</th>';
+  html += '<th style="' + thStyle + '">State</th>';
+  html += '<th style="' + thStyle + '">Source</th>';
+  html += '<th style="' + thStyle + '">Year</th>';
+  html += '<th style="' + thStyle + '">Research Context</th>';
+  html += '<th style="' + thStyle + ';text-align:center">Action</th>';
   html += '</tr></thead><tbody>';
   pageResults.forEach(function(r) {
     var sources = r._sources || [r.source];
@@ -9592,21 +9659,37 @@ function renderSearchTable(pageResults) {
       var sl = (s||'').toLowerCase();
       var label = sl.includes('pubmed') ? 'Pub' : sl.includes('nih') || sl.includes('grant') ? 'Grant' : 'Trial';
       var color = sl.includes('pubmed') ? '#6eb5ff' : sl.includes('nih') || sl.includes('grant') ? '#10b981' : '#a78bfa';
-      return '<span style="font-size:.62rem;padding:1px 5px;border-radius:3px;background:' + color + '22;color:' + color + '">' + label + '</span>';
+      return '<span style="font-size:.6rem;padding:1px 4px;border-radius:3px;background:' + color + '22;color:' + color + '">' + label + '</span>';
     }).join(' ');
     var counts = [];
     if ((r.articles||0) > 1) counts.push(r.articles + ' pubs');
     if ((r.grants||0) > 1) counts.push(r.grants + ' grants');
-    var countText = counts.length ? ' <span style="font-size:.6rem;color:var(--muted)">' + counts.join(', ') + '</span>' : '';
-    html += '<tr id="rc_' + r.id + '" style="border-bottom:1px solid rgba(255,255,255,.03);cursor:pointer" onmouseover="this.style.background=\'rgba(255,255,255,.02)\'" onmouseout="this.style.background=\'transparent\'">';
-    html += '<td style="padding:8px 10px"><div style="font-weight:600;color:var(--text)">' + (r.name||'Unknown') + '</div>' + (r.title ? '<div style="font-size:.65rem;color:var(--muted)">' + r.title + '</div>' : '') + '</td>';
-    html += '<td style="padding:8px 10px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (r.institution||'—') + '</td>';
-    html += '<td style="padding:8px 6px;color:var(--muted)">' + (r.state||'—') + '</td>';
-    html += '<td style="padding:8px 6px">' + srcTags + countText + '</td>';
-    html += '<td style="padding:8px 6px;color:var(--muted)">' + (r.date||'—') + '</td>';
-    html += '<td style="padding:8px 10px;color:var(--muted);font-size:.72rem;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (r.snippet||'').substring(0,80) + '</td>';
-    html += '<td style="padding:8px 6px;text-align:center"><button class="rc-btn-add" onclick="event.stopPropagation();addSearchLeadToPlaybook(\'' + r.id + '\')" style="padding:4px 10px;border-radius:5px;border:1px solid rgba(0,200,122,.3);background:rgba(0,200,122,.08);color:#00c87a;cursor:pointer;font-family:inherit;font-size:.68rem;font-weight:600;white-space:nowrap">Find Email & Add</button></td>';
+    var countText = counts.length ? '<div style="font-size:.58rem;color:var(--muted)">' + counts.join(', ') + '</div>' : '';
+    var fundingText = r.funding ? '<span style="font-size:.6rem;color:#10b981;font-weight:600"> ' + r.funding + '</span>' : '';
+
+    // Main row
+    html += '<tr id="rc_' + r.id + '" style="border-bottom:1px solid rgba(255,255,255,.03);cursor:pointer" onclick="toggleSearchRow(\'' + r.id + '\')" onmouseover="this.style.background=\'rgba(255,255,255,.02)\'" onmouseout="this.style.background=\'transparent\'">';
+    html += '<td style="padding:8px;overflow:hidden"><div style="font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (r.name||'Unknown') + '</div><div style="font-size:.62rem;color:var(--muted)">' + (r.title||'') + '</div></td>';
+    html += '<td style="padding:8px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + (r.institution||'').replace(/"/g,'&quot;') + '">' + (r.institution||'--') + '</td>';
+    html += '<td style="padding:8px;color:var(--muted);font-size:.75rem">' + (r.state||'--') + '</td>';
+    html += '<td style="padding:8px">' + srcTags + fundingText + countText + '</td>';
+    html += '<td style="padding:8px;color:var(--muted);font-size:.75rem">' + (r.date||'--') + '</td>';
+    // KWIC snippet with highlighted terms - show 2 lines
+    html += '<td style="padding:8px;overflow:hidden"><div style="font-size:.72rem;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.4">' + highlightTerms(r.snippet || r.paperTitle || '', searchInput) + '</div></td>';
+    html += '<td style="padding:8px;text-align:center"><button class="rc-btn-add" onclick="event.stopPropagation();addSearchLeadToPlaybook(\'' + r.id + '\')" style="padding:4px 8px;border-radius:5px;border:1px solid rgba(0,200,122,.3);background:rgba(0,200,122,.08);color:#00c87a;cursor:pointer;font-family:inherit;font-size:.65rem;font-weight:600;white-space:nowrap">Find Email & Add</button></td>';
     html += '</tr>';
+
+    // Expandable detail row (hidden by default)
+    var detailContent = '';
+    if (r.paperTitle) detailContent += '<div style="margin-bottom:6px"><span style="font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Title:</span> <span style="color:var(--text)">' + highlightTerms(r.paperTitle, searchInput) + '</span></div>';
+    if (r.abstract) detailContent += '<div style="margin-bottom:6px"><span style="font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Abstract:</span> <span style="color:var(--muted);line-height:1.5">' + highlightTerms(r.abstract, searchInput) + '</span></div>';
+    if (r.journal) detailContent += '<div><span style="font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Journal:</span> <span style="color:var(--muted)">' + r.journal + '</span></div>';
+    if (r.funding) detailContent += '<div><span style="font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Funding:</span> <span style="color:#10b981;font-weight:600">' + r.funding + '</span></div>';
+    if (r.sourceUrl) detailContent += '<div style="margin-top:6px"><a href="' + r.sourceUrl + '" target="_blank" style="font-size:.72rem;color:var(--orange-light);text-decoration:none">View full source &#8594;</a></div>';
+
+    if (detailContent) {
+      html += '<tr id="srDetail_' + r.id + '" style="display:none;background:rgba(255,255,255,.015)"><td colspan="7" style="padding:12px 16px;font-size:.75rem;border-bottom:1px solid rgba(255,255,255,.06)">' + detailContent + '</td></tr>';
+    }
   });
   html += '</tbody></table>';
   return html;
