@@ -17,9 +17,11 @@ const app = express();
 const SUPABASE_URL = 'https://cqsdsztzyvxtnzrruxeb.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_oWLb_blZHL_rayCldsPfMw_OoQs0HMR';
 
-// -- Helper: get relevant Fida resources from Supabase --
-async function getRelevantResources(applicationFocus, researchContext) {
-  const keywordMap = {
+// -- Helper: get relevant resources from Supabase --
+// Accepts dynamic application areas and keywords instead of hardcoded Fida values
+async function getRelevantResources(applicationFocus, researchContext, companyProfile) {
+  // Use company-specific application areas if provided, otherwise use defaults
+  const keywordMap = (companyProfile && companyProfile.applicationAreas) || {
     spr_biacore: ['biacore', 'spr', 'kinetics', 'binding affinity'],
     antibody_dev: ['antibody', 'aggregation', 'developability'],
     drug_discovery: ['small molecule', 'drug discovery', 'fragment', 'binding'],
@@ -27,15 +29,18 @@ async function getRelevantResources(applicationFocus, researchContext) {
     de_novo_proteins: ['de novo', 'protein design', 'folding'],
     general: ['protein', 'characterization', 'quality']
   };
-  const keywords = keywordMap[applicationFocus] || keywordMap.general;
+  const keywords = keywordMap[applicationFocus] || keywordMap.general || ['protein', 'characterization'];
   const matchedApp = researchContext?.application_match;
   const extraKeywords = matchedApp ? (keywordMap[matchedApp] || []) : [];
   const allKeywords = [...new Set([...keywords, ...extraKeywords])];
   const preferredTypes = ['Application Notes', 'Posters', 'Brochures', 'Tech Notes', 'White Papers'];
 
+  // Use company-specific resource table if provided, otherwise default
+  const resourceTable = (companyProfile && companyProfile.resourceTable) || 'fida_resources';
+
   try {
     const resp = await fetch(
-      `${SUPABASE_URL}/rest/v1/fida_resources?select=type,title,url&order=created_at.asc`,
+      `${SUPABASE_URL}/rest/v1/${resourceTable}?select=type,title,url&order=created_at.asc`,
       {
         headers: {
           'apikey': SUPABASE_KEY,
@@ -75,9 +80,14 @@ app.get('/health', (req, res) => res.json({ ok: true }));
 // GET /list-resources
 // ====================================================================
 app.get('/list-resources', async (req, res) => {
+  // Accept optional table name for future multi-company support
+  // Defaults to fida_resources (current Fida deployment)
+  const table = req.query.table || 'fida_resources';
+  // Sanitize table name to prevent injection
+  const safeTable = table.replace(/[^a-zA-Z0-9_]/g, '');
   try {
     const resp = await fetch(
-      `${SUPABASE_URL}/rest/v1/fida_resources?select=type,title,url&order=created_at.asc`,
+      `${SUPABASE_URL}/rest/v1/${safeTable}?select=type,title,url&order=created_at.asc`,
       {
         headers: {
           'apikey': SUPABASE_KEY,
@@ -258,7 +268,7 @@ app.post('/instantly-push', async (req, res) => {
   try {
     // Build campaign body -- support both new format (campaignName) and old (campaign object)
     const campaignBody = campaign || {
-      name: campaignName || 'Fida SDR Campaign',
+      name: campaignName || 'LeadGeeks Campaign',
       email_list: emailAccount ? [emailAccount] : [],
       daily_limit: dailyLimit || 30,
       daily_max_leads: dailyLimit || 30,
@@ -437,11 +447,36 @@ app.post('/generate', async (req, res) => {
     campaignContext = 'scileads',
     applicationFocus = 'general',
     sequenceLength = 3,
-    senderName = "Mike O'Donovan",
+    senderName = '',
+    companyName = '',
     playbookBrief = '',
     conferenceNotes = '',
-    conferenceName = ''
+    conferenceName = '',
+    // Company profile: allows the frontend to pass product-specific context
+    // For Fida, this is sent from hardcoded config. For Beanstalks, it comes from the DB.
+    companyProfile = null
   } = req.body;
+
+  // Build company context from profile or use defaults
+  const cp = companyProfile || {};
+  const productName = cp.productName || 'Fida Neo';
+  const company = companyName || cp.companyName || 'Fida Bio';
+  const sender = senderName || cp.senderName || "Mike O'Donovan";
+  const valueProposition = cp.valueProposition || 'Measures hydrodynamic radius (Rh), polydispersity, and aggregation in native conditions. Only 40nL sample needed -- no wasted precious material. Label-free, solution-phase measurements.';
+  const competitorPositioning = cp.competitorPositioning || 'Cytiva/Biacore partner -- positioned as companion, NOT competitor';
+
+  // Application area descriptions (dynamic or default Fida)
+  const focusDescriptions = cp.focusDescriptions || {
+    general: 'native-state protein characterization -- Rh, aggregation, polydispersity in 40nL',
+    spr_biacore: 'SPR/Biacore companion -- verify reagent quality before runs, orthogonal KD confirmation',
+    antibody_dev: 'antibody developability screening -- rapid aggregation check with 40nL, no labeling',
+    drug_discovery: 'label-free target engagement and fragment binding confirmation in native conditions',
+    structural_biology: 'pre-cryo-EM/crystallography screening -- confirm monodispersity before committing samples',
+    de_novo_proteins: 'solution-phase validation of designed proteins -- confirm folding and monodispersity'
+  };
+
+  // Application area list for research prompt
+  const appAreaList = cp.applicationAreaList || 'spr_biacore | antibody_dev | drug_discovery | structural_biology | de_novo_proteins | general';
 
   // Step 1: Research via Claude with web search
   let researchContext = '';
@@ -464,7 +499,7 @@ Return a JSON object with:
 {
   "recent_work": "1-2 sentence summary of their most recent research",
   "key_proteins": ["protein1", "protein2"],
-  "application_match": "which Fida Neo application fits best: spr_biacore | antibody_dev | drug_discovery | structural_biology | de_novo_proteins | general",
+  "application_match": "which ${productName} application fits best: ${appAreaList}",
   "personalization_hook": "1 specific hook to open the email with, referencing their actual work",
   "confidence": "high | low"
 }
@@ -502,15 +537,6 @@ Return ONLY valid JSON, no markdown.`;
   // Build knowledge base context
   const kbText = knowledgeBase.map(d => d.content).join('\n\n').substring(0, 3000);
 
-  // Application focus descriptions
-  const focusDescriptions = {
-    general: 'native-state protein characterization -- Rh, aggregation, polydispersity in 40nL',
-    spr_biacore: 'SPR/Biacore companion -- verify reagent quality before runs, orthogonal KD confirmation',
-    antibody_dev: 'antibody developability screening -- rapid aggregation check with 40nL, no labeling',
-    drug_discovery: 'label-free target engagement and fragment binding confirmation in native conditions',
-    structural_biology: 'pre-cryo-EM/crystallography screening -- confirm monodispersity before committing samples',
-    de_novo_proteins: 'solution-phase validation of designed proteins -- confirm folding and monodispersity'
-  };
   const appDesc = focusDescriptions[researchContext?.application_match || applicationFocus] || focusDescriptions.general;
 
   // Campaign context
@@ -518,24 +544,24 @@ Return ONLY valid JSON, no markdown.`;
     scileads: 'You found this researcher via SciLeads based on their recent publications.',
     leadgeeks: 'This researcher was identified via LeadGeeks prospecting.',
     conference_attendee: 'This researcher attended a recent conference in your field.',
-    conference_announcement: 'Fida Bio will be attending an upcoming conference.',
+    conference_announcement: `${company} will be attending an upcoming conference.`,
     generic: 'General cold outreach.',
     conference: 'This researcher attended a recent conference.'
   };
 
   const emailCount = Math.min(Math.max(sequenceLength, 1), 7);
 
-  // Fetch relevant Fida resources from Supabase
-  const relevantResources = await getRelevantResources(applicationFocus, researchContext);
+  // Fetch relevant resources from Supabase (passes company profile for dynamic keywords)
+  const relevantResources = await getRelevantResources(applicationFocus, researchContext, companyProfile);
   const resourcesText = relevantResources.length > 0
-    ? '\nRELEVANT FIDA RESOURCES (use the most appropriate link in one of the emails -- hyperlink it naturally):\n' + relevantResources.join('\n')
+    ? '\nRELEVANT PRODUCT RESOURCES (use the most appropriate link in one of the emails -- hyperlink it naturally):\n' + relevantResources.join('\n')
     : '';
 
-  // Build the email generation prompt
-  const emailPrompt = `You are an expert biotech sales email writer for Fida Bio, selling the Fida Neo instrument.
+  // Build the email generation prompt -- fully dynamic
+  const emailPrompt = `You are an expert biotech sales email writer for ${company}, selling the ${productName}.
 
 IMPORTANT RULE: If you include a resource link in an email, embed it naturally as a hyperlink in the body text -- do NOT add it as a bare URL at the end.
-Example: "I thought you might find <a href='URL'>this application note on SPR companion workflows</a> relevant to your work."
+Example: "I thought you might find <a href='URL'>this application note</a> relevant to your work."
 ${resourcesText}
 
 LEAD INFORMATION:
@@ -549,19 +575,17 @@ Tone: ${tone} (academic = collegial/peer-to-peer; industry = professional/ROI-fo
 RESEARCH CONTEXT:
 ${researchContext ? JSON.stringify(researchContext, null, 2) : 'No specific research found -- use general biotech context'}
 
-FIDA NEO VALUE PROPOSITION:
-- Measures hydrodynamic radius (Rh), polydispersity, and aggregation in native conditions
-- Only 40nL sample needed -- no wasted precious material
-- Label-free, solution-phase measurements
+${productName.toUpperCase()} VALUE PROPOSITION:
+${valueProposition}
 - Application focus for this lead: ${appDesc}
-- Cytiva/Biacore partner -- positioned as companion, NOT competitor
+- ${competitorPositioning}
 
 CAMPAIGN CONTEXT:
 ${contextDescriptions[campaignContext] || contextDescriptions.generic}
 
-${kbText ? 'FIDA KNOWLEDGE BASE:\n' + kbText : ''}
+${kbText ? 'PRODUCT KNOWLEDGE BASE:\n' + kbText : ''}
 ${playbookBrief ? '\nPLAYBOOK BRIEF (use this to guide your messaging strategy and angles):\n' + playbookBrief : ''}
-${conferenceNotes ? '\nCONFERENCE CONTEXT:\nThis lead attended ' + (conferenceName || 'a recent conference') + '. Their notes/interests from the conference: ' + conferenceNotes + '\nIMPORTANT: You (the sender) may NOT have been at this conference personally, but Fida Bio may have had a presence. Reference the conference naturally and connect their stated interest to how Fida Neo could help their work. Do NOT claim you met them or spoke with them unless the notes explicitly say so.' : ''}
+${conferenceNotes ? '\nCONFERENCE CONTEXT:\nThis lead attended ' + (conferenceName || 'a recent conference') + '. Their notes/interests from the conference: ' + conferenceNotes + '\nIMPORTANT: You (the sender) may NOT have been at this conference personally, but ' + company + ' may have had a presence. Reference the conference naturally and connect their stated interest to how ' + productName + ' could help their work. Do NOT claim you met them or spoke with them unless the notes explicitly say so.' : ''}
 
 Write ${emailCount === 1 ? "a single cold outreach email" : `a ${emailCount}-email cold outreach sequence`}.
 Each email should:
@@ -569,13 +593,13 @@ Each email should:
 - Reference their specific research when possible
 - Have a clear, non-spammy subject line
 - End with a soft CTA (not "buy now" -- more like "worth a quick look?")
-- Sign off as: Best,\n${senderName}\nFida Bio
+- Sign off as: Best,\n${sender}\n${company}
 - Each follow-up should try a different angle
 
 Return ONLY valid JSON in this exact format:
 {
   "personalization_note": "1 sentence on the specific angle used",
-  "matched_app": "which Fida Neo application was matched",
+  "matched_app": "which ${productName} application was matched",
   ${Array.from({ length: emailCount }, (_, i) => `"email${i + 1}": { "subject": "...", "body": "..." }`).join(',\n  ')}
 }`;
 
@@ -696,7 +720,7 @@ app.post('/instantly-create-campaign', async (req, res) => {
         daily_limit: 10,
         stop_on_reply: true,
         stop_on_auto_reply: true,
-        tracking_domain: trackingDomain || 'inst.fida-connect.com'
+        tracking_domain: trackingDomain || ''
       })
     });
     res.json(await r.json());
@@ -1457,7 +1481,7 @@ app.post('/api/bug-report', async (req, res) => {
 
   try {
     const body = [
-      'FIDA NEO BUG REPORT',
+      'BUG REPORT',
       '===========================',
       '',
       `Description: ${description}`,
@@ -1486,12 +1510,12 @@ app.post('/api/bug-report', async (req, res) => {
 
     const instantlyPayload = {
       api_key: process.env.INSTANTLY_API_KEY || '',
-      to: ['odonovan@fidabio.com'],
-      from: 'mike@fida-connect.com',
-      from_name: 'Fida Neo Bug Reporter',
+      to: [reporterEmail || 'support@leadgeeksinc.com'],
+      from: reporterEmail || 'bugs@leadgeeksinc.com',
+      from_name: 'Bug Reporter',
       subject: `Bug Report: ${description.substring(0, 60)}`,
       body: body.replace(/\n/g, '<br>'),
-      reply_to: reporterEmail || 'odonovan@fidabio.com'
+      reply_to: reporterEmail || 'support@leadgeeksinc.com'
     };
 
     let sent = false;
@@ -1523,5 +1547,5 @@ app.post('/api/bug-report', async (req, res) => {
 // Start server
 // ====================================================================
 app.listen(PORT, () => {
-  console.log(`Fida SDR backend running on port ${PORT}`);
+  console.log(`LeadGeeks backend running on port ${PORT}`);
 });
