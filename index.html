@@ -1504,7 +1504,7 @@ tr:hover .row-actions-inline { display:flex; }
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
         <div class="sr-count" id="srCount" style="font-size:.82rem;color:var(--muted)">Enter keywords and press Search</div>
         <div style="display:flex;align-items:center;gap:8px">
-          <button class="sr-add-all" id="srAddAll" style="display:none;padding:6px 14px;background:var(--green);color:#fff;border:none;border-radius:6px;font-size:.75rem;cursor:pointer" onclick="addAllSearchResults()">+ Add All to Playbook</button>
+          <button id="srAddAll" style="display:none;padding:6px 14px;background:rgba(249,168,37,.15);color:#F9A825;border:1px solid rgba(249,168,37,.3);border-radius:6px;font-size:.75rem;cursor:pointer;font-weight:600" onclick="addAllSearchResults()">Smart Add</button>
           <div style="font-size:.72rem;color:var(--muted)">
             Sort: <select id="srSort" onchange="sortSearchResults()" style="padding:2px 6px;background:var(--navy-light);border:1px solid var(--border);border-radius:4px;color:#fff;font-size:.72rem">
               <option value="relevance">Relevance</option>
@@ -9056,6 +9056,12 @@ async function runNewSearch() {
     return true;
   });
 
+  // Sort: prioritize results with complete data (institution + full name)
+  unique.sort(function(a, b) {
+    var scoreA = (a.institution ? 3 : 0) + (a.firstName && a.firstName.length > 2 ? 2 : 0) + (a.state ? 1 : 0);
+    var scoreB = (b.institution ? 3 : 0) + (b.firstName && b.firstName.length > 2 ? 2 : 0) + (b.state ? 1 : 0);
+    return scoreB - scoreA;
+  });
   searchLeadsResults = unique;
   renderSearchResults(unique);
 
@@ -9071,37 +9077,77 @@ async function searchPubMedForLeads(terms, filters) {
   const stateFilter = filters.states.length ? ` AND (${filters.states.map(s => s + '[ad]').join(' OR ')})` : '';
   const query = encodeURIComponent(terms + stateFilter);
   
-  const searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${query}&retmax=200&retmode=json${dateFilter}`;
+  const searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${query}&retmax=100&retmode=json${dateFilter}`;
   const searchResp = await fetch(searchUrl);
   const searchData = await searchResp.json();
   const ids = searchData.esearchresult?.idlist || [];
   if (!ids.length) return [];
 
-  const summaryUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=${ids.slice(0,200).join(',')}&retmode=json`;
-  const summaryResp = await fetch(summaryUrl);
-  const summaryData = await summaryResp.json();
+  // Use efetch XML to get full author details with affiliations
+  const fetchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${ids.slice(0,100).join(',')}&retmode=xml`;
+  const fetchResp = await fetch(fetchUrl);
+  const xmlText = await fetchResp.text();
+  const parser = new DOMParser();
+  const xml = parser.parseFromString(xmlText, 'text/xml');
+  const articles = xml.querySelectorAll('PubmedArticle');
 
   const leads = [];
-  Object.values(summaryData.result || {}).forEach(article => {
-    if (!article.uid) return;
-    const authors = article.authors || [];
-    authors.slice(0, 2).forEach(author => {
-      if (!author.name) return;
-      const nameParts = author.name.split(' ');
+  const seenAuthors = new Set();
+  articles.forEach(function(article) {
+    var pmid = article.querySelector('PMID')?.textContent || '';
+    var title = article.querySelector('ArticleTitle')?.textContent || '';
+    var year = article.querySelector('PubDate Year')?.textContent || article.querySelector('PubDate MedlineDate')?.textContent || '';
+    var authors = article.querySelectorAll('Author');
+    
+    // Take first author (PI) and last author (senior) only
+    var authorsToProcess = [];
+    if (authors.length > 0) authorsToProcess.push(authors[0]);
+    if (authors.length > 1) authorsToProcess.push(authors[authors.length - 1]);
+    
+    authorsToProcess.forEach(function(auth) {
+      var lastName = auth.querySelector('LastName')?.textContent || '';
+      var foreName = auth.querySelector('ForeName')?.textContent || '';
+      var initials = auth.querySelector('Initials')?.textContent || '';
+      var affiliation = auth.querySelector('AffiliationInfo Affiliation')?.textContent || '';
+      
+      if (!lastName) return;
+      var firstName = foreName || initials || '';
+      var fullName = firstName + ' ' + lastName;
+      
+      // Dedup by name
+      var key = fullName.toLowerCase();
+      if (seenAuthors.has(key)) return;
+      seenAuthors.add(key);
+      
+      // Extract institution from affiliation string
+      var institution = '';
+      var state = '';
+      if (affiliation) {
+        // Try to get the institution name (usually first part before comma)
+        var parts = affiliation.split(',');
+        institution = parts[0].replace(/^(Department of.*?|Division of.*?|School of.*?|College of.*?|Institute of.*?),?\s*/i, '').trim();
+        if (institution.length > 80) institution = institution.substring(0, 80) + '...';
+        // Try to extract US state
+        var stateMatch = affiliation.match(/\b([A-Z]{2})\s+\d{5}/) || affiliation.match(/,\s*([A-Z]{2}),?\s*USA/);
+        if (stateMatch) state = stateMatch[1];
+      }
+      
       leads.push({
-        id: `pm_${article.uid}_${author.name.replace(/\s/g,'')}`,
-        firstName: nameParts.slice(1).join(' ') || nameParts[0],
-        lastName: nameParts[0],
-        name: author.name,
-        institution: '',  // journal name not useful; filled by profile enrichment
+        id: 'pm_' + pmid + '_' + lastName.substring(0,4),
+        firstName: firstName,
+        lastName: lastName,
+        name: fullName,
+        institution: institution,
+        state: state,
+        country: affiliation.includes('USA') || state ? 'US' : '',
         title: 'Researcher',
         email: '',
-        snippet: article.title || '',
+        snippet: title,
         source: 'PubMed',
-        sourceUrl: `https://pubmed.ncbi.nlm.nih.gov/${article.uid}`,
-        date: article.pubdate || '',
+        sourceUrl: 'https://pubmed.ncbi.nlm.nih.gov/' + pmid,
+        date: year,
         grants: 0, tradeshows: 0,
-        articles: parseInt(article.pmcrefcount) || 1
+        articles: 1
       });
     });
   });
@@ -9196,7 +9242,7 @@ function renderSearchPage() {
 
   count.innerHTML = `<strong style="color:#fff">${results.length} researchers found</strong> <span style="color:var(--muted);font-size:.75rem">${breakdown}</span>`;
   addAllBtn.style.display = 'flex';
-  addAllBtn.textContent = `+ Add All ${results.length} Results to Playbook`;
+  addAllBtn.textContent = 'Smart Add — Claude scores & verifies';;
 
   // Render page results
   container.innerHTML = pageResults.map(r => {
@@ -9219,7 +9265,7 @@ function renderSearchPage() {
         </div>
       </div>
       <div class="rc-actions">
-        <button class="rc-btn-add" onclick="addSearchLeadToPlaybook('${r.id}')">+ Add</button>
+        <button class="rc-btn-add" onclick="addSearchLeadToPlaybook('${r.id}')">Find Email &amp; Add</button>
         ${r.sourceUrl ? `<a href="${r.sourceUrl}" target="_blank" style="font-size:.72rem;color:var(--muted);text-decoration:none">View source</a>` : ''}
       </div>
     </div>`;
@@ -9268,58 +9314,238 @@ function goToSearchPage(page) {
 function addSearchLeadToPlaybook(leadId) {
   const lead = searchLeadsResults.find(r => r.id === leadId);
   if (!lead) return;
-  // Always show playbook picker
   showPlaybookPicker(pbId => {
     if (!pbId) return;
-    _doAddSearchLead(lead, pbId);
-  }, `Add ${lead.firstName} ${lead.lastName} to:`);
-}
-function _doAddSearchLead(lead, pbId) {
-  if (!pbId) { if (!activePlaybookId) { switchTab('playbooks'); showToast('Select an active playbook first'); return; } pbId = activePlaybookId; }
-  
-  const newLead = {
-    id: 'sl_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
-    firstName: lead.firstName, lastName: lead.lastName,
-    email: lead.email || '', jobTitle: lead.title || 'Researcher',
-    organisation: lead.institution || '', country: 'US',
-    focusedAreas: lead.snippet?.substring(0,100) || '',
-    status: 'new', createdAt: new Date().toISOString()
-  };
-  addLeadToPlaybook(activePlaybookId, newLead);
-  
-  // Update button
-  const btn = document.querySelector(`#src_${leadId} .rc-btn-add`);
-  if (btn) { btn.textContent = '✅ Added'; btn.disabled = true; btn.style.opacity = '.6'; }
-  showToast(`${lead.name} added to playbook`);
+    _findEmailThenAdd(lead, leadId, pbId);
+  }, `Find email & add ${lead.firstName} ${lead.lastName} to:`);
 }
 
-function addAllSearchResults() {
-  const total = searchLeadsResults.length;
-  showPlaybookPicker(pbId => {
-    if (!pbId) return;
-    _doAddAllSearchResults(pbId);
-  }, `Add all ${total} researchers to:`);
+async function _findEmailThenAdd(lead, leadId, pbId) {
+  // Update the card to show "finding email..."
+  var card = document.getElementById('rc_' + leadId);
+  var btn = card?.querySelector('.rc-btn-add');
+  var statusEl = card?.querySelector('.rc-email-status');
+  if (!statusEl && card) {
+    statusEl = document.createElement('div');
+    statusEl.className = 'rc-email-status';
+    statusEl.style.cssText = 'font-size:.72rem;padding:4px 8px;border-radius:6px;margin-top:4px';
+    var actions = card.querySelector('.rc-actions');
+    if (actions) actions.prepend(statusEl);
+  }
+  if (btn) { btn.textContent = 'Finding email...'; btn.disabled = true; btn.style.opacity = '.6'; }
+  if (statusEl) { statusEl.textContent = 'Searching...'; statusEl.style.background = 'rgba(255,255,255,.05)'; statusEl.style.color = 'var(--muted)'; }
+
+  // Build a temp lead object for the email enrichment pipeline
+  var tempLead = {
+    firstName: lead.firstName,
+    lastName: lead.lastName,
+    organisation: lead.institution || '',
+    institution: lead.institution || '',
+    company: lead.institution || '',
+    email: lead.email || '',
+    state: lead.state || '',
+    country: lead.country || 'US'
+  };
+
+  try {
+    var result = await enrichLeadEmail(tempLead, null);
+
+    if (result.status === 'found' && result.email) {
+      // Verify with ZeroBounce if available
+      var zbKey = localStorage.getItem('fidaZbKey');
+      var emailVerified = false;
+      var verifyTag = 'unverified';
+
+      if (zbKey && !['valid','catch-all'].includes(result.zbStatus || '')) {
+        if (statusEl) { statusEl.textContent = 'Verifying ' + result.email + '...'; }
+        var zbResult = await verifyEmailZB(result.email, zbKey);
+        verifyTag = zbResult.tag;
+        emailVerified = zbResult.valid;
+      } else if (result.confidence === 'high' || result.zbStatus === 'valid' || result.zbStatus === 'catch-all') {
+        emailVerified = true;
+        verifyTag = result.zbStatus || 'valid';
+      } else {
+        // No ZB key — accept medium+ confidence emails
+        emailVerified = result.confidence !== 'low';
+        verifyTag = 'unverified';
+      }
+
+      if (emailVerified || verifyTag === 'catch-all' || verifyTag === 'valid') {
+        // Email found and verified — add to playbook
+        var newLead = {
+          id: 'sl_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+          firstName: lead.firstName, lastName: lead.lastName,
+          email: result.email, jobTitle: lead.title || 'Researcher',
+          organisation: lead.institution || '',
+          state: lead.state || '',
+          country: lead.country || 'US',
+          focusedAreas: lead.snippet?.substring(0,100) || '',
+          status: 'new', createdAt: new Date().toISOString(),
+          _emailStatus: 'verified', _zbStatus: verifyTag,
+          _emailSource: result.method || 'waterfall',
+          _source: lead.source || 'search'
+        };
+        addLeadToPlaybook(pbId, newLead);
+        if (btn) { btn.textContent = 'Added'; btn.disabled = true; btn.style.background = 'var(--green)'; btn.style.opacity = '1'; btn.style.color = '#fff'; }
+        if (statusEl) { statusEl.textContent = result.email + ' (' + verifyTag + ')'; statusEl.style.background = 'rgba(39,174,96,.1)'; statusEl.style.color = 'var(--green)'; }
+        showToast(lead.name + ' added with verified email');
+      } else {
+        // Email found but invalid
+        if (btn) { btn.textContent = '+ Add'; btn.disabled = false; btn.style.opacity = '1'; }
+        if (statusEl) { statusEl.textContent = result.email + ' — invalid (' + verifyTag + ')'; statusEl.style.background = 'rgba(231,76,60,.1)'; statusEl.style.color = '#e74c3c'; }
+        showToast(lead.name + ': email found but failed verification', 'warning');
+      }
+
+    } else {
+      // No email found
+      if (btn) { btn.textContent = '+ Add'; btn.disabled = false; btn.style.opacity = '1'; }
+      if (statusEl) { statusEl.textContent = 'No email found'; statusEl.style.background = 'rgba(231,76,60,.1)'; statusEl.style.color = '#e74c3c'; }
+      showToast(lead.name + ': no email found — not added', 'warning');
+    }
+  } catch(e) {
+    if (btn) { btn.textContent = '+ Add'; btn.disabled = false; btn.style.opacity = '1'; }
+    if (statusEl) { statusEl.textContent = 'Error: ' + e.message; statusEl.style.color = '#e74c3c'; }
+    showToast('Email search error: ' + e.message, 'error');
+  }
 }
-function _doAddAllSearchResults(activePlaybookId) {
-  if (!activePlaybookId) { switchTab('playbooks'); showToast('Select an active playbook first'); return; }
-  const total = searchLeadsResults.length;
-  let added = 0;
-  searchLeadsResults.forEach(lead => {
-    addLeadToPlaybook(activePlaybookId, {
-      id: 'sl_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
-      firstName: lead.firstName, lastName: lead.lastName,
-      email: lead.email || '', jobTitle: lead.title || 'Researcher',
-      organisation: lead.institution || '',
-      state: lead.state || inferStateFromOrg(lead.institution || ''),
-      country: lead.country || 'US',
-      focusedAreas: lead.snippet?.substring(0,100) || '',
-      status: 'new', createdAt: new Date().toISOString()
-    });
-    added++;
+
+
+async function addAllSearchResults() {
+  // Smart Add: Claude scores results against playbooks, finds emails, adds verified matches
+  var apiKey = localStorage.getItem('fidaApiKey');
+  if (!apiKey) { showToast('Add your Anthropic API key in Settings first', 'warning'); return; }
+  if (!playbooks.length) { showToast('Create a playbook first', 'warning'); return; }
+  if (!searchLeadsResults.length) return;
+
+  // Build playbook context for Claude
+  var pbContext = playbooks.map(function(pb) {
+    return { id: pb.id, name: pb.name, brief: pb.brief || '', keywords: pb.keywords || '', angle: pb.angle || '' };
   });
-  showToast(`${added} leads added to playbook`);
-  document.querySelectorAll('.rc-btn-add').forEach(btn => { btn.textContent = '✅ Added'; btn.disabled = true; btn.style.opacity = '.6'; });
+
+  // Take top 50 results (don't overwhelm Claude)
+  var candidates = searchLeadsResults.slice(0, 50).map(function(r) {
+    return { id: r.id, name: r.name, institution: r.institution || '', title: r.title || '', snippet: (r.snippet || '').substring(0, 120), source: r.source, state: r.state || '' };
+  });
+
+  // Show progress UI
+  var countEl = document.getElementById('srCount');
+  var addBtn = document.getElementById('srAddAll');
+  if (addBtn) { addBtn.textContent = 'Claude is scoring...'; addBtn.style.opacity = '.6'; }
+  if (countEl) countEl.innerHTML = '<span style="color:var(--orange-light)">Claude is analyzing ' + candidates.length + ' results against your playbooks...</span>';
+
+  try {
+    var prompt = 'You are a biotech sales lead scoring assistant. Given these playbooks and search results, score each result 0-10 for relevance to the BEST matching playbook. Only include results scoring 7 or higher.\n\nPLAYBOOKS:\n' + JSON.stringify(pbContext) + '\n\nSEARCH RESULTS:\n' + JSON.stringify(candidates) + '\n\nReturn ONLY valid JSON array, no markdown:\n[\n  { "resultId": "...", "playbookId": "...", "playbookName": "...", "score": 8, "reason": "short reason" },\n  ...\n]\n\nOnly include results scoring 7+. If no results match any playbook well, return an empty array [].';
+
+    var resp = await fetch(BACKEND + '/claude-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiKey: apiKey, prompt: prompt, maxTokens: 2000 })
+    });
+    var data = await resp.json();
+    var text = data.text || '';
+    var jsonMatch = text.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) throw new Error('Claude returned no valid JSON');
+    var scored = JSON.parse(jsonMatch[0]);
+
+    if (!scored.length) {
+      if (countEl) countEl.innerHTML = '<strong style="color:#fff">' + searchLeadsResults.length + ' researchers found</strong> <span style="color:var(--muted)">Claude found no strong matches for your playbooks. Try different keywords or update your playbook briefs.</span>';
+      if (addBtn) { addBtn.textContent = 'Smart Add'; addBtn.style.opacity = '1'; }
+      return;
+    }
+
+    // Now find emails and add verified ones
+    if (countEl) countEl.innerHTML = '<span style="color:var(--orange-light)">Found ' + scored.length + ' matches. Finding emails...</span>';
+
+    var added = 0;
+    var noEmail = 0;
+    var invalid = 0;
+    var zbKey = localStorage.getItem('fidaZbKey');
+
+    for (var i = 0; i < scored.length; i++) {
+      var match = scored[i];
+      var lead = searchLeadsResults.find(function(r) { return r.id === match.resultId; });
+      if (!lead) continue;
+
+      // Update progress
+      if (countEl) countEl.innerHTML = '<span style="color:var(--orange-light)">Processing ' + (i+1) + '/' + scored.length + ': ' + lead.name + '...</span>';
+
+      // Update card UI
+      var card = document.getElementById('rc_' + lead.id);
+      var btn = card?.querySelector('.rc-btn-add');
+      if (btn) { btn.textContent = 'Finding email...'; btn.disabled = true; btn.style.opacity = '.6'; }
+
+      // Find email
+      var tempLead = {
+        firstName: lead.firstName, lastName: lead.lastName,
+        organisation: lead.institution || '', institution: lead.institution || '',
+        company: lead.institution || '', email: '', state: lead.state || ''
+      };
+
+      try {
+        var result = await enrichLeadEmail(tempLead, null);
+        if (result.status === 'found' && result.email) {
+          // Verify
+          var verifyTag = result.zbStatus || 'unverified';
+          var emailVerified = false;
+          if (zbKey && !['valid','catch-all'].includes(verifyTag)) {
+            var zbResult = await verifyEmailZB(result.email, zbKey);
+            verifyTag = zbResult.tag;
+            emailVerified = zbResult.valid;
+          } else if (result.confidence === 'high' || verifyTag === 'valid' || verifyTag === 'catch-all') {
+            emailVerified = true;
+          }
+
+          if (emailVerified || verifyTag === 'catch-all' || verifyTag === 'valid') {
+            addLeadToPlaybook(match.playbookId, {
+              id: 'sa_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+              firstName: lead.firstName, lastName: lead.lastName,
+              email: result.email, jobTitle: lead.title || 'Researcher',
+              organisation: lead.institution || '', state: lead.state || '',
+              country: lead.country || 'US',
+              focusedAreas: lead.snippet?.substring(0,100) || '',
+              status: 'new', createdAt: new Date().toISOString(),
+              _emailStatus: 'verified', _zbStatus: verifyTag,
+              _emailSource: result.method || 'waterfall',
+              _source: lead.source || 'search',
+              _aiScore: match.score, _aiReason: match.reason
+            });
+            added++;
+            if (btn) { btn.textContent = 'Added (' + match.score + '/10)'; btn.style.background = 'var(--green)'; btn.style.color = '#fff'; btn.style.opacity = '1'; }
+            // Add email status to card
+            var statusEl = document.createElement('div');
+            statusEl.style.cssText = 'font-size:.72rem;padding:2px 6px;color:var(--green);margin-top:2px';
+            statusEl.textContent = result.email + ' → ' + (match.playbookName || 'playbook');
+            if (card?.querySelector('.rc-actions')) card.querySelector('.rc-actions').prepend(statusEl);
+          } else {
+            invalid++;
+            if (btn) { btn.textContent = 'Invalid email'; btn.style.opacity = '.5'; }
+          }
+        } else {
+          noEmail++;
+          if (btn) { btn.textContent = 'No email'; btn.style.opacity = '.5'; }
+        }
+      } catch(e) {
+        noEmail++;
+        if (btn) { btn.textContent = 'Error'; btn.style.opacity = '.5'; }
+      }
+    }
+
+    // Final summary
+    var summary = '<strong style="color:#fff">' + added + ' verified leads added</strong>';
+    summary += ' <span style="color:var(--muted)">' + scored.length + ' matched, ' + noEmail + ' no email, ' + invalid + ' invalid</span>';
+    if (countEl) countEl.innerHTML = summary;
+    if (addBtn) { addBtn.textContent = 'Done — ' + added + ' added'; addBtn.style.opacity = '1'; }
+    showToast(added + ' verified leads added to playbooks');
+    savePlaybooksToStorage();
+
+  } catch(e) {
+    if (countEl) countEl.innerHTML = '<strong style="color:#fff">' + searchLeadsResults.length + ' researchers found</strong>';
+    if (addBtn) { addBtn.textContent = 'Smart Add'; addBtn.style.opacity = '1'; }
+    showToast('Smart Add error: ' + e.message, 'error');
+    console.error('[SmartAdd]', e);
+  }
 }
+
 
 function clearNewSearch() {
   document.getElementById('sfKeyword').value = '';
