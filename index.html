@@ -1828,6 +1828,22 @@ tr:hover .row-actions-inline { display:flex; }
   </div>
 </div>
 
+<!-- Chrome Extension User ID -->
+<div style="margin-bottom:16px;padding:14px 16px;background:rgba(239,77,5,.04);border:1px solid rgba(239,77,5,.2);border-radius:8px">
+  <div class="field-label" style="margin-bottom:6px;font-size:.8rem">
+    🔌 CHROME EXTENSION USER ID <span style="font-weight:400;color:var(--muted)">— paste this into the extension popup</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+    <input type="text" id="extUserIdDisplay" readonly
+      style="width:100%;box-sizing:border-box;font-family:monospace;font-size:.88rem;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--orange-light);cursor:text;letter-spacing:.02em"
+      placeholder="loading..." onclick="this.select()"/>
+    <button class="btn btn-ghost btn-sm" onclick="copyExtUserId()" id="copyExtIdBtn" style="white-space:nowrap;flex-shrink:0;min-width:70px;color:var(--orange-light);border-color:rgba(239,77,5,.3)">Copy</button>
+  </div>
+  <div style="font-size:.72rem;color:var(--muted);line-height:1.5">
+    Open the LeadGeeks Chrome Extension on LinkedIn, click the extension icon, and paste this ID into the User ID field. This links the extension to your account so leads sync to your playbooks.
+  </div>
+</div>
+
 <div style="margin-bottom:16px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px">
   <div class="field-label" style="margin-bottom:6px">Your Name <span style="color:var(--muted);font-weight:400;font-size:.72rem">— used to sign emails</span></div>
   <div class="input-row">
@@ -2123,6 +2139,20 @@ function upsertUserProfile(user) {
       else console.log('[Profile] upserted for', user.email);
     }).catch(function(e) { console.warn('[Profile] upsert failed:', e.message); });
   } catch(e) { /* non-critical */ }
+}
+
+function copyExtUserId() {
+  var el = document.getElementById('extUserIdDisplay');
+  if (!el || !el.value) return;
+  navigator.clipboard.writeText(el.value).then(function() {
+    var btn = document.getElementById('copyExtIdBtn');
+    if (btn) { btn.textContent = 'Copied!'; setTimeout(function() { btn.textContent = 'Copy'; }, 2000); }
+  }).catch(function() {
+    el.select();
+    document.execCommand('copy');
+    var btn = document.getElementById('copyExtIdBtn');
+    if (btn) { btn.textContent = 'Copied!'; setTimeout(function() { btn.textContent = 'Copy'; }, 2000); }
+  });
 }
 
 // Sign out and redirect to login
@@ -2784,10 +2814,14 @@ function loadSettings() {
   });
   // User ID — auto-generate if needed, always show current value
   const uidEl = document.getElementById('userIdInput');
+  const extIdEl = document.getElementById('extUserIdDisplay');
   if (uidEl) {
     const uid = getUserId(); // auto-generates if not set
     uidEl.value = uid;
     uidEl.placeholder = uid; // fallback if value somehow empty
+  }
+  if (extIdEl) {
+    extIdEl.value = getUserId() || 'Sign in first';
   }
 }
 async function loadPlaybooksFromSupabase() {
