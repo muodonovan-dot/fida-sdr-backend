@@ -9248,6 +9248,19 @@ async function runNewSearch() {
     var scoreB = (b.institution ? 3 : 0) + (b.firstName && b.firstName.length > 2 ? 2 : 0) + (b.state ? 1 : 0) + ((b._sources||[]).length > 1 ? 2 : 0) + (b.articles||0) + (b.grants||0);
     return scoreB - scoreA;
   });
+
+  // Enforce location filter client-side (API filters are unreliable for state matching)
+  var locFilter = filters.states;
+  if (locFilter && locFilter.length > 0) {
+    var stateSet = new Set(locFilter.map(function(s) { return s.toUpperCase(); }));
+    var beforeCount = unique.length;
+    unique = unique.filter(function(r) {
+      if (!r.state) return false; // Drop results with no detected state when filtering by territory
+      return stateSet.has((r.state||'').toUpperCase());
+    });
+    console.log('[Search] State filter: ' + beforeCount + ' -> ' + unique.length + ' (kept ' + locFilter.length + ' states, dropped no-state results)');
+  }
+
   searchLeadsResults = unique;
   renderSearchResults(unique);
 
