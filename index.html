@@ -9183,41 +9183,47 @@ function renderSearchPage() {
   const end = Math.min(start + searchLeadsPerPage, results.length);
   const pageResults = results.slice(start, end);
 
-  const pubmedCount = results.filter(r => r.source === 'pubmed').length;
-  const grantCount = results.filter(r => r.source === 'grants').length;
-  const trialCount = results.filter(r => r.source === 'trials').length;
+  const pubmedCount = results.filter(r => r.source === 'PubMed' || r.source === 'pubmed').length;
+  const grantCount = results.filter(r => r.source === 'NIH Grant' || r.source === 'grants').length;
+  const trialCount = results.filter(r => r.source === 'Clinical Trial' || r.source === 'trials').length;
 
   // Source breakdown
   const breakdown = [
-    pubmedCount ? `📄 ${pubmedCount} publications` : '',
-    grantCount ? `💰 ${grantCount} grants` : '',
-    trialCount ? `🧪 ${trialCount} trials` : ''
+    pubmedCount ? `${pubmedCount} publications` : '',
+    grantCount ? `${grantCount} grants` : '',
+    trialCount ? `${trialCount} trials` : ''
   ].filter(Boolean).join(' · ');
 
   count.innerHTML = `<strong style="color:#fff">${results.length} researchers found</strong> <span style="color:var(--muted);font-size:.75rem">${breakdown}</span>`;
   addAllBtn.style.display = 'flex';
-  addAllBtn.textContent = `➕ Add All ${results.length} Results to Playbook`;
+  addAllBtn.textContent = `+ Add All ${results.length} Results to Playbook`;
 
   // Render page results
-  container.innerHTML = pageResults.map(r => `
+  container.innerHTML = pageResults.map(r => {
+    const srcLower = (r.source || '').toLowerCase();
+    const isPub = srcLower.includes('pubmed') || srcLower === 'pubmed';
+    const isGrant = srcLower.includes('nih') || srcLower.includes('grant');
+    const srcLabel = isPub ? 'Publication' : isGrant ? 'NIH Grant' : 'Clinical Trial';
+    const srcClass = isPub ? 'pubmed' : isGrant ? 'grants' : 'trials';
+    return `
     <div class="rc-card" id="rc_${r.id}">
-      <div class="rc-avatar" style="background:${stringToColor(r.name)}">${(r.firstName?.[0]||'?')}${(r.lastName?.[0]||'')}</div>
+      <div class="rc-avatar" style="background:${getAvatarBg(r.name)}">${(r.firstName?.[0]||'?')}${(r.lastName?.[0]||'')}</div>
       <div class="rc-body">
         <div class="rc-name">${r.name || 'Unknown'}</div>
         <div class="rc-meta">${[r.title, r.institution].filter(Boolean).join(' · ')}</div>
-        ${r.location ? `<div class="rc-loc">📍 ${r.location}</div>` : ''}
+        ${r.state ? `<div class="rc-loc" style="font-size:.72rem;color:var(--muted)">${r.state}${r.country && r.country !== 'US' ? ', ' + r.country : ''}</div>` : ''}
         <div class="rc-snippet">${r.snippet || ''}</div>
         <div style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap">
-          <span class="rc-src-tag ${r.source}">${r.source === 'pubmed' ? '📄 Publication' : r.source === 'grants' ? '💰 NIH Grant' : '🧪 Trial'}</span>
-          ${r.stats ? `<span style="font-size:.68rem;color:var(--muted)">${r.stats}</span>` : ''}
+          <span class="rc-src-tag ${srcClass}">${srcLabel}</span>
+          ${r.date ? `<span style="font-size:.68rem;color:var(--muted)">${r.date}</span>` : ''}
         </div>
       </div>
       <div class="rc-actions">
-        <button class="rc-btn-add" onclick="addSearchLeadToPlaybook('${r.id}')">➕ Add to Playbook</button>
-        ${r.sourceUrl ? `<a href="${r.sourceUrl}" target="_blank" style="font-size:.72rem;color:var(--muted);text-decoration:none">View →</a>` : ''}
+        <button class="rc-btn-add" onclick="addSearchLeadToPlaybook('${r.id}')">+ Add</button>
+        ${r.sourceUrl ? `<a href="${r.sourceUrl}" target="_blank" style="font-size:.72rem;color:var(--muted);text-decoration:none">View source</a>` : ''}
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 
   // Pagination controls
   if (totalPages > 1) {
