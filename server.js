@@ -286,26 +286,32 @@ app.post('/instantly-push', async (req, res) => {
         schedules: [{
           name: 'Business Hours',
           timing: { from: '08:00', to: '17:00' },
-          days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+          days: [true, true, true, true, true, false, false],
           timezone: 'America/Chicago'
         }]
       }
     };
 
-    // Force valid Instantly timezone on all schedules
+    // Force valid Instantly timezone and days format on all schedules
+    // Instantly API requires days as boolean array: [Mon, Tue, Wed, Thu, Fri, Sat, Sun]
+    var DAY_NAMES = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
     if (campaignBody.campaign_schedule?.schedules) {
       campaignBody.campaign_schedule.schedules.forEach(s => {
         s.timezone = 'America/Chicago';
-        // Fix days: if object (old format), convert to array
-        if (!Array.isArray(s.days)) {
-          if (s.days && typeof s.days === 'object') {
-            s.days = Object.entries(s.days)
-              .filter(([_, enabled]) => enabled)
-              .map(([day]) => day);
+        // Convert days to boolean array format if needed
+        if (Array.isArray(s.days)) {
+          if (typeof s.days[0] === 'string') {
+            // String array like ['monday','tuesday'] -> boolean array
+            var lowerDays = s.days.map(d => (d || '').toLowerCase());
+            s.days = DAY_NAMES.map(d => lowerDays.includes(d));
           }
-          if (!Array.isArray(s.days) || s.days.length === 0) {
-            s.days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
-          }
+          // Already boolean array - leave it
+        } else if (s.days && typeof s.days === 'object') {
+          // Object format like {monday:true, tuesday:true} -> boolean array
+          s.days = DAY_NAMES.map(d => !!s.days[d]);
+        } else {
+          // No days or invalid - default to Mon-Fri
+          s.days = [true, true, true, true, true, false, false];
         }
       });
     }
