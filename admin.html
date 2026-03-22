@@ -173,15 +173,25 @@ async function loadDashboard() {
     const { data: allLeads, count: leadsCount } = await supaFetch('leads?select=user_id,email,first_name,last_name,organisation,status,created_at,playbook_id&order=created_at.desc&limit=5000');
     const { data: allPlaybooks, count: pbCount } = await supaFetch('playbooks?select=id,name,user_id,created_at,brief,keywords,angle&order=created_at.desc');
     const { data: allResources } = await supaFetch('fida_resources?select=id&limit=1');
+    // 2. Get all profiles (every user who has ever logged in)
+    var allProfiles = [];
+    try {
+      var profResult = await supaFetch('profiles?select=id,email,full_name,company,region,role&limit=500');
+      allProfiles = profResult.data || [];
+    } catch(e) { console.warn('Profiles query failed:', e); }
 
     // Parse counts from content-range header
     const totalLeads = leadsCount ? parseInt(leadsCount.split('/')[1]) : allLeads.length;
     const totalPlaybooks = pbCount ? parseInt(pbCount.split('/')[1]) : allPlaybooks.length;
 
-    // Group by user
+    // Group by user — start with profiles so we see ALL logged-in users
     const userMap = {};
+    allProfiles.forEach(function(p) {
+      if (!p.email) return;
+      userMap[p.email] = { leads: 0, withEmail: 0, playbooks: new Set(), lastActivity: null, fullName: p.full_name || '', company: p.company || '', region: p.region || '', role: p.role || '', fromProfile: true };
+    });
     allLeads.forEach(function(l) {
-      if (!userMap[l.user_id]) userMap[l.user_id] = { leads: 0, withEmail: 0, playbooks: new Set(), lastActivity: null };
+      if (!userMap[l.user_id]) userMap[l.user_id] = { leads: 0, withEmail: 0, playbooks: new Set(), lastActivity: null, fullName: '', company: '', region: '', role: '', fromProfile: false };
       userMap[l.user_id].leads++;
       if (l.email) userMap[l.user_id].withEmail++;
       if (l.playbook_id) userMap[l.user_id].playbooks.add(l.playbook_id);
@@ -191,8 +201,11 @@ async function loadDashboard() {
     });
     // Also count playbooks for users with no leads
     allPlaybooks.forEach(function(pb) {
-      if (!userMap[pb.user_id]) userMap[pb.user_id] = { leads: 0, withEmail: 0, playbooks: new Set(), lastActivity: pb.created_at };
+      if (!userMap[pb.user_id]) userMap[pb.user_id] = { leads: 0, withEmail: 0, playbooks: new Set(), lastActivity: pb.created_at, fullName: '', company: '', region: '', role: '', fromProfile: false };
       userMap[pb.user_id].playbooks.add(pb.id);
+      if (!userMap[pb.user_id].lastActivity || pb.created_at > userMap[pb.user_id].lastActivity) {
+        userMap[pb.user_id].lastActivity = pb.created_at;
+      }
     });
 
     var users = Object.keys(userMap);
@@ -205,19 +218,21 @@ async function loadDashboard() {
 
     // Users table
     document.getElementById('userCount').textContent = users.length + ' users';
-    var usersHtml = '<table><thead><tr><th>User</th><th>Leads</th><th>With email</th><th>Playbooks</th><th>Last activity</th><th>Status</th></tr></thead><tbody>';
+    var usersHtml = '<table><thead><tr><th>User</th><th>Name</th><th>Company</th><th>Leads</th><th>Playbooks</th><th>Last activity</th><th>Status</th></tr></thead><tbody>';
     users.sort(function(a, b) { return (userMap[b].lastActivity || '') > (userMap[a].lastActivity || '') ? 1 : -1; });
     users.forEach(function(uid) {
       var u = userMap[uid];
       var ago = u.lastActivity ? timeSince(new Date(u.lastActivity)) : 'never';
-      var isRecent = u.lastActivity && (Date.now() - new Date(u.lastActivity).getTime()) < 24 * 60 * 60 * 1000;
+      var isRecent = u.lastActivity && (Date.now() - new Date(u.lastActivity).getTime()) < 7 * 24 * 60 * 60 * 1000;
+      var hasData = u.leads > 0 || u.playbooks.size > 0;
       usersHtml += '<tr>';
       usersHtml += '<td style="font-weight:500">' + escHtml(uid) + '</td>';
+      usersHtml += '<td style="color:var(--muted);font-size:12px">' + escHtml(u.fullName || '--') + '</td>';
+      usersHtml += '<td style="color:var(--muted);font-size:12px">' + escHtml(u.company || '--') + '</td>';
       usersHtml += '<td>' + u.leads + '</td>';
-      usersHtml += '<td>' + u.withEmail + ' <span style="color:var(--muted);font-size:11px">(' + (u.leads ? Math.round(u.withEmail/u.leads*100) : 0) + '%)</span></td>';
       usersHtml += '<td>' + u.playbooks.size + '</td>';
       usersHtml += '<td class="timestamp">' + ago + '</td>';
-      usersHtml += '<td>' + (isRecent ? '<span class="badge-active">Active</span>' : '<span class="badge-new">Inactive</span>') + '</td>';
+      usersHtml += '<td>' + (isRecent ? '<span class="badge-active">Active</span>' : hasData ? '<span class="badge-new">Inactive</span>' : '<span class="badge-new">Empty</span>') + '</td>';
       usersHtml += '</tr>';
     });
     usersHtml += '</tbody></table>';

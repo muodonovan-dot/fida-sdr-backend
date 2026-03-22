@@ -2074,6 +2074,8 @@ async function initSupabase() {
       localStorage.setItem('fidaUserId', currentUser.email);
       localStorage.setItem('fidaUserEmail', currentUser.email);
       console.log('[Auth] Logged in as:', currentUser.email, '(id:', currentUser.id, ')');
+      // Upsert profile for admin dashboard tracking (delayed to not block load)
+      setTimeout(function() { upsertUserProfile(currentUser); }, 2000);
     } else {
       // No session — redirect to login page
       console.log('[Auth] No session found — redirecting to login');
@@ -2096,10 +2098,31 @@ async function initSupabase() {
       currentUser = session.user;
       localStorage.setItem('fidaUserId', currentUser.email);
       localStorage.setItem('fidaUserEmail', currentUser.email);
+      // Upsert profile so admin dashboard can see all users who have ever logged in
+      upsertUserProfile(currentUser);
     }
   });
 
   return true;
+}
+
+// Upsert user profile on every login — ensures admin dashboard can see all users
+function upsertUserProfile(user) {
+  try {
+    var headers = getSupabaseHeaders(true);
+    headers['Prefer'] = 'resolution=merge-duplicates';
+    fetch('https://cqsdsztzyvxtnzrruxeb.supabase.co/rest/v1/profiles', {
+      method: 'POST', headers: headers,
+      body: JSON.stringify({
+        id: user.id,
+        email: user.email,
+        full_name: user.user_metadata?.full_name || user.user_metadata?.name || ''
+      })
+    }).then(function(r) {
+      if (!r.ok) console.warn('[Profile] upsert status:', r.status);
+      else console.log('[Profile] upserted for', user.email);
+    }).catch(function(e) { console.warn('[Profile] upsert failed:', e.message); });
+  } catch(e) { /* non-critical */ }
 }
 
 // Sign out and redirect to login
