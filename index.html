@@ -3550,6 +3550,16 @@ function switchTab(tab) {
   if (tab === 'settings') { checkSettingsAutoExpand(); loadSettings(); renderSettingsKeyStatus(); }
   if (tab === 'searchLeads') { initSearchLeadsPage(); var cb = document.querySelector('.content-body'); if(cb) { cb.style.padding = '0'; cb.style.overflowY = 'hidden'; } }
   else { var cb = document.querySelector('.content-body'); if(cb) { cb.style.padding = '22px 24px 0'; cb.style.overflowY = 'auto'; } }
+  // Pages outside content-body need content-body to collapse
+  var outsidePages = ['contacts','linkedin','import','settings'];
+  var cb2 = document.querySelector('.content-body');
+  if (cb2) {
+    if (outsidePages.includes(tab)) {
+      cb2.style.display = 'none';
+    } else {
+      cb2.style.display = '';
+    }
+  }
   // Hide old hero block
   const hero = document.getElementById('heroBlock');
   if (hero) hero.style.display = 'none';
