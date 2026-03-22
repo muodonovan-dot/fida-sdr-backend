@@ -798,7 +798,8 @@ tr:hover .row-actions-inline { display:flex; }
     <button class="sidebar-item" id="navImport" onclick="switchTab('import')">
       <span class="si">📥</span><span>Import Leads</span>
     </button>
-    <button class="sidebar-item" id="navSdr" onclick="switchTab('sdr')">
+    <!-- Generate nav removed — generation is accessed via playbook ⚡ Generate buttons -->
+    <button class="sidebar-item" id="navSdr" onclick="switchTab('sdr')" style="display:none">
       <span class="si">⚡</span><span>Generate</span>
       <span class="sb-badge" id="queueBadge2">0</span>
     </button>
@@ -4372,15 +4373,14 @@ function renderDealPipeline(leads) {
     html += '</div>';
   }
 
-  // All deals list (not just open)
+  // Deals list — sectioned by stage, scrollable
   if (deals.length) {
-    html += '<div style="font-size:.62rem;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">All Deals (' + deals.length + ')</div>';
-    deals.sort(function(a,b){return (b.dealValue||0)-(a.dealValue||0)}).slice(0,12).forEach(function(l){
+    var renderDealRow = function(l) {
       var stageColor = l.dealStage==='won' ? '#00c87a' : l.dealStage==='lost' ? '#ff6b6b' : '#f59e0b';
       var stageIcon = l.dealStage==='won' ? '🟢' : l.dealStage==='lost' ? '🔴' : '🟡';
       var closedText = l.dealClosedAt ? ' · Closed ' + new Date(l.dealClosedAt).toLocaleDateString() : '';
       var flaggedText = l.dealCreatedAt ? new Date(l.dealCreatedAt).toLocaleDateString() : '';
-      html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)">' +
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04)">' +
         '<div style="flex:1;min-width:0">' +
           '<div><span style="font-size:.78rem;color:var(--text);font-weight:600">' + (l.firstName||'') + ' ' + (l.lastName||'') + '</span> <span style="font-size:.65rem;color:var(--muted)">' + (l.organisation||'') + '</span></div>' +
           '<div style="font-size:.58rem;color:var(--muted)">Flagged ' + flaggedText + closedText + '</div>' +
@@ -4390,7 +4390,29 @@ function renderDealPipeline(leads) {
           '<div style="font-size:.58rem;color:' + stageColor + '">' + stageIcon + ' ' + (l.dealStage||'').charAt(0).toUpperCase() + (l.dealStage||'').slice(1) + '</div>' +
         '</div>' +
       '</div>';
-    });
+    };
+
+    html += '<div style="max-height:400px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.1) transparent">';
+
+    // Open opportunities
+    if (opp.length) {
+      html += '<div style="font-size:.62rem;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:.08em;margin:10px 0 6px;display:flex;align-items:center;gap:6px">🟡 Open Pipeline <span style="color:var(--muted);font-weight:400">(' + opp.length + ' · ' + fmtVal(oppVal) + ')</span></div>';
+      opp.sort(function(a,b){return (b.dealValue||0)-(a.dealValue||0)}).forEach(function(l){ html += renderDealRow(l); });
+    }
+
+    // Won deals
+    if (won.length) {
+      html += '<div style="font-size:.62rem;font-weight:700;color:#00c87a;text-transform:uppercase;letter-spacing:.08em;margin:14px 0 6px;display:flex;align-items:center;gap:6px">🟢 Won <span style="color:var(--muted);font-weight:400">(' + won.length + ' · ' + fmtVal(wonVal) + ')</span></div>';
+      won.sort(function(a,b){return (b.dealValue||0)-(a.dealValue||0)}).forEach(function(l){ html += renderDealRow(l); });
+    }
+
+    // Lost deals
+    if (lost.length) {
+      html += '<div style="font-size:.62rem;font-weight:700;color:#ff6b6b;text-transform:uppercase;letter-spacing:.08em;margin:14px 0 6px;display:flex;align-items:center;gap:6px">🔴 Lost <span style="color:var(--muted);font-weight:400">(' + lost.length + ' · ' + fmtVal(lostVal) + ')</span></div>';
+      lost.sort(function(a,b){return (b.dealValue||0)-(a.dealValue||0)}).forEach(function(l){ html += renderDealRow(l); });
+    }
+
+    html += '</div>';
   }
 
   content.innerHTML = html;
