@@ -500,7 +500,7 @@ footer a{color:var(--orange-light);text-decoration:none}
 .li-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;background:#0A66C2;color:#fff;font-size:.78rem;font-weight:600;text-decoration:none;border:none;cursor:pointer;margin-top:8px;font-family:'Montserrat',sans-serif}
 
 
-#pageSearchLeads { padding:0 !important; margin:0 !important; overflow:hidden; height:calc(100vh - 52px); width:100%; }
+#pageSearchLeads { padding:0 !important; margin:0 !important; overflow:hidden; width:100%; }
 #pageSearchLeads .search-shell { height:100%; width:100%; }
 
 /* Force pages to fill content area */
@@ -3548,8 +3548,8 @@ function switchTab(tab) {
   if (tab === 'contacts') { cleanBadEmails(); renderContacts(); }
   else { clearSelection?.(); }
   if (tab === 'settings') { checkSettingsAutoExpand(); loadSettings(); renderSettingsKeyStatus(); }
-  if (tab === 'searchLeads') { initSearchLeadsPage(); var cb = document.querySelector('.content-body'); if(cb) { cb.style.padding = '0'; cb.style.overflow = 'hidden'; } }
-  else { var cb = document.querySelector('.content-body'); if(cb) { cb.style.padding = '22px 24px 0'; cb.style.overflow = ''; } }
+  if (tab === 'searchLeads') { initSearchLeadsPage(); var cb = document.querySelector('.content-body'); if(cb) { cb.style.padding = '0'; cb.style.overflowY = 'hidden'; } }
+  else { var cb = document.querySelector('.content-body'); if(cb) { cb.style.padding = '22px 24px 0'; cb.style.overflowY = 'auto'; } }
   // Hide old hero block
   const hero = document.getElementById('heroBlock');
   if (hero) hero.style.display = 'none';
