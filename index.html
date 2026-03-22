@@ -9119,7 +9119,8 @@ async function searchNIHGrantsForLeads(terms, filters) {
     fields: ['contact_pi_name','organization','project_title','abstract_text','award_amount','fiscal_year']
   };
 
-  const resp = await fetch('https://api.reporter.nih.gov/v2/projects/search', {
+  // Route through backend proxy to avoid CORS
+  const resp = await fetch(BACKEND + '/nih-grants-search', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
@@ -9257,149 +9258,6 @@ function goToSearchPage(page) {
 }
 
 
-async function searchPubMedForLeads(terms, filters) {
-  const dateFilter = filters.dateRange ? `&datetype=pdat&reldate=${filters.dateRange * 365}` : '';
-  const stateFilter = filters.states.length ? ` AND (${filters.states.map(s => s + '[ad]').join(' OR ')})` : '';
-  const query = encodeURIComponent(terms + stateFilter);
-  
-  const searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${query}&retmax=200&retmode=json${dateFilter}`;
-  const searchResp = await fetch(searchUrl);
-  const searchData = await searchResp.json();
-  const ids = searchData.esearchresult?.idlist || [];
-  if (!ids.length) return [];
-
-  const summaryUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=${ids.slice(0,200).join(',')}&retmode=json`;
-  const summaryResp = await fetch(summaryUrl);
-  const summaryData = await summaryResp.json();
-
-  const leads = [];
-  Object.values(summaryData.result || {}).forEach(article => {
-    if (!article.uid) return;
-    const authors = article.authors || [];
-    authors.slice(0, 2).forEach(author => {
-      if (!author.name) return;
-      const nameParts = author.name.split(' ');
-      leads.push({
-        id: `pm_${article.uid}_${author.name.replace(/\s/g,'')}`,
-        firstName: nameParts.slice(1).join(' ') || nameParts[0],
-        lastName: nameParts[0],
-        name: author.name,
-        institution: article.source || '',
-        title: 'Researcher',
-        email: '',
-        snippet: article.title || '',
-        source: 'PubMed',
-        sourceUrl: `https://pubmed.ncbi.nlm.nih.gov/${article.uid}`,
-        date: article.pubdate || '',
-        grants: 0, tradeshows: 0,
-        articles: parseInt(article.pmcrefcount) || 1
-      });
-    });
-  });
-  return leads;
-}
-
-async function searchNIHGrantsForLeads(terms, filters) {
-  const stateFilter = filters.states.length ? filters.states : [];
-  const body = {
-    criteria: {
-      advanced_text_search: { search_text: terms, search_field: 'all' },
-      ...(stateFilter.length ? { org_states: stateFilter } : {})
-    },
-    offset: 0, limit: 150,
-    fields: ['contact_pi_name','organization','project_title','abstract_text','award_amount','fiscal_year']
-  };
-
-  const resp = await fetch('https://api.reporter.nih.gov/v2/projects/search', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  const data = await resp.json();
-  const leads = [];
-  (data.results || []).forEach(grant => {
-    if (!grant.contact_pi_name) return;
-    const name = grant.contact_pi_name;
-    const nameParts = name.split(',');
-    leads.push({
-      id: `nih_${grant.project_num || Math.random()}`,
-      firstName: nameParts[1]?.trim() || '',
-      lastName: nameParts[0]?.trim() || name,
-      name: nameParts.length > 1 ? `${nameParts[1]?.trim()} ${nameParts[0]?.trim()}` : name,
-      institution: grant.organization?.org_name || '',
-      state: grant.organization?.org_state || '',
-      country: grant.organization?.org_country || 'US',
-      title: 'Principal Investigator',
-      email: '',
-      snippet: grant.project_title || '',
-      source: 'NIH Grant',
-      sourceUrl: `https://reporter.nih.gov/project-details/${grant.project_num}`,
-      date: grant.fiscal_year?.toString() || '',
-      grants: 1, tradeshows: 0, articles: 0
-    });
-  });
-  return leads;
-}
-
-function getAvatarBg(name) {
-  const colors = ['linear-gradient(135deg,#EF4D05,#FF8210)','linear-gradient(135deg,#8B5CF6,#3B82F6)',
-    'linear-gradient(135deg,#059669,#10B981)','linear-gradient(135deg,#DC2626,#F59E0B)',
-    'linear-gradient(135deg,#7C3AED,#DB2777)','linear-gradient(135deg,#0891B2,#6366F1)'];
-  let h = 0; for (let c of (name||'A')) h = (h * 31 + c.charCodeAt(0)) & 0xFFFF;
-  return colors[h % colors.length];
-}
-
-function renderSearchResults(results) {
-  const container = document.getElementById('srResults');
-  const count = document.getElementById('srCount');
-  const addAllBtn = document.getElementById('srAddAll');
-
-  if (!results.length) {
-    container.innerHTML = `<div class="rc-empty"><div class="rc-empty-icon">🔬</div><div>No results found. Try different keywords or broaden your filters.</div></div>`;
-    count.innerHTML = 'No results';
-    addAllBtn.style.display = 'none';
-    return;
-  }
-
-  const pubmedCount = results.filter(r => r.source === 'pubmed').length;
-  const grantCount = results.filter(r => r.source === 'grants').length;
-  const ctCount = results.filter(r => r.source === 'clinical_trials').length;
-  const parts = [];
-  if (pubmedCount) parts.push(`${pubmedCount} publications`);
-  if (grantCount) parts.push(`${grantCount} grants`);
-  if (ctCount) parts.push(`${ctCount} trials`);
-  count.innerHTML = `<strong>${results.length}</strong> researchers found ${parts.length ? '· <span style="color:var(--muted);font-size:.75rem">' + parts.join(' · ') + '</span>' : ''}`;
-  addAllBtn.style.display = 'inline-flex';
-
-  container.innerHTML = results.map(r => {
-    const initials = ((r.firstName||'').charAt(0) + (r.lastName||'').charAt(0)).toUpperCase() || '?';
-    const avgBg = getAvatarBg(r.name);
-    return `
-    <div class="rc" id="src_${r.id}">
-      <div class="rc-top">
-        <div class="rc-avatar" style="background:${avgBg}">${initials}</div>
-        <div class="rc-info">
-          <div class="rc-name">${r.name}</div>
-          <div class="rc-title">${r.title || ''}${r.title && r.institution ? ' · ' : ''}${r.institution || ''}</div>
-          ${r.email ? `<div class="rc-email">✉ ${r.email}</div>` : ''}
-        </div>
-        <div>
-          <span class="rc-source-tag">${r.source}</span>
-        </div>
-      </div>
-      <div class="rc-stats">
-        <div class="rc-stat"><div class="rc-stat-val">${r.grants}</div><div class="rc-stat-label">Grants</div></div>
-        <div class="rc-stat"><div class="rc-stat-val">${r.tradeshows}</div><div class="rc-stat-label">Shows</div></div>
-        <div class="rc-stat"><div class="rc-stat-val">${r.articles}</div><div class="rc-stat-label">Articles</div></div>
-      </div>
-      ${r.snippet ? `<div class="rc-snippet">${r.snippet.substring(0,180)}</div>` : ''}
-      <div class="rc-actions">
-        <button class="rc-btn-add" onclick="addSearchLeadToPlaybook('${r.id}')">➕ Add to Playbook</button>
-        ${r.sourceUrl ? `<a href="${r.sourceUrl}" target="_blank" style="font-size:.72rem;color:var(--muted);text-decoration:none">View Source →</a>` : ''}
-      </div>
-    </div>`;
-  }).join('');
-}
 
 function addSearchLeadToPlaybook(leadId) {
   const lead = searchLeadsResults.find(r => r.id === leadId);
