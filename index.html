@@ -1830,28 +1830,18 @@ tr:hover .row-actions-inline { display:flex; }
       <div id="settingsBody" style="display:block">
 
 <!-- User Identity -->
-<div style="margin-bottom:16px;padding:14px 16px;background:rgba(239,77,5,.05);border:1px solid rgba(239,77,5,.3);border-radius:8px">
+<div style="margin-bottom:16px;padding:14px 16px;background:rgba(39,174,96,.05);border:1px solid rgba(39,174,96,.3);border-radius:8px">
   <div class="field-label" style="margin-bottom:8px;font-size:.8rem">
-    YOUR USER ID <span style="font-weight:400;color:var(--muted)">— KEEPS YOUR DATA SEPARATE FROM OTHER USERS</span>
+    SIGNED IN AS <span style="font-weight:400;color:var(--muted)">— YOUR DATA IS ISOLATED BY YOUR LOGIN</span>
   </div>
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-    <input type="text" id="userIdInput"
-      style="width:100%;box-sizing:border-box;font-family:monospace;font-size:.85rem;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:#fff;cursor:text"
-      placeholder="auto-generating..."
-      oninput="localStorage.setItem('fidaUserId', this.value.trim())"/>
-    <button class="btn btn-primary btn-sm" onclick="
-      const val = document.getElementById('userIdInput').value.trim();
-      if (!val) return;
-      localStorage.setItem('fidaUserId', val);
-      navigator.clipboard.writeText(val).catch(()=>{});
-      this.textContent='✓ Saved & Copied';
-      this.style.background='var(--green)';
-      setTimeout(()=>{ this.textContent='Save & Copy'; this.style.background=''; }, 2000);
-      showToast('User ID saved — paste it into the Chrome Extension popup');
-    " style="white-space:nowrap;flex-shrink:0;min-width:110px">Save & Copy</button>
+    <input type="text" id="userIdInput" readonly
+      style="width:100%;box-sizing:border-box;font-family:monospace;font-size:.85rem;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--green);cursor:default;opacity:.8"
+      placeholder="loading..."/>
+    <button class="btn btn-ghost btn-sm" onclick="signOut()" style="white-space:nowrap;flex-shrink:0;min-width:90px;color:var(--muted)">Sign Out</button>
   </div>
   <div style="font-size:.72rem;color:var(--muted);line-height:1.5">
-    Set this once. Then paste it into the <strong style="color:rgba(255,255,255,.6)">Chrome Extension popup</strong>. All teammates need a different ID to keep data separate.
+    Your playbooks, leads, and settings are tied to this account. Each team member signs in with their own email.
   </div>
 </div>
 
@@ -2071,12 +2061,16 @@ const SUPABASE_URL = 'https://cqsdsztzyvxtnzrruxeb.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_oWLb_blZHL_rayCldsPfMw_OoQs0HMR';
 
 function getUserId() {
-  let uid = localStorage.getItem('fidaUserId');
-  if (!uid) {
-    uid = 'michael@fida';
-    localStorage.setItem('fidaUserId', uid);
+  // Use the authenticated user's email as the user_id
+  if (currentUser && currentUser.email && currentUser.email !== 'user@fida') {
+    return currentUser.email;
   }
-  return uid;
+  // Fallback to localStorage (set during login)
+  let uid = localStorage.getItem('fidaUserId');
+  if (uid && uid !== 'michael@fida') return uid;
+  // If we get here, user isn't logged in — this shouldn't happen
+  // because initSupabase redirects to login
+  return 'unknown';
 }
 let sb = null;
 let currentUser = null;
@@ -2093,22 +2087,52 @@ async function initSupabase() {
     });
   }
   sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  // No auth required — using anon key with open RLS
-  // Try to get session for user info if available, but don't require it
+
+  // Check for authenticated session
   try {
     const { data: { session } } = await sb.auth.getSession();
-    if (session) {
+    if (session && session.user) {
       currentUser = session.user;
-      console.log('[Supabase] Logged in as:', currentUser.email);
+      // Use auth email as the user ID for all data queries
+      localStorage.setItem('fidaUserId', currentUser.email);
+      localStorage.setItem('fidaUserEmail', currentUser.email);
+      console.log('[Auth] Logged in as:', currentUser.email, '(id:', currentUser.id, ')');
     } else {
-      console.log('[Supabase] Using anon access — no login required');
-      currentUser = { id: 'default', email: localStorage.getItem('fidaUserEmail') || 'user@fida' };
+      // No session — redirect to login page
+      console.log('[Auth] No session found — redirecting to login');
+      window.location.href = '/login.html';
+      return false;
     }
   } catch(e) {
-    console.log('[Supabase] Session check skipped:', e.message);
-    currentUser = { id: 'default', email: 'user@fida' };
+    console.warn('[Auth] Session check failed:', e.message, '— redirecting to login');
+    window.location.href = '/login.html';
+    return false;
   }
-  return true; // Always proceed — open RLS
+
+  // Listen for auth state changes (e.g. token refresh, logout)
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT') {
+      localStorage.removeItem('fidaUserId');
+      localStorage.removeItem('fidaUserEmail');
+      window.location.href = '/login.html';
+    } else if (event === 'SIGNED_IN' && session?.user) {
+      currentUser = session.user;
+      localStorage.setItem('fidaUserId', currentUser.email);
+      localStorage.setItem('fidaUserEmail', currentUser.email);
+    }
+  });
+
+  return true;
+}
+
+// Sign out and redirect to login
+async function signOut() {
+  try {
+    if (sb) await sb.auth.signOut();
+  } catch(e) { console.warn('Sign out error:', e.message); }
+  localStorage.removeItem('fidaUserId');
+  localStorage.removeItem('fidaUserEmail');
+  window.location.href = '/login.html';
 }
 
 const BACKEND = 'https://fida-sdr-backend.onrender.com';
@@ -3413,13 +3437,24 @@ window.addEventListener('load', () => {
 
   // Then try Supabase — merge/update if available, but never wipe local data
   (async function() {
-    try { await initSupabase(); } catch(e) { console.warn('[Supabase] Init error:', e.message); }
+    try {
+      const authOk = await initSupabase();
+      if (!authOk) return; // Redirecting to login — stop everything
+    } catch(e) {
+      console.warn('[Auth] Init error:', e.message);
+      window.location.href = '/login.html';
+      return;
+    }
     const emailEl = document.getElementById('navUserEmail');
     if (emailEl && currentUser) {
       emailEl.textContent = currentUser.email;
       const avi = document.getElementById('userAvatar');
       if (avi) avi.textContent = currentUser.email.charAt(0).toUpperCase();
     }
+    // Now that we're authenticated, reload playbooks with the correct user_id
+    loadPlaybooks();
+    renderPlaybooks();
+    buildContactsData();
     // loadPlaybooksFromSupabase uses direct REST — doesn't need sb client
     try {
       const loaded = await loadPlaybooksFromSupabase();
@@ -3429,7 +3464,7 @@ window.addEventListener('load', () => {
         applyContactsFiltersAndRender();
         updateQueueBadge();
         updateAiDiscoverUI();
-        console.log('[Startup] Loaded from Supabase successfully');
+        console.log('[Startup] Loaded from Supabase for user:', getUserId());
       } else {
         console.log('[Startup] No data in Supabase — using localStorage');
       }

@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LeadGeeks — Sign In</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --orange: #EF4D05;
+    --orange-light: #FF8210;
+    --navy: #0d0b2e;
+    --navy-mid: #141240;
+    --navy-light: #1e1872;
+    --text: #f0eeff;
+    --muted: rgba(240,238,255,.45);
+    --border: rgba(255,255,255,.08);
+    --card: rgba(255,255,255,.04);
+    --green: #27ae60;
+    --red: #e74c3c;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    font-family: 'DM Sans', sans-serif;
+    background: var(--navy);
+    color: var(--text);
+    overflow: hidden;
+  }
+
+  /* Animated background */
+  .bg {
+    position: fixed; inset: 0; z-index: 0;
+    background: var(--navy);
+    overflow: hidden;
+  }
+  .bg::before {
+    content: '';
+    position: absolute;
+    top: -40%; left: -20%;
+    width: 80%; height: 80%;
+    background: radial-gradient(ellipse, rgba(239,77,5,.18) 0%, transparent 65%);
+    animation: pulse 8s ease-in-out infinite alternate;
+  }
+  .bg::after {
+    content: '';
+    position: absolute;
+    bottom: -30%; right: -10%;
+    width: 70%; height: 70%;
+    background: radial-gradient(ellipse, rgba(30,24,114,.6) 0%, transparent 65%);
+    animation: pulse 10s ease-in-out infinite alternate-reverse;
+  }
+  @keyframes pulse {
+    from { transform: scale(1) translate(0,0); }
+    to   { transform: scale(1.1) translate(2%,2%); }
+  }
+
+  /* Grid lines */
+  .grid-lines {
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 0%, transparent 100%);
+  }
+
+  /* Layout */
+  .page {
+    position: relative; z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  /* Logo area */
+  .logo-area {
+    text-align: center;
+    margin-bottom: 32px;
+    animation: fadeUp .6s ease both;
+  }
+  .logo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(239,77,5,.12);
+    border: 1px solid rgba(239,77,5,.3);
+    border-radius: 100px;
+    padding: 6px 16px 6px 8px;
+    margin-bottom: 16px;
+  }
+  .logo-dot {
+    width: 8px; height: 8px;
+    background: var(--orange);
+    border-radius: 50%;
+    animation: blink 2s ease infinite;
+  }
+  @keyframes blink {
+    0%,100% { opacity: 1; }
+    50% { opacity: .3; }
+  }
+  .logo-badge-text {
+    font-size: .72rem;
+    font-weight: 600;
+    color: var(--orange-light);
+    text-transform: uppercase;
+    letter-spacing: .1em;
+  }
+  .logo-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 2.4rem;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -.02em;
+  }
+  .logo-title .accent { color: var(--orange); }
+  .logo-sub {
+    margin-top: 8px;
+    font-size: .82rem;
+    color: var(--muted);
+    letter-spacing: .04em;
+  }
+
+  /* Card */
+  .card {
+    width: 100%;
+    max-width: 420px;
+    background: rgba(20,18,64,.7);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px;
+    animation: fadeUp .6s .1s ease both;
+  }
+
+  .card-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 24px;
+    color: var(--text);
+  }
+
+  /* Tabs */
+  .auth-tabs {
+    display: flex;
+    background: rgba(0,0,0,.2);
+    border-radius: 10px;
+    padding: 3px;
+    margin-bottom: 24px;
+    gap: 3px;
+  }
+  .auth-tab {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: .85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: .2s;
+  }
+  .auth-tab.active {
+    background: rgba(239,77,5,.2);
+    color: var(--orange-light);
+    font-weight: 600;
+  }
+
+  /* Form */
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-size: .75rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    margin-bottom: 6px;
+  }
+  .field input, .field select {
+    width: 100%;
+    background: rgba(0,0,0,.25);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 11px 14px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: .9rem;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .field input:focus, .field select:focus {
+    border-color: var(--orange);
+  }
+  .field input::placeholder { color: var(--muted); }
+  .field select option { background: #141240; color: var(--text); }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  /* Button */
+  .btn-primary {
+    width: 100%;
+    background: var(--orange);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 13px;
+    font-family: 'Outfit', sans-serif;
+    font-size: .95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: .2s;
+    margin-top: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-primary:hover { background: var(--orange-light); transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+  .btn-primary .spinner {
+    display: none;
+    width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+    margin: 0 auto;
+  }
+  .btn-primary.loading .btn-text { display: none; }
+  .btn-primary.loading .spinner { display: block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Messages */
+  .msg {
+    margin-top: 14px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: .82rem;
+    display: none;
+  }
+  .msg.error { background: rgba(231,76,60,.12); border: 1px solid rgba(231,76,60,.3); color: #ff8080; display: block; }
+  .msg.success { background: rgba(39,174,96,.12); border: 1px solid rgba(39,174,96,.3); color: #6ddc9a; display: block; }
+
+  /* Divider */
+  .divider {
+    display: flex; align-items: center; gap: 12px;
+    margin: 20px 0;
+    color: var(--muted);
+    font-size: .75rem;
+  }
+  .divider::before, .divider::after {
+    content: ''; flex: 1;
+    height: 1px; background: var(--border);
+  }
+
+  /* Footer */
+  .footer {
+    margin-top: 20px;
+    text-align: center;
+    font-size: .75rem;
+    color: var(--muted);
+    animation: fadeUp .6s .2s ease both;
+  }
+  .footer a { color: var(--orange-light); text-decoration: none; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Signup extra fields - hidden by default */
+  #signupFields { display: none; }
+
+  .btn-oauth {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: rgba(255,255,255,.05);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 11px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: .88rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: .2s;
+  }
+  .btn-oauth:hover {
+    background: rgba(255,255,255,.1);
+    border-color: rgba(255,255,255,.2);
+    transform: translateY(-1px);
+  }
+
+  @media (max-width: 480px) {
+    .card { padding: 24px 20px; }
+    .logo-title { font-size: 1.9rem; }
+    .field-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg"></div>
+<div class="grid-lines"></div>
+
+<div class="page">
+
+  <div class="logo-area">
+    <div class="logo-badge">
+      <div class="logo-dot"></div>
+      <span class="logo-badge-text">AI-Powered Sales Platform</span>
+    </div>
+    <div class="logo-title">Lead<span class="accent">Geeks</span></div>
+    <div class="logo-sub">Fida Neo AI SDR — Multi-User</div>
+  </div>
+
+  <div class="card">
+    <div style="margin-bottom:20px">
+      <div style="font-size:.82rem;color:var(--muted)">Sign in or create your account — magic link works for both.</div>
+    </div>
+
+    <!-- Login fields -->
+    <div id="loginFields">
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="loginEmail" placeholder="your@email.com" autocomplete="email"/>
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password"/>
+      </div>
+    </div>
+
+    <!-- Signup fields -->
+    <div id="signupFields">
+      <div class="field-row">
+        <div class="field">
+          <label>First Name</label>
+          <input type="text" id="signupFirst" placeholder="Michael"/>
+        </div>
+        <div class="field">
+          <label>Last Name</label>
+          <input type="text" id="signupLast" placeholder="O'Donovan"/>
+        </div>
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="signupEmail" placeholder="your@email.com" autocomplete="email"/>
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="signupPassword" placeholder="Min. 8 characters" autocomplete="new-password"/>
+      </div>
+      <div class="field">
+        <label>Company</label>
+        <select id="signupCompany">
+          <option value="Fida Bio">Fida Bio</option>
+          <option value="LeadGeeks">LeadGeeks</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Region</label>
+        <select id="signupRegion">
+          <option value="USA">USA</option>
+          <option value="Europe">Europe</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Magic link tab -->
+    <div id="magicSection">
+      <div class="field">
+        <label>Your Email</label>
+        <input type="email" id="magicEmail" placeholder="your@email.com" autocomplete="email"/>
+      </div>
+      <button class="btn-primary" id="magicBtn" onclick="handleMagicLink()">
+        <div class="spinner"></div>
+        <span class="btn-text">✉️ Send Magic Link</span>
+      </button>
+      <div style="text-align:center;font-size:.75rem;color:var(--muted);margin-top:12px">
+        We'll email you a sign-in link — no password needed
+      </div>
+    </div>
+
+    <div class="divider">or use email + password</div>
+
+    <button class="btn-primary" id="authBtn" onclick="handleAuth()" style="background:rgba(255,255,255,.06);border:1px solid var(--border)">
+      <div class="spinner"></div>
+      <span class="btn-text" id="authBtnText">Sign In with Password</span>
+    </button>
+
+    <div class="msg" id="authMsg"></div>
+
+    <div style="text-align:center;font-size:.78rem;color:var(--muted);margin-top:14px">
+      Forgot your password? <a href="#" onclick="handleReset()" style="color:var(--orange-light)">Reset it</a>
+    </div>
+  </div>
+
+  <div class="footer">
+    &copy; 2025 LeadGeeks · <a href="https://fida-sdr.netlify.app" target="_blank">Classic (single-user) app</a>
+  </div>
+
+</div>
+
+<script>
+// ── Supabase init ──────────────────────────────────────────
+const SUPABASE_URL = 'https://cqsdsztzyvxtnzrruxeb.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_oWLb_blZHL_rayCldsPfMw_OoQs0HMR';
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ── Tab switching ──────────────────────────────────────────
+let currentTab = 'login';
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('loginFields').style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById('signupFields').style.display = tab === 'signup' ? 'block' : 'none';
+  document.getElementById('tab-login').className = 'auth-tab' + (tab === 'login' ? ' active' : '');
+  document.getElementById('tab-signup').className = 'auth-tab' + (tab === 'signup' ? ' active' : '');
+  document.getElementById('authBtnText').textContent = tab === 'login' ? 'Sign In' : 'Create Account';
+  hideMsg();
+}
+
+function showMsg(text, type) {
+  const el = document.getElementById('authMsg');
+  el.textContent = text;
+  el.className = 'msg ' + type;
+}
+function hideMsg() {
+  document.getElementById('authMsg').className = 'msg';
+}
+
+// ── Auth handler ───────────────────────────────────────────
+async function handleAuth() {
+  const btn = document.getElementById('authBtn');
+  btn.classList.add('loading');
+  btn.disabled = true;
+  hideMsg();
+
+  try {
+    if (currentTab === 'login') {
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      if (!email || !password) { showMsg('Please enter your email and password.', 'error'); return; }
+
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) { showMsg(error.message, 'error'); return; }
+
+      // Store session and redirect to app
+      showMsg('Signed in! Loading your workspace...', 'success');
+      setTimeout(() => { window.location.href = '/'; }, 800);
+
+    } else {
+      // Signup
+      const firstName = document.getElementById('signupFirst').value.trim();
+      const lastName  = document.getElementById('signupLast').value.trim();
+      const email     = document.getElementById('signupEmail').value.trim();
+      const password  = document.getElementById('signupPassword').value;
+      const company   = document.getElementById('signupCompany').value;
+      const region    = document.getElementById('signupRegion').value;
+
+      if (!firstName || !lastName || !email || !password) {
+        showMsg('Please fill in all fields.', 'error'); return;
+      }
+      if (password.length < 8) {
+        showMsg('Password must be at least 8 characters.', 'error'); return;
+      }
+
+      const { data, error } = await sb.auth.signUp({
+        email, password,
+        options: {
+          data: { full_name: `${firstName} ${lastName}`, company, region }
+        }
+      });
+
+      if (error) { showMsg(error.message, 'error'); return; }
+
+      // Update profile with extra details
+      if (data.user) {
+        await sb.from('profiles').upsert({
+          id: data.user.id,
+          email,
+          full_name: `${firstName} ${lastName}`,
+          company,
+          region
+        });
+      }
+
+      showMsg('Account created! Check your email to confirm, then sign in.', 'success');
+      setTimeout(() => switchTab('login'), 2000);
+    }
+
+  } catch(e) {
+    showMsg('Something went wrong. Please try again.', 'error');
+    console.error(e);
+  } finally {
+    btn.classList.remove('loading');
+    btn.disabled = false;
+  }
+}
+
+async function handleMagicLink() {
+  const email = document.getElementById('magicEmail').value.trim();
+  if (!email) { showMsg('Please enter your email address.', 'error'); return; }
+
+  const btn = document.getElementById('magicBtn');
+  btn.classList.add('loading');
+  btn.disabled = true;
+  hideMsg();
+
+  const { error } = await sb.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: window.location.origin + '/login.html' }
+  });
+
+  btn.classList.remove('loading');
+  btn.disabled = false;
+
+  if (error) {
+    showMsg(error.message, 'error');
+  } else {
+    document.getElementById('magicSection').innerHTML = `
+      <div style="text-align:center;padding:20px 0">
+        <div style="font-size:2.5rem;margin-bottom:12px">📬</div>
+        <div style="font-family:'Outfit',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:8px">Check your inbox!</div>
+        <div style="font-size:.82rem;color:var(--muted);line-height:1.6">
+          We sent a sign-in link to<br>
+          <strong style="color:var(--text)">${email}</strong><br><br>
+          Click the link in the email to sign in.<br>
+          The link expires in 1 hour.
+        </div>
+      </div>`;
+  }
+}
+
+async function signInWithGoogle() {
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin + '/app.html' }
+  });
+  if (error) showMsg(error.message, 'error');
+}
+
+async function signInWithMicrosoft() {
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: 'azure',
+    options: {
+      scopes: 'email',
+      redirectTo: window.location.origin + '/app.html'
+    }
+  });
+  if (error) showMsg(error.message, 'error');
+}
+
+async function handleReset() {
+  const email = document.getElementById('loginEmail').value.trim();
+  if (!email) { showMsg('Enter your email address above first.', 'error'); return; }
+  const { error } = await sb.auth.resetPasswordForEmail(email);
+  if (error) { showMsg(error.message, 'error'); }
+  else { showMsg('Password reset email sent! Check your inbox.', 'success'); }
+}
+
+// ── Enter key support ──────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') handleAuth();
+});
+
+// ── Handle magic link token in URL + check existing session ──
+(async () => {
+  // If there's a token in the URL hash (magic link callback)
+  if (window.location.hash && (
+    window.location.hash.includes('access_token') ||
+    window.location.hash.includes('error')
+  )) {
+    // Let Supabase process the hash
+    const { data, error } = await sb.auth.getSession();
+    if (error || window.location.hash.includes('error')) {
+      showMsg('Sign-in link expired or invalid. Please request a new one.', 'error');
+      // Clean up the URL
+      history.replaceState(null, '', window.location.pathname);
+      return;
+    }
+    if (data.session) {
+      window.location.href = '/';
+      return;
+    }
+  }
+
+  // Check if already logged in
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    window.location.href = '/';
+  }
+})();
+</script>
+</body>
+</html>
