@@ -7489,7 +7489,7 @@ async function runProspectEmailPipeline() {
 
   var minScore = parseInt(document.getElementById('prospectMinScore')?.value) || 7;
   var candidates = prospectResults.filter(function(r) {
-    return (r._aiScore || 0) >= minScore && r._emailStatus !== 'verified' && r._emailStatus !== 'catch-all' && r._emailStatus !== 'invalid' && r._emailStatus !== 'not_found';
+    return (r._aiScore || 0) >= minScore && r._emailStatus !== 'verified' && r._emailStatus !== 'catch-all' && r._emailStatus !== 'invalid';
   });
 
   if (!candidates.length) {
